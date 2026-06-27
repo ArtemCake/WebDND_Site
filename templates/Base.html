@@ -1,0 +1,36 @@
+<!-- templates/base.html -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+	<meta charset="UTF-8">
+	<!-- Заголовок страницы. Если дочерний шаблон не задаст свой, будет использоваться этот -->
+	<title>{% block title %}D&D Сайт{% endblock %}</title>
+	
+	<!-- Подключение CSS-файла -->
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<!-- Блок для шапки сайта -->
+{% block header %}
+<header class="site-header">
+	<h1>D&D Мастерская</h1>
+</header>
+{% endblock %}
+
+<main class="container">
+	<!-- Основной блок контента. Именно сюда каждая страница будет вставлять свое содержимое -->
+	{% block content %}
+	<p>Основной контент страницы появится здесь.</p>
+	{% endblock %}
+</main>
+
+<!-- Блок для подвала сайта -->
+{% block footer %}
+<footer class="site-footer">
+	<p>&copy; {{ year|default(2026) }} D&D Сайт. Все права защищены.</p>
+</footer>
+{% endblock %}
+
+</body>
+</html>

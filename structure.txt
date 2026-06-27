@@ -1,0 +1,38 @@
+WebDND_Site/
+│
+├── [01].gitignore
+├── [02]main.py
+├── [03]requirements.txt
+├── [04]amvera.yml
+├── [05]structure.txt
+│
+├── Config/
+│   ├── [10]Config.py
+│   └── [11]imports.py
+│
+├── app/
+│   ├── database/
+│   │   └── [12]database.py
+│ 	└── [13]models.py
+│
+├── static/
+│   ├── css/
+│   │   ├── modules/
+│   │   └── [06]style.css
+│   │
+│   ├── docs/
+│   │   ├── [07]privacy_policy.md
+│   │   └── [08]terms_of_service.md
+│   │
+│   ├── js/
+│   │   ├── modules/
+│   │   └── [09]main.js
+│
+├── templates/
+│   ├── admin/
+│   │
+│   ├── _macros/
+│   ├── [14]Base.html
+│   └── [15]index.html
+│
+└── web/

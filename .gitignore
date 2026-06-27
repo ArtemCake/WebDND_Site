@@ -11,8 +11,6 @@ venv
 out
 gen
 *.session
-Улучшения.txt
-Улучшения.docx
-index.html
+Улучшения.*
 tests
 requirements_dev.txt

@@ -1,0 +1,23 @@
+<!-- templates/index.html -->
+
+{% extends 'base.html' %}
+
+{% block title %}
+Главная | {{ context.title }}
+{% endblock %}
+
+{% block content %}
+<section class="intro">
+	<h2>{{ context.welcome_message }}</h2>
+	<p>{{ context.description }}</p>
+</section>
+
+<section class="features-list">
+	<h3>Основные возможности:</h3>
+	<ul>
+		{% for feature in context.features %}
+		<li>{{ feature }}</li>
+		{% endfor %}
+	</ul>
+</section>
+{% endblock %}
