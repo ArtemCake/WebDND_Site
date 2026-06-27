@@ -1,6 +1,18 @@
 #.gitignore
 
-.gigaide
+node_modules
+dist
 .idea
 venv
-WebDND_Site.iml
+.gitverse
+.gigaide
+*.spec
+*.iml
+out
+gen
+*.session
+Улучшения.txt
+Улучшения.docx
+index.html
+tests
+requirements_dev.txt
