@@ -1,6 +1,6 @@
 # Config/web_config.py
 
-from web.imports.imports import (BaseSettings, SettingsConfigDict, os)
+from Config.imports import (BaseSettings, SettingsConfigDict, os)
 
 
 # --- НАСТРОЙКИ ТАЙМЕРА ---
@@ -15,8 +15,8 @@ class WebAppSettings(BaseSettings):
 
 	# --- Основные настройки API ---
 	API_V1_STR: str = "/api/v1"
-	PROJECT_NAME: str = "StreamAlertBot API"
-	DESCRIPTION: str = "Веб-API для управления уведомлениями о трансляциях Twitch"
+	PROJECT_NAME: str = "WebDND_Site API"
+	DESCRIPTION: str = "Веб-API для управления сайтом по ДНД"
 	VERSION: str = "1.0.0"
 
 	# НОВЫЕ НАСТРОЙКИ ДЛЯ POSTGRESQL
@@ -37,18 +37,9 @@ class WebAppSettings(BaseSettings):
 	ALGORITHM: str = "HS256"
 	ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 дней
 
-	# --- Настройки Telegram API ---
-	TELEGRAM_BOT_TOKEN: str  # ОБЯЗАТЕЛЬНО указать в .env файле
-	TELEGRAM_API_ID: str     # ОБЯЗАТЕЛЬНО указать в .env файле
-	TELEGRAM_API_HASH: str   # ОБЯЗАТЕЛЬНО указать в .env файле
-
 	ADMIN_PASSWORD: str   # ОБЯЗАТЕЛЬНО указать в .env файле
 
 	# --- Настройки Twitch API ---
-
-	# --- Настройки Twitch API ---
-	TWITCH_CLIENT_ID: str  # ОБЯЗАТЕЛЬНО указать в .env файле
-	TWITCH_CLIENT_SECRET: str  # ОБЯЗАТЕЛЬНО указать в .env файле
 
 	# --- Глобальные пути проекта (добавлены для удобства) ---
 	TIMER_DEFAULT_INTERVAL_MIN: int = TIMER_DEFAULT_INTERVAL_MIN
