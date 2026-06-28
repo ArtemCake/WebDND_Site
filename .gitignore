@@ -2,9 +2,9 @@
 
 node_modules
 dist
-.idea
 venv
 .gitverse
+.idea
 .gigaide
 *.spec
 *.iml
@@ -14,3 +14,4 @@ gen
 Улучшения.*
 tests
 requirements_dev.txt
+data/.env
