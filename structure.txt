@@ -6,6 +6,10 @@ WebDND_Site/
 ├── [04]amvera.yml
 ├── [05]structure.txt
 │
+├── data/
+│   └── [16].env
+│
+│
 ├── Config/
 │   ├── [10]Config.py
 │   └── [11]imports.py
