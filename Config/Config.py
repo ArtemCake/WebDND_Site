@@ -51,7 +51,7 @@ class WebAppSettings(BaseSettings):
 		return [item.strip() for item in os.environ.get("BACKEND_CORS_ORIGINS", "").split(',')]
 
 	model_config = SettingsConfigDict(
-		env_file="/data/.env",
+		env_file="data/.env",
 		env_file_encoding="utf-8",
 		case_sensitive=False,
 		extra="ignore",  # Игнорирует лишние переменные в .env
