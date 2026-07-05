@@ -18,7 +18,7 @@ web_router = APIRouter()
 
 # --- 1. ГЛАВНАЯ СТРАНИЦА И ПЕРЕНАПРАВЛЕНИЯ ---
 @web_router.get("/")
-async def root(request: Request, user: User = Depends(get_current_user)):
+async def home_page(request: Request, user: User = Depends(get_current_user)):
 	"""
 	Главная страница. Редирект на профиль или логин.
 	"""
@@ -234,4 +234,25 @@ async def terms_of_service(request: Request):
 		context= {"title": "Политика конфиденциальности",
 		          "content": html_content}
 	)
+
+@web_router.get("/login?logout=1") # Использование query param для GET-запроса выхода
+async def logout(request: Request):
+	"""
+	Обработчик выхода из аккаунта.
+	Удаляет токен из куки и перенаправляет на страницу авторизации.
+	"""
+	response = RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
+	response.set_cookie(
+		key="session_id",
+		value="",
+		max_age=0,  # немедленно истекает
+		expires="Thu, 01 Jan 1970 00:00:00 GMT",  # эпоха Unix
+		path="/",
+		httponly=True,
+		secure=True,  # только HTTPS
+		samesite="Strict"
+	)
+	response.delete_cookie("access_token")
+	response.delete_cookie("temp_user_id")
+	return response
 

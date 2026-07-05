@@ -7,6 +7,7 @@
 {% endblock %}
 
 {% block content %}
+<p>Вы вошли как: <strong>{{ user.username }}</strong></p>
 <section class="intro">
 	<h2>{{ context.welcome_message }}</h2>
 	<p>{{ context.description }}</p>
