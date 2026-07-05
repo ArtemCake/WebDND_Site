@@ -14,4 +14,3 @@
 @import url("modules/_forms.css");          /* Стили для форм и кнопок */
 @import url("modules/_auth.css");           /* Специфичные стили для login/register */
 @import url("modules/_password-toggle.css"); /* Стили для иконки глаза */
-@import url("modules/emoji.css");           /* Стили для Эмодзи блока */

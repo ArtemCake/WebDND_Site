@@ -5,10 +5,17 @@ WebDND_Site/
 ├── [03]requirements.txt
 ├── [04]amvera.yml
 ├── [05]structure.txt
+├── []LICENSE
+├── []alembic.ini
+│
+├── versions/
+│   ├── versions/
+│   ├── []README
+│   ├── []env.py
+│   └── []script.py.mako
 │
 ├── data/
 │   └── [16].env
-│
 │
 ├── Config/
 │   ├── [10]Config.py
@@ -16,12 +23,33 @@ WebDND_Site/
 │
 ├── app/
 │   ├── database/
+│   │   ├── [13]models.py
+│   │   ├── []session.py
 │   │   └── [12]database.py
-│ 	└── [13]models.py
+│   ├── core/
+│   │   ├── []security.py
+│   │   └── []dependencies.py
+│   ├── enums/
+│   │   └── []user_enums.py
+│   ├── repositories/
+│   │   └── []user_repository.py
+│   ├── Routers/
+│   │   └── []Web_Routers.py
+│   └── services/
+│   │   ├── []user_service.py
+│       └── []auth_service.py
 │
 ├── static/
 │   ├── css/
 │   │   ├── modules/
+│   │   │    ├── []_auth.css
+│   │   │    ├── []_base.css
+│   │   │    ├── []_base-content.css
+│   │   │    ├── []_forms.css
+│   │   │    ├── []_header.css
+│   │   │    ├── []_password-toggle.css
+│   │   │    ├── []_reset.css
+│   │   │    └── []_variables.css
 │   │   └── [06]style.css
 │   │
 │   ├── docs/
@@ -30,12 +58,19 @@ WebDND_Site/
 │   │
 │   ├── js/
 │   │   ├── modules/
+│   │   │    ├── []cookieBanner.js
+│   │   │    └── []passwordToggle.js
 │   │   └── [09]main.js
 │
 ├── templates/
 │   ├── admin/
 │   │
 │   ├── _macros/
+│   │     └── []cookieBaner.html
+│   ├── []_menu.html
+│   ├── []document.html
+│   ├── []login.html
+│   ├── []register.html
 │   ├── [14]Base.html
 │   └── [15]index.html
 │
