@@ -7,7 +7,7 @@
 	<title>{% block title %}{{ request.app.state.settings.PROJECT_NAME }}{% endblock %}</title>
 	{% import "_macros/cookieBaner.html" as macros %}
 	<!-- Подключение CSS-файла -->
-	<link rel="stylesheet" href="/static/css/style.css">
+	<link rel="stylesheet" href="/static/css/style.min.css">
 </head>
 <body>
 
@@ -36,7 +36,7 @@
 <div id='modal'>
 	{{ macros.render_cookie_banner() }}
 </div>
-<script type="module" src="/static/js/main.js" defer></script>
+<script type="module" src="/static/js/main.min.js" defer></script>
 
 </body>
 </html>

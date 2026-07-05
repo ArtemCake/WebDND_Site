@@ -12,7 +12,7 @@ class Character(Base):
 	id = Column(Integer, primary_key=True, index=True)
 
 	# Основные поля персонажа
-	user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True) # Кто владелец (пока опционально)
+	user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
 	name = Column(String(100), nullable=False)
 	race = Column(String(50))
 	character_class = Column(String(50)) # Класс нельзя называть 'class'

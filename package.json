@@ -1,0 +1,28 @@
+{
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@vitejs/plugin-vue": "^6.0.7",
+    "autoprefixer": "^10.5.0",
+    "cssnano": "^8.0.2",
+    "eslint": "^10.3.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "fs-extra": "^11.3.5",
+    "globals": "^17.6.0",
+    "postcss": "^8.5.15",
+    "postcss-import": "^16.1.1",
+    "prettier": "^3.8.3",
+    "sass": "^1.101.0",
+    "string-replace-middleware": "^1.1.0",
+    "vite": "^8.0.12",
+    "vite-plugin-css": "^1.0.4"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && node rename-script.js",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@joeattardi/emoji-button": "^4.6.4"
+  }
+}

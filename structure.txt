@@ -7,6 +7,12 @@ WebDND_Site/
 ├── [05]structure.txt
 ├── []LICENSE
 ├── []alembic.ini
+├── [].eslintrc.js
+├── []eslint.config.mjs'
+├── []package.json
+├── []package-lock.json
+├── []rename-script.js
+├── []vite.config.js
 │
 ├── versions/
 │   ├── versions/
@@ -50,6 +56,7 @@ WebDND_Site/
 │   │   │    ├── []_password-toggle.css
 │   │   │    ├── []_reset.css
 │   │   │    └── []_variables.css
+│   │   ├── []style.min.css
 │   │   └── [06]style.css
 │   │
 │   ├── docs/
@@ -60,6 +67,7 @@ WebDND_Site/
 │   │   ├── modules/
 │   │   │    ├── []cookieBanner.js
 │   │   │    └── []passwordToggle.js
+│   │   ├── []main.min.js
 │   │   └── [09]main.js
 │
 ├── templates/
