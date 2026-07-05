@@ -12,6 +12,7 @@ from pydantic import Field
 from markupsafe import Markup
 from jose import JWTError, jwt
 from enum import Enum as PyEnum
+from argon2 import PasswordHasher
 from fastapi import FastAPI, Request
 from fastapi.routing import APIRoute
 from fastapi import Form as DefaultForm

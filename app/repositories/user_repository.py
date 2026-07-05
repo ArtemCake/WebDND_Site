@@ -1,8 +1,9 @@
 # web/repositories/user_repository.py
 
-from Config.imports import (AsyncSession, select)
+from Config.imports import (AsyncSession, select, HTTPException)
 from app.database.models import User
 from app.core.security import verify_password
+from app.enums.user_enums import Role_enums
 
 
 # --- 1. СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ ---
@@ -10,7 +11,13 @@ async def create_user(db: AsyncSession, username: str, hashed_password: str, rol
     """
     Создает нового пользователя в БД.
     """
-    db_user = User(username=username, hashed_password=hashed_password, role=role, gdpr_consent=gdpr_consent)
+    try:
+        user_role = Role_enums(role)
+    except ValueError:
+        # Если передали неверную роль, возвращаем значение по умолчанию или вызываем ошибку
+        raise HTTPException(status_code=400, detail=f"Недопустимая роль: {role}")
+
+    db_user = User(username=username, hashed_password=hashed_password, role=user_role, gdpr_consent=gdpr_consent)
     db.add(db_user)
     await db.commit()
     await db.refresh(db_user) # Обновляем объект, чтобы получить ID

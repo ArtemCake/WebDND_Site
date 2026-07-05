@@ -29,6 +29,8 @@ class Character(Base):
 	# Биография
 	background = Column(Text)
 
+	user = relationship("User", back_populates="characters")
+
 	def __repr__(self):
 		return f"<Character(id={id}, name='{self.name}', lvl={self.level})>"
 

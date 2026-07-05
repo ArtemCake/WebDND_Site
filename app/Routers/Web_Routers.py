@@ -18,7 +18,7 @@ web_router = APIRouter()
 
 # --- 1. ГЛАВНАЯ СТРАНИЦА И ПЕРЕНАПРАВЛЕНИЯ ---
 @web_router.get("/")
-async def root(request: Request):
+async def root(request: Request, user: User = Depends(get_current_user)):
 	"""
 	Главная страница. Редирект на профиль или логин.
 	"""
@@ -61,11 +61,12 @@ async def register_page(request: Request):
 @web_router.post("/register")
 async def register_user(request: Request,
                         username: str = OverloadedForm(...),
+                        role: str = OverloadedForm(...),
                         password: str = OverloadedForm(...)):
 	# Теперь функция работает с 'templates', который пришел извне.
 	db_manager = get_async_db()
 	async with (db_manager as db):
-		success, message = await UserService.register_new_user(db, username, password)
+		success, message = await UserService.register_new_user(db, username, password, role)
 		if success:
 			# 2. Если успех - редиректим (как раньше)
 			return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
@@ -106,7 +107,7 @@ async def login(request: Request,
 		if success:
 			access_token = create_access_token(data={"sub": str(user.id)})
 			# --- НОВОЕ: Создаем RedirectResponse ---
-			next_url = "/users/me" # Куда перенаправить
+			next_url = "/" # Куда перенаправить
 			response = RedirectResponse(url=next_url, status_code=status.HTTP_303_SEE_OTHER)
 			# 1. Устанавливаем основной токен доступа
 			response.set_cookie(

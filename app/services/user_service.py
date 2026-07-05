@@ -7,7 +7,7 @@ from app.core.security import get_password_hash
 
 class UserService:
     @staticmethod
-    async def register_new_user(db, username: str, password: str, role: str = "user", gdpr_consent: bool=False):
+    async def register_new_user(db, username: str, password: str, role: str = "player", gdpr_consent: bool=False):
         """
         Бизнес-логика регистрации.
         Проверяет уникальность и хеширует пароль.
