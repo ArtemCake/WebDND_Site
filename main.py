@@ -1,6 +1,6 @@
 # main.py
 
-from Config.imports import (FastAPI, asynccontextmanager, asyncio, CORSMiddleware,
+from Config.imports import (FastAPI, asynccontextmanager, asyncio, CORSMiddleware, HTTPException, select,
                                  StaticFiles, Jinja2Templates, base64, RequestValidationError, Request,
                                  JSONResponse, HTMLResponse, Depends, uvicorn, APIRoute, os, pathlib)
 from Config.Config import settings
@@ -8,6 +8,8 @@ from app.database.session import get_async_db, get_async_session_factory
 from app.database.database import engine, metadata
 import app.Routers.main as api_module
 import app.Routers.Web_Routers as web_module # Модуль с Веб роутерами
+from app.services.user_service import UserService
+from app.database.models import User
 from alembic.command import upgrade
 from alembic.config import Config
 
@@ -28,6 +30,18 @@ async def lifespan(app: FastAPI):
 	# Создание глобальной сессии (фабрики)
 	async_session = get_async_db()
 	app.state.async_session = async_session
+	async with (async_session as db):
+		admin_password=settings.ADMIN_PASSWORD
+
+	if admin_password:
+		user_exists = await db.execute(select(User).where(User.username == "Admin"))
+
+		if not user_exists.scalars().first():
+
+			try:
+				await UserService.register_new_user(db, username="Admin", password=admin_password.strip(), role="admin", gdpr_consent=True)
+			except HTTPException as e:
+				raise
 	session_factory = get_async_session_factory
 	app.state.session_factory = session_factory
 	# Запуск трекеров для активных пользователей
