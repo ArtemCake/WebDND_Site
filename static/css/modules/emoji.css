@@ -1,0 +1,93 @@
+/* --- static/css/modules/emoji.css --- */
+
+.emoji-grid {
+    display: grid;
+    gap: 8px; /* Отступы между эмодзи */
+    padding: 8px;
+    grid-template-columns: repeat(7, 1fr);
+    /* --- НОВЫЕ СТРОКИ ДЛЯ СКРОЛЛИНГА --- */
+    max-height: 350px; /* Задаем максимальную высоту блока */
+    overflow-y: auto; /* Включаем вертикальную прокрутку, если контент больше высоты */
+     font-size: 26px;
+}
+
+.emoji-item {
+    cursor: pointer;
+    display: inline-block;
+    font-size: 24px;
+    font-family: 'Segoe UI Emoji', 'Apple Color Emoji',
+               'Noto Color Emoji', 'Twemoji Mozilla',
+               'Android Emoji', sans-serif;
+    text-align: center;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.emoji-item:hover {
+    background-color: #f0f0f0;
+}
+#emoji-picker {
+  position: absolute;
+  left: 63%;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.emoji-block-view {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-content: space-between;
+    justify-content: space-between;
+}
+
+/* Стили для всего пикера */
+#emoji-picker {
+    display: flex;
+    width: 400px; /* Фиксированная ширина для панели */
+    background-color: #f5f5f5;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+/* Сайдбар (меню) */
+.picker-sidebar {
+    padding: 12px;
+    background-color: white;
+    border-right: 1px solid #ddd;
+}
+
+.category-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.category-item {
+    cursor: pointer;
+    padding: 8px;
+    text-align: center;
+    font-size: 14px;
+    color: #333;
+}
+
+.category-item.active {
+    background-color: #e0e0e0; /* Цвет активной категории */
+    font-weight: bold;
+}
+
+/* Область контента */
+.picker-content {
+    flex-grow: 1;
+    padding: 12px;
+}
+
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+    gap: 8px;
+}
+
+

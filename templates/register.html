@@ -1,0 +1,55 @@
+<!--templates/register.html-->
+
+{% extends "base.html" %}
+
+{% block title %}Регистрация{% endblock %}
+
+{% block content %}
+<div class="auth-form">
+	<h1>Регистрация нового пользователя</h1>
+	
+	<!-- Блок для отображения ошибок -->
+	{% if error %}
+	<div class="error">{{ error }}</div>
+	{% endif %}
+	
+	<form method="post" action="/register">
+		<label for="username">Имя пользователя:</label>
+		<input type="text" id="username" name="username" placeholder="Введите имя пользователя" value="{{ username_value }}" required="Необходимо ввести имя пользователя"><br><br>
+		
+		<!-- Контейнер, чтобы объединить поле и кнопку в одну строку -->
+		<div class="password-container">
+			<!-- Само поле ввода. Обратите внимание на атрибут id="password", он нужен для JS -->
+			<label for="password">Пароль:</label>
+			<input type="password" id="password" name="password" required="Необходимо ввести пароль">
+			
+			<!-- Кнопка/иконка для переключения видимости -->
+			<span class="password-toggle" onclick="togglePasswordVisibility()">
+				<svg class="eye-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+					<circle cx="12" cy="12" r="10" stroke="#000" stroke-width="2"/>
+					<path d="M12 12C15.866 12 19 9.866 19 7V5C19 2.134 15.866 0 12 0C8.134 0 5 2.134 5 5V7C5 9.866 8.134 12 12 12z" fill="#000"/>
+		        </svg>
+            </span>
+		</div>
+		<label for="role">Ваша роль:</label>
+		<select id="role" name="role" required>
+			<option value="player">Игрок</option>
+			<option value="master">Мастер (DM)</option>
+		</select>
+		<div class="form-group">
+			<div class="form-check">
+				<!-- Добавляем атрибут 'required' -->
+				<input class="form-check-input" type="checkbox" value="true" id="gdprCheck" name="gdpr_consent" required="Необходимо принять соглашение и политику конфедициальности">
+				<label class="form-check-label" for="gdprCheck">
+					Я согласен с <a href="/terms" target="_blank">Пользовательским соглашением</a> и <a href="/privacy" target="_blank">Политикой конфиденциальности</a>
+				</label>
+			</div>
+		</div>
+		
+		<button type="submit">Зарегистрироваться</button>
+	</form>
+	
+	<!-- Ссылка на авторизацию -->
+	<p>Уже есть аккаунт? <a href="{{ request.url_for('login_page') }}">Войти</a></p>
+</div>
+{% endblock %}

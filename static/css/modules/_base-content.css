@@ -1,0 +1,114 @@
+/* --- static/css/modules/_base-content.css --- */
+
+/* --- 4. БАЗОВЫЕ СТИЛИ КОНТЕНТА И СООБЩЕНИЙ --- */
+
+/* Стили для основного блока контента */
+.content-wrapper {
+	display: grid;
+	place-items: center;
+	padding: 20px;
+	background-color: var(--color-white);
+	border-radius: var(--radius-md);
+	box-shadow: var(--shadow-sm);
+	max-width: 900px;
+	width: 100%;
+	margin: 0 auto;
+	justify-items: stretch;
+	align-items: center;
+
+	word-wrap: break-word;
+	overflow-wrap: anywhere;
+}
+
+/* Общие стили для сообщений об успехе (Зеленый) */
+.success {
+	color: var(--color-success);
+	background-color: #d4edda; /* Светло-зеленый фон */
+	padding: 10px;
+	border-radius: var(--radius-sm);
+	margin-bottom: 15px;
+}
+
+/* Общие стили для сообщений об ошибке (Красный) */
+.failure {
+	color: var(--color-danger);
+	background-color: #f8d7da; /* Светло-красный фон */
+	padding: 10px;
+	border-radius: var(--radius-sm);
+	margin-bottom: 15px;
+}
+
+/* НОВОЕ: Стили для панели управления скриптом */
+.script-control-panel {
+	background-color: var(--color-white); /* Белый фон карточки */
+	border-radius: var(--radius-md);     /* Скругленные углы */
+	box-shadow: var(--shadow-sm);        /* Небольшая тень */
+	padding: 20px;                       /* Внутренние отступы */
+	text-align: center;                 /* Центрируем содержимое */
+	margin-bottom: 25px;                 /* Отступ снизу от других блоков */
+}
+
+/* Стили для заголовка внутри панели */
+.script-control-panel h3 {
+	color: #333;            /* Темно-серый цвет */
+	margin-top: 0;          /* Убираем верхний отступ у заголовка */
+	margin-bottom: 15px;     /* Отступ под заголовком */
+	font-size: 1.2em;       /* Немного увеличенный шрифт */
+	border-bottom: 1px solid #eee; /* Линии-разделители снизу (опционально) */
+	padding-bottom: 10px;
+}
+
+/* Стили для кнопки внутри панели (делаем ее шире) */
+.script-control-panel button {
+	width: 80%;             /* Кнопка занимает 80% ширины карточки */
+	max-width: 300px;        /* Максимальная ширина, чтобы на больших экранах не было огромного поля */
+	margin: 0 auto 15px;    /* Центрируем кнопку и добавляем отступ снизу */
+}
+
+/* Стили для параграфа со статусом */
+.script-control-panel p {
+	margin: 5px 0 0;        /* Убираем лишние отступы у параграфа */
+	font-size: 0.95em;       /* Чуть меньший шрифт для статуса */
+}
+
+/* Класс для скрытия элементов */
+.hidden {
+    display: none !important; /* !important гарантирует, что стиль не будет переопределен */
+}
+
+/* --- СТИЛИ ДЛЯ МОДАЛЬНОГО ОКНА --- */
+
+/* 1. Базовые стили для модального окна (оверлея) */
+#delete-modal {
+    transition: opacity 0.3s ease, transform 0.3s ease; /* Плавный переход для прозрачности и масштаба */
+    opacity: 0; /* Изначально полностью прозрачно */
+    transform: scale(0.95); /* Изначально немного уменьшено */
+    pointer-events: none; /* Не реагирует на клики, пока не появится */
+}
+
+/* 2. Стили для активного (видимого) окна */
+#delete-modal:not(.hidden) {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto; /* Включает возможность кликать по элементам внутри */
+}
+
+/* 3. Стили для самого белого блока с текстом (чтобы он не был прозрачным) */
+#delete-modal > div {
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    opacity: 0;
+    transform: scale(0.95);
+}
+
+#delete-modal:not(.hidden) > div {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* 4. Стили для кнопок внутри модального окна (для красоты) */
+#delete-modal button {
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+#delete-modal button:hover {
+    transform: translateY(-1px); /* Эффект "нажатия" при наведении */
+}

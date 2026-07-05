@@ -1,0 +1,51 @@
+/* --- static/css/modules/_auth.css --- */
+
+/* --- 7. ФОРМЫ АВТОРИЗАЦИИ И РЕГИСТРАЦИИ --- */
+
+/* Стили для контейнера форм входа и регистрации */
+.auth-form {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	max-width: 400px; /* Ограничиваем ширину формы */
+	margin: 0 auto; /* Центрирование по горизонтали */
+	padding: 20px;
+	background-color: var(--color-white);
+	border-radius: var(--radius-md);
+	box-shadow: var(--shadow-sm);
+}
+
+.auth-form h1 {
+	text-align: center;
+	margin-bottom: 20px; /* Отступ под заголовком */
+}
+
+/* Стили для кнопки входа/регистрации */
+.auth-form button {
+	width: 100%;
+	margin-top: 10px; /* Отступ сверху над кнопкой */
+}
+
+/* Стили для блока с ошибкой в формах */
+.auth-form .error {
+	text-align: center; /* Центрируем текст ошибки */
+	margin-bottom: 20px; /* Отступ снизу от поля ввода */
+}
+
+/* Стили для ссылки "Нет аккаунта? Войти" */
+.auth-form p {
+	text-align: center;
+	margin-top: 20px; /* Отступ сверху от кнопки */
+	font-size: 0.9em; /* Чуть меньший шрифт */
+}
+
+.auth-form p a {
+	color: var(--color-primary);
+	text-decoration: none;
+	font-weight: 500;
+}
+
+.auth-form p a:hover {
+	text-decoration: underline;
+}

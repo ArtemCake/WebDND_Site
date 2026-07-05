@@ -1,0 +1,16 @@
+/* --- static/css/modules/_variables.css --- */
+
+/* --- 1. ТОКЕНЫ ДИЗАЙНА (ПЕРЕМЕННЫЕ) --- */
+:root {
+	--color-primary: #0d6efd;
+	--color-primary-hover: #0a58ca;
+	--color-success: #28a745;
+	--color-danger: #dc3545;
+	--color-muted: #6c757d;
+	--color-bg-dark: #f0f0f0;
+	--color-bg-light: #f8f9fa;
+	--color-white: #fff;
+	--radius-sm: 4px;
+	--radius-md: 8px;
+	--shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+}

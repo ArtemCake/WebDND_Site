@@ -1,0 +1,13 @@
+<!-- templates/_macros/cookieBaner.html -->
+
+{% macro render_cookie_banner() %}
+<div id="cookie-banner">
+	<p class="text-sm md:text-base">
+		Для работы уведомлений и личного кабинета сайт использует файлы cookie.
+		<a href="/privacy" target="_blank" class="text-blue-400 hover:underline ml-1">Подробнее</a>
+	</p>
+	<button id="accept-cookie-btn">
+		Принять
+	</button>
+</div>
+{% endmacro %}

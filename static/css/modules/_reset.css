@@ -1,0 +1,19 @@
+/* --- static/css/modules/_reset.css --- */
+
+/* --- 2. СБРОС И БАЗОВЫЕ СТИЛИ --- */
+/* 1. Сброс стандартных отступов */
+body, html, header {
+	margin: 0;
+	padding: 0;
+	height: 100%;
+}
+
+/* 2. Общая раскладка страницы с помощью Grid */
+body {
+	display: grid;
+	grid-template-rows: auto 1fr;
+	grid-template-columns: 1fr;
+	min-height: 100vh;
+	font-family: Arial, sans-serif;
+	background-color: var(--color-bg-light);
+}

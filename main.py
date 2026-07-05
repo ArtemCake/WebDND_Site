@@ -1,4 +1,4 @@
-# [02]main.py - ОБНОВЛЕННЫЙ ВАРИАНТ
+# main.py
 
 from Config.imports import (FastAPI, asynccontextmanager, asyncio, CORSMiddleware,
                                  StaticFiles, Jinja2Templates, base64, RequestValidationError, Request,
@@ -31,6 +31,7 @@ async def lifespan(app: FastAPI):
 	session_factory = get_async_session_factory
 	app.state.session_factory = session_factory
 	# Запуск трекеров для активных пользователей
+	app.state.settings = settings
 	await asyncio.sleep(1)
 	yield # Точка, где приложение начинает работать
 

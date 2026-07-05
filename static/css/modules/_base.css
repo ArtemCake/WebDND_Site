@@ -1,0 +1,61 @@
+/* --- static/css/modules/_base.css --- */
+
+/* --- 2. СБРОС И БАЗОВЫЕ СТИЛИ --- */
+
+/* 1. Сброс стандартных отступов (Box Model) */
+/* Убираем внешние отступы и границы по умолчанию для многих элементов */
+body, h1, h2, h3, h4, h5, h6, p, ul, ol, li, header, form, button {
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+/* Устанавливаем базовый размер шрифта для всего документа (16px по умолчанию) */
+html {
+	font-size: 16px;
+	box-sizing: border-box; /* Очень важно: padding и border входят в ширину элемента */
+}
+
+/* Применяем box-sizing ко всем элементам и их псевдоэлементам */
+*, *::before, *::after {
+	box-sizing: inherit; /* Наследуем от html */
+}
+
+/* 2. Общая раскладка страницы (Grid) */
+body {
+	display: grid;
+	grid-template-rows: auto 1fr; /* Строка 1: шапка (auto), Строка 2: контент (всё остальное) */
+	grid-template-columns: 1fr; /* Одна колонка на всю ширину */
+	min-height: 100vh; /* Высота страницы - минимум на весь экран */
+
+	font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+	background-color: var(--color-bg-light); /* Используем переменную из _variables.css */
+	color: #212529; /* Базовый цвет текста */
+}
+
+#cookie-banner {
+    transform: translateY(100%); /* Скрыт за нижним краем экрана */
+    transition: transform 0.4s ease-out; /* Плавная анимация */
+}
+
+#cookie-banner.show {
+    transform: translateY(0); /* Выезжает на экран */
+}
+
+/* Медиа-запросы для адаптивной верстки */
+
+/* 1. Стили для планшетов и маленьких экранов */
+@media (max-width: 992px) {
+/* Уменьшаем боковые отступы у всего body, чтобы контент не прилипал к краям */
+	body {
+		padding: 0 15px;
+	}
+}
+
+/* 2. Стили для мобильных телефонов */
+@media (max-width: 576px) {
+/* Убираем отступы у body на самых маленьких экранах, чтобы использовать max-width в контенте */
+	body {
+		padding: 0;
+	}
+}

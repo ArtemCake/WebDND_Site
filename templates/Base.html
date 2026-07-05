@@ -4,8 +4,8 @@
 <head>
 	<meta charset="UTF-8">
 	<!-- Заголовок страницы. Если дочерний шаблон не задаст свой, будет использоваться этот -->
-	<title>{% block title %}D&D Сайт{% endblock %}</title>
-	
+	<title>{% block title %}{{ request.app.state.settings.PROJECT_NAME }}{% endblock %}</title>
+	{% import "_macros/cookieBaner.html" as macros %}
 	<!-- Подключение CSS-файла -->
 	<link rel="stylesheet" href="/static/css/style.css">
 </head>
@@ -15,6 +15,7 @@
 {% block header %}
 <header class="site-header">
 	<h1>D&D Мастерская</h1>
+	{% include '_menu.html' %}
 </header>
 {% endblock %}
 
@@ -31,6 +32,11 @@
 	<p>&copy; {{ year|default(2026) }} D&D Сайт. Все права защищены.</p>
 </footer>
 {% endblock %}
+
+<div id='modal'>
+	{{ macros.render_cookie_banner() }}
+</div>
+<script type="module" src="/static/js/main.js" defer></script>
 
 </body>
 </html>

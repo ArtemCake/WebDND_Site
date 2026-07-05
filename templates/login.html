@@ -1,0 +1,41 @@
+<!--templates/login.html-->
+
+{% extends "base.html" %}
+
+{% block title %}Авторизация{% endblock %}
+
+{% block content %}
+<div class="auth-form">
+	<h1>Вход в систему</h1>
+	
+	<!-- Блок для отображения ошибок -->
+	{% if error %}
+	<div class="error">{{ error }}</div>
+	{% endif %}
+	
+	<form method="post" action="/login">
+		<label for="username">Имя пользователя:</label>
+		<input type="text" id="username" name="username" placeholder="Введите имя пользователя" value="{{ username_value }}" required><br><br>
+		
+		<!-- Контейнер, чтобы объединить поле и кнопку в одну строку -->
+		<div class="password-container">
+			<label for="password">Пароль:</label>
+			<!-- Само поле ввода. Обратите внимание на атрибут id="password", он нужен для JS -->
+			<input type="password" id="password" name="password" required>
+			
+			<!-- Кнопка/иконка для переключения видимости -->
+			<span class="password-toggle" onclick="togglePasswordVisibility()">
+				<svg class="eye-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+					<circle cx="12" cy="12" r="10" stroke="#000" stroke-width="2"/>
+					<path d="M12 12C15.866 12 19 9.866 19 7V5C19 2.134 15.866 0 12 0C8.134 0 5 2.134 5 5V7C5 9.866 8.134 12 12 12z" fill="#000"/>
+		        </svg>
+            </span>
+		</div>
+		
+		<button type="submit">Войти</button>
+	</form>
+	
+	<!-- Ссылка на регистрацию -->
+	<p>Нет аккаунта? <a href="{{ request.url_for('register_page') }}">Зарегистрироваться</a></p>
+</div>
+{% endblock %}

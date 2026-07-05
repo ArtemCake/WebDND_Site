@@ -1,0 +1,46 @@
+<!-- templates/_menu.html -->
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark rounded" aria-label="Главное меню">
+	<div class="container-fluid">
+		<a class="navbar-brand" href="{{ url_for('root') }}">D&D Мастерская</a>
+		
+		<div class="collapse navbar-collapse justify-content-end" id="navbarsTop">
+			<ul class="navbar-nav mb-2 mb-lg-0">
+				
+				<!-- Если пользователь авторизован -->
+				{% if user %}
+				<li class="nav-item">
+					<a class="nav-link active" aria-current="page" href="{{ url_for('home_page') }}">🏠 Главная</a>
+				</li>
+				<li class="nav-item dropdown">
+					<a class="nav-link dropdown-toggle" href="#" id="dropdownUser" data-bs-toggle="dropdown" aria-expanded="false">
+						👤 {{ user.username }}
+					</a>
+					<ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownUser">
+						<li><a class="dropdown-item" href="#">📋 Мои персонажи</a></li>
+						<li><a class="dropdown-item" href="#">⚙️ Настройки профиля</a></li>
+						<li><hr class="dropdown-divider"></li>
+						
+						<!-- Только для админов -->
+						{% if user.role == "admin" %}
+						<li><span class="dropdown-header">Администрирование</span></li>
+						<li><a class="dropdown-item" href="{{ url_for('admin_dashboard') }}">👑 Панель управления</a></li>
+						{% endif %}
+						
+						<li><a class="dropdown-item text-danger" href="/logout">🚪 Выйти</a></li>
+					</ul>
+				</li>
+				
+				{% else %}
+				<!-- Если пользователь НЕ авторизован -->
+				<li class="nav-item">
+					<a class="nav-link" href="{{ url_for('login_page') }}">🔐 Войти</a>
+				</li>
+				<li class="nav-item">
+					<a class="nav-link" href="{{ url_for('register_page') }}">✍️ Регистрация</a>
+				</li>
+				{% endif %}
+			</ul>
+		</div>
+	</div>
+</nav>

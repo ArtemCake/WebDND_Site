@@ -1,0 +1,50 @@
+/* --- static/css/modules/_header.css --- */
+
+/* --- 3. ШАПКА И МЕНЮ (HEADER / .main_nav) --- */
+
+/* Стили для навигационной панели (основной контейнер) */
+.main_nav {
+/* Используем переменную для цвета текста ссылок */
+	color: var(--color-muted);
+
+	/* Прилипание к верху экрана при прокрутке */
+	position: sticky;
+	top: 0;
+
+	/* Гарантируем, что шапка будет поверх всего контента */
+	z-index: 1000;
+
+	/* Фон и тень для отделения от контента */
+	background-color: var(--color-bg-dark);
+	box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* Внутренний контейнер для выравнивания ссылок */
+.main_nav .container {
+	display: flex; /* Используем флексбокс для выравнивания */
+	justify-content: space-around; /* Равномерное распределение ссылок */
+	align-items: center; /* Вертикальное выравнивание по центру */
+	padding: 10px 20px;
+}
+
+/* Стили для ссылок в меню */
+.main_nav a {
+/* Цвет берем из переменной */
+	color: var(--color-primary);
+
+	text-decoration: none; /* Убираем подчеркивание */
+	padding: 10px 20px;
+	font-weight: bold;
+
+	/* Плавный эффект при наведении */
+	transition: background-color 0.3s, color 0.3s;
+}
+
+/* Эффект при наведении курсора на ссылку */
+.main_nav a:hover {
+/* Полупрозрачный фон из основного цвета */
+	background-color: rgba(13, 111, 253, 0.2);
+
+	/* Скругление углов */
+	border-radius: var(--radius-sm);
+}

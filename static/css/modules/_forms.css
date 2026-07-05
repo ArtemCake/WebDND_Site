@@ -1,0 +1,111 @@
+/* --- static/css/modules/_forms.css --- */
+
+/* --- 4. СТИЛИ ДЛЯ ФОРМ, СПИСКОВ И БЛОКОВ --- */
+
+/* Стили для основного блока контента */
+.content-wrapper {
+	display: grid;
+	place-items: center;
+	padding: 20px;
+	background-color: var(--color-white);
+	border-radius: var(--radius-md);
+	box-shadow: var(--shadow-sm);
+	max-width: 900px;
+	width: 100%;
+	margin: 0 auto;
+	justify-items: center;
+	align-items: stretch;
+	word-wrap: break-word;
+	overflow-wrap: anywhere;
+	align-content: stretch;
+	grid-auto-flow: row;
+}
+
+.content-wrapper h1 {
+	text-align: center;
+	color: #333;
+}
+
+/* --- 5. СТИЛИ ДЛЯ ФОРМ И ЭЛЕМЕНТОВ ВВОДА --- */
+.content-wrapper form label {
+	display: block;
+	margin-bottom: 5px;
+	color: #555;
+}
+
+.content-wrapper form input,
+.content-wrapper form select,
+.content-wrapper form textarea {
+	width: 95%;
+	padding: 10px;
+	margin-bottom: 15px;
+	border: 1px solid #ddd;
+	border-radius: var(--radius-sm);
+}
+
+.content-wrapper button {
+	width: 100%;
+	padding: 10px;
+	background-color: var(--color-primary);
+	color: var(--color-white);
+	border: none;
+	border-radius: var(--radius-sm);
+	cursor: pointer;
+	font-size: 16px;
+}
+
+.content-wrapper button:hover {
+	background-color: var(--color-primary-hover);
+}
+
+/* --- 6. СТИЛИ ДЛЯ ОШИБОК И СПИСКОВ --- */
+.error {
+	color: var(--color-danger);
+	background-color: #ffebee; /* Можно заменить на переменную, если нужна */
+	padding: 10px;
+	border-radius: var(--radius-sm);
+	margin-bottom: 15px;
+}
+
+ul.preset-list {
+	list-style-type: none;
+	padding: 0;
+}
+
+ul.preset-list li {
+	background-color: var(--color-bg-light);
+	margin-bottom: 10px;
+	padding: 15px;
+	border-radius: var(--radius-sm);
+}
+
+ul.preset-list li strong {
+	color: var(--color-primary);
+}
+
+.btn-group.me-2 {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    align-content: center;
+}
+
+.btn-group.me-2 button {
+    background-color: white;
+    color: black;
+}
+
+.spoiler:hover {
+    background: rgba(0, 0, 0, 2.0); /* Затемняем фон */
+    color: transparent; /* Делаем текст невидимым */
+    -webkit-background-clip: text; /* Применяем фон к тексту */
+    background-clip: text;
+    cursor: pointer; /* Показываем, что текст кликабелен */
+    border-radius: 3px;
+}
+
+.spoiler {
+    background: rgba(0, 0, 0, 2.0); /* Полупрозрачный при наведении */
+    color: black;
+}
