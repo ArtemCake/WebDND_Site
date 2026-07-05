@@ -70,16 +70,14 @@ WebDND_Site/
 │   │   ├── []main.min.js
 │   │   └── [09]main.js
 │
-├── templates/
-│   ├── admin/
-│   │
-│   ├── _macros/
-│   │     └── []cookieBaner.html
-│   ├── []_menu.html
-│   ├── []document.html
-│   ├── []login.html
-│   ├── []register.html
-│   ├── [14]Base.html
-│   └── [15]index.html
-│
-└── web/
+└──templates/
+    ├── admin/
+    │
+    ├── _macros/
+    │     └── []cookieBaner.html
+    ├── []_menu.html
+    ├── []document.html
+    ├── []login.html
+    ├── []register.html
+    ├── [14]Base.html
+    └── [15]index.html

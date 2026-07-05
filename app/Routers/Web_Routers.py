@@ -39,7 +39,8 @@ async def root(request: Request, user: User = Depends(get_current_user)):
 	response = templates.TemplateResponse(
 	request=request,
 	name="index.html",
-	context={"context": page_data}
+	context={"context": page_data,
+	         "user": user}
 	)
 	return response
 
