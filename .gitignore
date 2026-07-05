@@ -14,4 +14,4 @@ gen
 Улучшения.*
 tests
 requirements_dev.txt
-data/.env
+data
