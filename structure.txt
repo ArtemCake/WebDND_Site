@@ -8,7 +8,7 @@ WebDND_Site/
 ├── [06]LICENSE
 ├── [07]alembic.ini
 ├── [08].eslintrc.js
-├── [09]eslint.config.mjs'
+├── [09]eslint.config.mjs
 ├── [10]package.json
 ├── [11]package-lock.json
 ├── [12]rename-script.js
