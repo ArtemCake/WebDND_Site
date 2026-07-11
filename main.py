@@ -8,6 +8,9 @@ from app.database.session import get_async_db, get_async_session_factory
 from app.database.database import engine, metadata
 import app.Routers.main as api_module
 import app.Routers.Web_Routers as web_module # Модуль с Веб роутерами
+from app.enums.log_enums import LogAction, LogLevelEnum
+from app.services.cleanup_on_start import cleanup_old_logs
+from app.services.log_service import LogService
 from app.services.user_service import UserService
 from app.database.models import User
 from alembic.command import upgrade
@@ -19,7 +22,19 @@ async def apply_migrations():
 		alembic_cfg = Config("alembic.ini")
 		alembic_cfg.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("postgresql+asyncpg", "postgresql"))
 		upgrade(alembic_cfg, "head")
+		await LogService.create_log(
+			username=None,
+			action=LogAction.DATABASE_MIGRATION,
+			description="✅ Миграции БД успешно применены",
+			log_level=LogLevelEnum.INFO
+		)
 	except Exception as e:
+		await LogService.create_log(
+			username=None,
+			action=LogAction.DATABASE_ERROR,
+			description=f"⚠️ Ошибка при применении миграций: {str(e)}",
+			log_level=LogLevelEnum.ERROR
+		)
 		raise
 
 @asynccontextmanager
@@ -35,16 +50,26 @@ async def lifespan(app: FastAPI):
 
 	if admin_password:
 		user_exists = await db.execute(select(User).where(User.username == "Admin"))
-
 		if not user_exists.scalars().first():
-
 			try:
 				await UserService.register_new_user(db, username="Admin", password=admin_password.strip(), role="admin", gdpr_consent=True)
+				await LogService.create_log(
+					username="Admin",
+					action=LogAction.REGISTER_SUCCESS,
+					description="✅ Администратор успешно создан.",
+					log_level=LogLevelEnum.INFO
+				)
 			except HTTPException as e:
+				await LogService.create_log(
+					username="Admin",
+					action=LogAction.REGISTER_FAILED,
+					description=f"⚠️ Не удалось создать админа: {e.detail}",
+					log_level=LogLevelEnum.ERROR
+				)
 				raise
+	await cleanup_old_logs()
 	session_factory = get_async_session_factory
 	app.state.session_factory = session_factory
-	# Запуск трекеров для активных пользователей
 	app.state.settings = settings
 	await asyncio.sleep(1)
 	yield # Точка, где приложение начинает работать

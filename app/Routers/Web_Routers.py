@@ -146,22 +146,6 @@ async def delete_own_account(request: Request,
                              user: User = Depends(get_current_user)):
 	if not user or not hasattr(user, 'id'):
 		return RedirectResponse(url="/login")
-	if hasattr(request.app.state, 'trackers') and user.id in request.app.state.trackers:
-		data = request.app.state.trackers[user.id]
-		tracker_instance = data['tracker']
-		start_task = data['start_task']
-		# 1. Останавливаем сам трекер
-		await tracker_instance.stop()
-		# 2. Отменяем задачу (на случай, если она зависла)
-		if not start_task.done():
-			start_task.cancel()
-			try:
-				await start_task
-			except asyncio.CancelledError:
-				pass # Ошибка отмены задачи — это нормально
-		# 3. Удаляем трекер из словаря состояния
-		del request.app.state.trackers[user.id]
-
 	db_manager = get_async_db()
 	async with (db_manager as db):
 		success, message  = await UserService.web_delete_user(db, user)

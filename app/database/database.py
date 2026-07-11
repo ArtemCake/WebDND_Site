@@ -15,9 +15,23 @@ engine = create_async_engine(
 	max_overflow=20
 )
 
+engine_logs = create_async_engine(
+	ASYNC_SQLALCHEMY_DATABASE_URL,
+	echo=True, # Показывает SQL запросы в консоли (удобно для отладки)
+	pool_size=10,
+	max_overflow=20
+)
+
 # Фабрика сессий
 AsyncSessionLocal = async_sessionmaker(
 	bind=engine,
+	class_=AsyncSession,
+	expire_on_commit=False,
+	future=True
+)
+
+AsyncSessionLogsLocal = async_sessionmaker(
+	bind=engine_logs,
 	class_=AsyncSession,
 	expire_on_commit=False,
 	future=True

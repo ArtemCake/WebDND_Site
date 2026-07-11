@@ -1,8 +1,8 @@
 # web/services/auth_service.py
 
-from web.imports.imports import (timedelta)
-from web.core.security import create_access_token
-from web.repositories.user_repository import authenticate_user
+from Config.imports import (timedelta)
+from app.core.security import create_access_token
+from app.repositories.user_repository import authenticate_user
 
 class AuthService:
     @staticmethod

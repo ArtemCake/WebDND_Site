@@ -1,8 +1,10 @@
 # web/services/user_service.py
 
-from Config.imports import (IntegrityError, HTTPException, AsyncSession)
+from Config.imports import (IntegrityError, AsyncSession)
+from app.enums.log_enums import LogAction, LogLevelEnum
 from app.repositories.user_repository import create_user as create_user_db, get_user_by_username, authenticate_user, delete_user
 from app.core.security import get_password_hash
+from app.services.log_service import LogService
 
 
 class UserService:
@@ -24,6 +26,12 @@ class UserService:
             return True, "Пользователь успешно создан."
         except IntegrityError as error:
             # На случай, если проверка на уникальность в БД не сработала
+            await LogService.create_log(
+                username=username,
+                action=LogAction.REGISTER_FAILED,
+                description=f"Системная ошибка: {error}",
+                log_level=LogLevelEnum.ERROR
+            )
             return False, f"Ошибка при создании пользователя: {error}"
 
     @staticmethod
@@ -38,8 +46,14 @@ class UserService:
                 return True, "", user
             else:
                 return False, "Ошибка при авторизации пользователя. Неверное имя пользователя или пароль.", None
-        except IntegrityError as e:
+        except IntegrityError as error:
             # На случай, если проверка на уникальность в БД не сработала
+            await LogService.create_log(
+                username=username,
+                action=LogAction.LOGIN_FAILED,
+                description=f"Системная ошибка: {error}",
+                log_level=LogLevelEnum.ERROR
+            )
             return False, "Ошибка при авторизации пользователя. Непредвиденная ошибка при попытке авторизации", None
 
     @staticmethod
@@ -51,6 +65,12 @@ class UserService:
             await delete_user(db, user)
             return True, "Аккаунт успешно удален"
         except Exception as error:
+            await LogService.create_log(
+                username=user.username,
+                action=LogAction.USER_DELETE_FAILED,
+                description=f"Системная ошибка: {error}",
+                log_level=LogLevelEnum.ERROR
+            )
             return False, f"Ошибка при удалении пользователя: {error}"
 
 

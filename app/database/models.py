@@ -1,8 +1,9 @@
 # app/database/models.py
 
-from Config.imports import (Column, Integer, String, Text, Boolean, Enum,
-                            DateTime, func, relationship, ForeignKey)
+from Config.imports import (Column, Integer, String, Text, Boolean, Enum, SQLEnum,
+                            DateTime, func, relationship, ForeignKey, datetime)
 from app.database.database import Base
+from app.enums.log_enums import LogLevelEnum, LogAction
 from app.enums.user_enums import Role_enums
 
 
@@ -34,7 +35,59 @@ class Character(Base):
 	def __repr__(self):
 		return f"<Character(id={id}, name='{self.name}', lvl={self.level})>"
 
-# --- МОДЕЛЬ ПОЛЬЗОВАТЕЛЯ ---
+class UserLog(Base):
+	"""
+	Таблица для логирования действий пользователей.
+	Хранит информацию о том, кто, что и когда сделал.
+	"""
+	__tablename__ = "user_logs"
+
+	id = Column(Integer, primary_key=True, index=True)
+	user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+	action = Column(
+		SQLEnum(LogAction, literal_bindparam=True),
+		nullable=False,
+		index=True
+	)
+	description = Column(Text, nullable=True)   # Подробности, например: "Создал пресет 'Стандартный'"
+	log_level = Column(
+		SQLEnum(LogLevelEnum, literal_bindparam=True), # Используем наш Enum
+		nullable=False,
+		default=LogLevelEnum.INFO, # По умолчанию лог будет информационным
+		index=True # Создаем индекс для быстрой фильтрации
+	)
+	timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+	created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+	# Связь с пользователем
+	user = relationship("User", back_populates="logs")
+	def __repr__(self):
+		return f"<user_logs(user_id='{self.user_id}', log_level='{self.log_level}')>"
+
+class AppLog(Base):
+	"""
+	Таблица для хранения системных логов и действий пользователей.
+	В отличие от UserLog, здесь хранится username, а не user_id, чтобы логировать
+	события регистрации и входа, когда пользователя в БД еще нет или он не авторизован.
+	"""
+	__tablename__ = "app_logs"
+
+	id = Column(Integer, primary_key=True, index=True)
+	username = Column(String(50), nullable=True, index=True)
+	action = Column(
+		SQLEnum(LogAction, literal_bindparam=True),
+		nullable=False,
+		index=True
+	)
+	description = Column(Text, nullable=True)   # Подробности
+	timestamp = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+	log_level = Column(
+		SQLEnum(LogLevelEnum, literal_bindparam=True), # Используем наш Enum
+		nullable=False,
+		default=LogLevelEnum.INFO, # По умолчанию лог будет информационным
+		index=True # Создаем индекс для быстрой фильтрации
+	)
+
 class User(Base):
 	__tablename__ = "users"
 
@@ -54,6 +107,10 @@ class User(Base):
 	characters = relationship("Character", back_populates="user",
 	                          foreign_keys="Character.user_id",
 	                          passive_deletes=True)
+
+	logs = relationship("UserLog", back_populates="user",
+	                    order_by=UserLog.timestamp.desc()
+	                    , passive_deletes=True)
 
 	def __repr__(self):
 		return f"<User(username='{self.username}', role='{self.role}')>"
