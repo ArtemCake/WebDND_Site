@@ -1,4 +1,4 @@
-# app/database/models.py
+# app/enums/user_enums.py
 
 from Config.imports import enum
 

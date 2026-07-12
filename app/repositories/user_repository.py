@@ -1,4 +1,4 @@
-# web/repositories/user_repository.py
+# app/repositories/user_repository.py
 
 from Config.imports import (AsyncSession, select, HTTPException)
 from app.database.models import User

@@ -14,6 +14,7 @@ from markupsafe import Markup
 from jose import JWTError, jwt
 from enum import Enum as PyEnum
 from argon2 import PasswordHasher
+from typing import ClassVar, Dict
 from fastapi import FastAPI, Request
 from fastapi.routing import APIRoute
 from fastapi import Form as DefaultForm
@@ -35,6 +36,7 @@ from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError, ProgrammingError
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy import (func, select, Column, Integer, cast, String, Boolean, Text, Enum,
+                        Table, Float, JSON, SmallInteger, CheckConstraint,
                         LargeBinary, DateTime, ForeignKey, UniqueConstraint, delete, text, update)
 from fastapi import FastAPI, Request, status, UploadFile, APIRouter, Depends, HTTPException, Form, File
 

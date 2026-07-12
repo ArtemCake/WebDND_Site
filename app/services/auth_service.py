@@ -1,4 +1,4 @@
-# web/services/auth_service.py
+# app/services/auth_service.py
 
 from Config.imports import (timedelta)
 from app.core.security import create_access_token

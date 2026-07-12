@@ -1,4 +1,4 @@
-# web/services/log_service.py
+# app/services/log_service.py
 
 from Config.imports import logging
 from app.database.models import UserLog, AppLog

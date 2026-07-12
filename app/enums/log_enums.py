@@ -1,4 +1,4 @@
-# web/enums/log_actions.py
+# app/enums/log_enums.py
 
 from Config.imports import enum
 
@@ -45,8 +45,6 @@ class LogLevelEnum(enum.Enum):
 	ERROR = "error"
 	CRITICAL = "critical"
 	DEBUG = "debug"
-
-
 	def __str__(self) -> str:
 		"""Позволяет использовать f-строки и print() для получения значения."""
 		return self.value

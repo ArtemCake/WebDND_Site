@@ -1,4 +1,4 @@
-# web/services/user_service.py
+# app/services/user_service.py
 
 from Config.imports import (IntegrityError, AsyncSession)
 from app.enums.log_enums import LogAction, LogLevelEnum

@@ -37,6 +37,7 @@ WebDND_Site/
 │   │   └── [24]dependencies.py
 │   ├── enums/
 │   │   ├── [25]log_enums.py
+│   │   ├── [56]person_enums.py
 │   │   └── [26]user_enums.py
 │   ├── repositories/
 │   │   └── [27]user_repository.py

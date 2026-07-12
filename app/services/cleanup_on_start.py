@@ -1,4 +1,4 @@
-# web/tasks/cleanup_on_start.py
+# app/services/cleanup_on_start.py
 
 from Config.imports import datetime, timedelta, delete
 from app.database.session import get_async_logs_db

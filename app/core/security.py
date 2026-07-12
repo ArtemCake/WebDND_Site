@@ -1,4 +1,4 @@
-# web/core/security.py
+# app/core/security.py
 
 from Config.imports import (CryptContext, timedelta, URLSafeTimedSerializer, datetime, jwt, JWTError, PasswordHasher)
 from Config.Config import settings

@@ -1,4 +1,4 @@
-# web/core/dependencies.py
+# app/core/dependencies.py
 
 from Config.imports import (OAuth2PasswordBearer, Request, Depends,
                                  HTTPException, status, JWTError, select, selectinload, Form, DefaultForm)
