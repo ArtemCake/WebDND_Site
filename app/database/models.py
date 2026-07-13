@@ -385,11 +385,24 @@ class Character(Base):
 		lazy="select",
 		backref="controller"
 	)
+	# --- НОВЫЕ ПОЛЯ ДЛЯ ПРОГРЕССИИ ---
+	total_experience_points = Column(Integer, default=0) # Итоговое число XP (денормализация для скорости)
+	# История уровней (мультикласс)
+	level_history = relationship("CharacterLevel", back_populates="character", cascade="all, delete-orphan", order_by="CharacterLevel.level_number")
+	# Логи получения опыта
+	xp_logs = relationship("ExperienceLog", back_populates="character", lazy="select")
+
+	@property
+	def current_level(self):
+		"""Свойство для быстрого доступа к текущему уровню"""
+		if not self.level_history:
+			return 0
+		return max(level.level_number for level in self.level_history)
 
 	def __repr__(self):
 		bg_name = self.background.name if self.background else "None"
 		org_name = self.organization.name if self.organization else "None"
-		return f"<Character(name='{self.name}', bg='{bg_name}', org='{org_name}')>"
+		return f"<Character(name='{self.name}', lvl={self.current_level}, xp={self.total_experience_points})>"
 
 # --- ВСПОМОГАТЕЛЬНЫЕ МОДЕЛИ ДАННЫХ ПЕРСОНАЖА ---
 
@@ -428,6 +441,52 @@ class SkillProficiency(Base):
 	def __repr__(self):
 		status = "Expert" if self.is_expertise else ("Yes" if self.proficient else "No")
 		return f"<SkillProf(char_id={self.character_id}, skill='{self.skill.slug}', prof={status})>"
+
+class CharacterLevel(Base):
+	"""
+	История уровней персонажа. Позволяет хранить данные о том, на каком этапе
+	был взят конкретный класс/подкласс и сколько костей хитов было получено.
+	Это решает проблему пересчета HP при изменении прошлых уровней.
+	"""
+	__tablename__ = "character_levels"
+	id = Column(Integer, primary_key=True, index=True)
+
+	character_id = Column(Integer, ForeignKey('characters.id', ondelete="CASCADE"), nullable=False, index=True)
+	class_id = Column(Integer, ForeignKey('classes.id'), nullable=False, index=True)
+	subclass_id = Column(Integer, ForeignKey('subclasses.id'), nullable=True, index=True)
+	level_number = Column(SmallInteger, nullable=False) # 1, 2, 3...
+	experience_at_level = Column(Integer, nullable=False) # Сколько XP было у чара в момент взятия этого уровня
+	hit_dice_collected_json = Column(JSON, nullable=False) # {"d8": 1} - какие кости кинул/собрал на этом уровне
+	features_unlocked_json = Column(JSON, nullable=True) # Какие черты открыл именно на этом уровне
+	created_at = Column(DateTime(timezone=True), server_default=func.now())
+	character = relationship("Character", back_populates="level_history")
+	dnd_class = relationship("DnDClass")
+	subclass = relationship("Subclass")
+	__table_args__ = (
+		UniqueConstraint('character_id', 'level_number', name='uq_character_level_num'),
+	)
+
+	def __repr__(self):
+		sub_name = f", {self.subclass.name}" if self.subclass else ""
+		return f"<CharLvl(char={self.character_id}, cls={self.dnd_class.name}{sub_name}, lvl={self.level_number})>"
+
+class ExperienceLog(Base):
+	"""Журнал начисления опыта. Нужен для аудита: за что дали опыт."""
+	__tablename__ = "experience_logs"
+	id = Column(Integer, primary_key=True, index=True)
+	character_id = Column(Integer, ForeignKey('characters.id', ondelete="CASCADE"), nullable=False, index=True)
+	session_id = Column(Integer, ForeignKey('sessions.id', ondelete="SET NULL"), nullable=True, index=True)
+	amount = Column(Integer, nullable=False) # +50, +300 xp
+	reason = Column(String(200), nullable=False) # "Убийство гоблина", "Решение загадки"
+	source_type = Column(String(30), nullable=True) # monster, quest, dm_bonus
+	source_id = Column(Integer, nullable=True) # ID монстра или квеста
+	awarded_at = Column(DateTime(timezone=True), server_default=func.now())
+	character = relationship("Character", back_populates="xp_logs")
+	session = relationship("Session") # Связь будет работать после создания таблицы Session
+
+	def __repr__(self):
+		src = f"{self.source_type}:{self.source_id}" if self.source_type else "Manual"
+		return f"<XPLog(char={self.character_id}, amt={self.amount}, src={src})>"
 
 # --- КЛАССЫ, РАСЫ, ЗАКЛИНАНИЯ, ПРЕДМЕТЫ ---
 
@@ -591,8 +650,6 @@ class Equipment(Base):
 		primaryjoin=(id == container_items.c.container_equipment_id),
 		secondaryjoin=(id == container_items.c.item_equipment_id),
 		lazy="select", backref="parent_container")
-	slot = relationship("EquipmentSlot", back_populates="equipment")
-	item = relationship("Item", back_populates="equipment_instances")
 
 	def __repr__(self):
 		owner = f"char_id={self.character_id}" if self.character_id else "storage"
@@ -611,3 +668,53 @@ class Condition(Base):
 
 	def __repr__(self):
 		return f"<Condition(name='{self.name}', slug='{self.slug}')>"
+
+#КОМПАНИИ
+
+class Campaign(Base):
+	"""Кампания / Мир (аналог Ruleset, но с сюжетом)"""
+	__tablename__ = "campaigns"
+	id = Column(Integer, primary_key=True, index=True)
+	name = Column(String(100), nullable=False, unique=True)
+	description = Column(Text, nullable=True)
+	dm_id = Column(Integer, ForeignKey('users.id', ondelete="SET NULL"), nullable=True, index=True)
+	is_active = Column(Boolean(), default=True)
+	homebrew_rules_json = Column(JSON, nullable=True)
+	starting_date = Column(DateTime(timezone=True), nullable=True)
+	sessions = relationship("Session", back_populates="campaign", cascade="all, delete-orphan")
+	characters = relationship("CampaignCharacter", back_populates="campaign", cascade="all, delete-orphan")
+
+	def __repr__(self):
+		return f"<Campaign(name='{self.name}', active={self.is_active})>"
+
+class Session(Base):
+	"""Игровая сессия (встреча)"""
+	__tablename__ = "sessions"
+	id = Column(Integer, primary_key=True, index=True)
+	campaign_id = Column(Integer, ForeignKey('campaigns.id', ondelete="CASCADE"), nullable=False, index=True)
+	date_played = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+	summary = Column(Text, nullable=True)
+	campaign = relationship("Campaign", back_populates="sessions")
+
+	def __repr__(self):
+		return f"<Session(id='{self.id}', date='{self.date_played.date()}')>"
+
+class CampaignCharacter(Base):
+	"""Привязка конкретного персонажа к конкретной кампании"""
+	__tablename__ = "campaign_characters"
+	id = Column(Integer, primary_key=True, index=True)
+	campaign_id = Column(Integer, ForeignKey('campaigns.id', ondelete="CASCADE"), nullable=False, index=True)
+	character_id = Column(Integer, ForeignKey('characters.id', ondelete="CASCADE"), nullable=False, index=True)
+	role_description = Column(String(100), nullable=True)
+	death_date = Column(DateTime(timezone=True), nullable=True)
+	reputation_points = Column(Integer, default=0)
+	status = Column(String(20), default='active')
+	joined_at = Column(DateTime(timezone=True), server_default=func.now())
+	campaign = relationship("Campaign", back_populates="characters")
+	character = relationship("Character")
+	__table_args__ = (
+		UniqueConstraint('campaign_id', 'character_id', name='uq_campaign_character'),
+	)
+
+	def __repr__(self):
+		return f"<CampChar(camp={self.campaign_id}, char={self.character_id}, status={self.status})>"
