@@ -1,0 +1,27 @@
+<!-- templates/races_list.html -->
+{% extends "base.html" %}
+{% import "_macros/card.html" as cards %}
+
+{% block title %}Справочник Рас{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+	<h2>Список Рас</h2>
+	<!-- Кнопка добавления (для админа позже) -->
+	{% if current_user.role.name == 'admin' %}
+	<a href="#" class="btn btn-primary">+ Добавить расу</a>
+	{% endif %}
+</div>
+
+<div class="row row-cols-1 row-cols-md-3 g-4">
+	{% for race in races %}
+	<div class="col">
+		{{ cards.card(race, link_prefix='race_view', image_path='images/races/' ~ race.name|lower ~ '.png') }}
+	</div>
+	{% else %}
+	<div class="col-12">
+		<div class="alert alert-info">В базе данных пока нет ни одной расы.</div>
+	</div>
+	{% endfor %}
+</div>
+{% endblock %}

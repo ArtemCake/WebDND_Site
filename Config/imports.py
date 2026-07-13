@@ -14,9 +14,9 @@ from markupsafe import Markup
 from jose import JWTError, jwt
 from enum import Enum as PyEnum
 from argon2 import PasswordHasher
-from typing import ClassVar, Dict
 from fastapi import FastAPI, Request
 from fastapi.routing import APIRoute
+from sqlalchemy.types import SchemaType
 from fastapi import Form as DefaultForm
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
@@ -26,9 +26,11 @@ from sqlalchemy import Enum as SQLEnum, desc
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
 from itsdangerous import URLSafeTimedSerializer
+from typing import Optional, Any, Dict, ClassVar
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse
+from sqlalchemy.dialects.postgresql import ENUM as PG_ENUM
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from sqlalchemy.orm import selectinload, declarative_base, relationship
@@ -39,5 +41,3 @@ from sqlalchemy import (func, select, Column, Integer, cast, String, Boolean, Te
                         Table, Float, JSON, SmallInteger, CheckConstraint,
                         LargeBinary, DateTime, ForeignKey, UniqueConstraint, delete, text, update)
 from fastapi import FastAPI, Request, status, UploadFile, APIRouter, Depends, HTTPException, Form, File
-
-

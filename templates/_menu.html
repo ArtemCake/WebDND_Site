@@ -14,10 +14,13 @@
 						👤 {{ user.username }}
 					</a>
 					<ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownUser">
-						<li><a class="dropdown-item" href="#">📋 Мои персонажи</a></li>
 						<li><a class="dropdown-item" href="#">⚙️ Настройки профиля</a></li>
+						<li><a class="dropdown-item" href="#">📋 Мои персонажи</a></li>
+						<li class="nav-item"><a class="nav-link" href="#">Расы</a></li>
+						<li class="nav-item"><a class="nav-link" href="#">Классы</a></li>
+						<li class="nav-item"><a class="nav-link" href="#">Заклинания</a></li>
+						<li class="nav-item"><a class="nav-link" href="#">Предметы</a></li>
 						<li><hr class="dropdown-divider"></li>
-						
 						<!-- Только для админов -->
 						{% if user.role == "admin" %}
 						<li><span class="dropdown-header">Администрирование</span></li>

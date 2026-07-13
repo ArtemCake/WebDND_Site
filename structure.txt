@@ -38,6 +38,7 @@ WebDND_Site/
 │   ├── enums/
 │   │   ├── [25]log_enums.py
 │   │   ├── [56]person_enums.py
+│   │   ├── [59]db_enums.py
 │   │   └── [26]user_enums.py
 │   ├── repositories/
 │   │   └── [27]user_repository.py
@@ -78,9 +79,11 @@ WebDND_Site/
     ├── admin/
     │
     ├── _macros/
+    │     ├── [57]card.html
     │     └── [47]cookieBaner.html
     ├── [48]_menu.html
     ├── [49]document.html
+    ├── [58]races_list.html
     ├── [50]login.html
     ├── [51]register.html
     ├── [52]Base.html

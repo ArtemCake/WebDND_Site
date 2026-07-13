@@ -1,0 +1,28 @@
+{# templates/_macros/card.html #}
+{% macro card(entity, link_prefix="", image_path=None) %}
+<div class="card mb-3 shadow-sm">
+	<div class="row g-0 align-items-center">
+		{% if image_path %}
+		<div class="col-md-4 d-flex justify-content-center align-items-center bg-light p-3">
+			<img src="{{ url_for('static', filename=image_path) }}"
+			     class="img-fluid rounded" alt="{{ entity.name }} illustration" style="max-height: 150px; object-fit: contain;">
+		</div>
+		{% endif %}
+		<div class="col-md-8">
+			<div class="card-body">
+				<h5 class="card-title">{{ entity.name }}</h5>
+				{% if entity.description and entity.description|length > 100 %}
+				<p class="card-text text-muted small">{{ entity.description[:200] }}...</p>
+				{% elif entity.description %}
+				<p class="card-text text-muted small">{{ entity.description }}</p>
+				{% else %}
+				<p class="text-muted fst-italic small">Описание отсутствует.</p>
+				{% endif %}
+				<a href="{{ url_for(link_prefix + '_view', id=entity.id) }}" class="btn btn-primary btn-sm stretched-link">
+					Подробнее
+				</a>
+			</div>
+		</div>
+	</div>
+</div>
+{% endmacro %}
