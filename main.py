@@ -1,4 +1,4 @@
-# main.py
+# API_Routers.py
 
 from Config.imports import (FastAPI, asynccontextmanager, asyncio, CORSMiddleware, HTTPException, select,
                                  StaticFiles, Jinja2Templates, base64, RequestValidationError, Request,
@@ -6,7 +6,7 @@ from Config.imports import (FastAPI, asynccontextmanager, asyncio, CORSMiddlewar
 from Config.Config import settings
 from app.database.session import get_async_db, get_async_session_factory
 from app.database.database import engine, metadata
-import app.Routers.main as api_module
+import app.Routers.API_Routers as api_module
 import app.Routers.Web_Routers as web_module
 from app.enums.log_enums import LogAction, LogLevelEnum
 from app.services.cleanup_on_start import cleanup_old_logs
