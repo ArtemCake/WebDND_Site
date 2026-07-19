@@ -33,11 +33,11 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy.dialects.postgresql import ENUM as PG_ENUM
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from sqlalchemy.orm import selectinload, declarative_base, relationship
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError, ProgrammingError
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy import (func, select, Column, Integer, cast, String, Boolean, Text, Enum,
-                        Table, Float, JSON, SmallInteger, CheckConstraint,
-                        LargeBinary, DateTime, ForeignKey, UniqueConstraint, delete, text, update)
+from sqlalchemy import (func, select, Column, Integer, cast, String, Boolean, Text, Enum, Table,
+                        Float, JSON, SmallInteger, CheckConstraint, LargeBinary, DateTime, ForeignKey,
+                        UniqueConstraint, delete, text, update)
 from fastapi import FastAPI, Request, status, UploadFile, APIRouter, Depends, HTTPException, Form, File
+from sqlalchemy.orm import selectinload, declarative_base, relationship, Mapped, mapped_column, backref

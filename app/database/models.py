@@ -1,14 +1,18 @@
-# app/database/models.py
-
-from Config.imports import (DateTime, func, SQLEnum, Enum, Float, UniqueConstraint,
+from Config.imports import (
+	DateTime, func, SQLEnum, Enum, Float, UniqueConstraint,
 	Column, Integer, String, Text, Boolean, ForeignKey, SmallInteger,
-	relationship, Table, JSON, datetime)
+	relationship, Table, JSON, datetime, Mapped, mapped_column, backref
+)
 from app.database.database import Base
 from app.enums.db_enums import EntityTypeEnum
 from app.enums.log_enums import LogLevelEnum, LogAction
 from app.enums.user_enums import Role_enums
-from app.enums.person_enums import (ItemCategory, ProtectionType, MagicItemRarity)
+from app.enums.person_enums import ItemCategory, ProtectionType, MagicItemRarity
 
+
+# =============================================================================
+# БЛОК 1: ИМПОРТЫ, M2M-ТАБЛИЦЫ, ЛОГИРОВАНИЕ, ПОЛЬЗОВАТЕЛИ
+# =============================================================================
 
 # --- СВЯЗИ МНОГИХ-КО-МНОГИМ ДЛЯ ПЕРСОНАЖА ---
 
@@ -38,25 +42,23 @@ character_items = Table(
 	Column('equipped', Boolean(), default=False)
 )
 
-# Значения характеристик конкретного персонажа (связь с таблицей ability_types)
-character_abilities = Table(
-	'character_abilities',
+character_abilities_m2m = Table(
+	'character_abilities_m2m',
 	Base.metadata,
 	Column('character_id', Integer, ForeignKey('characters.id', ondelete="CASCADE"), primary_key=True),
 	Column('ability_type_id', Integer, ForeignKey('ability_types.id'), primary_key=True),
 	Column('score', SmallInteger, nullable=False, default=8),
-	UniqueConstraint('character_id', 'ability_type_id', name='uq_character_ability')
+	UniqueConstraint('character_id', 'ability_type_id', name='uq_character_ability_m2m')
 )
 
-# Владение навыками конкретным персонажем
-skill_proficiencies = Table(
-	'skill_proficiencies',
+skill_proficiencies_m2m = Table(
+	'skill_proficiencies_m2m',
 	Base.metadata,
 	Column('character_id', Integer, ForeignKey('characters.id', ondelete="CASCADE"), primary_key=True),
 	Column('skill_id', Integer, ForeignKey('skills.id'), primary_key=True),
-	Column('is_expertise', Boolean(), default=False), # Экспертиза (двойной бонус)
-	Column('proficient', Boolean(), default=True),   # Просто владение
-	UniqueConstraint('character_id', 'skill_id', name='uq_character_skill')
+	Column('is_expertise', Boolean(), default=False),
+	Column('proficient', Boolean(), default=True),
+	UniqueConstraint('character_id', 'skill_id', name='uq_character_skill_m2m')
 )
 
 character_feats = Table(
@@ -81,24 +83,39 @@ character_equipment = Table(
 	Column('character_id', Integer, ForeignKey('characters.id', ondelete="CASCADE"), primary_key=True),
 	Column('equipment_id', Integer, ForeignKey('equipment.id'), primary_key=True),
 	Column('quantity', SmallInteger, nullable=False, default=1),
-	Column('is_attuned', Boolean(), default=False), # Для магических предметов
+	Column('is_attuned', Boolean(), default=False),
 	Column('attunement_slots_used', SmallInteger, default=0),
 	Column('equipped', Boolean(), default=False),
 	UniqueConstraint('character_id', 'equipment_id', name='uq_character_equipment')
 )
 
-# Связь контроля: какой персонаж кем управляет (фамильяры, нежить, наемники)
 character_allies = Table(
 	'character_allies',
 	Base.metadata,
 	Column('owner_character_id', Integer, ForeignKey('characters.id', ondelete="CASCADE"), primary_key=True),
 	Column('ally_character_id', Integer, ForeignKey('characters.id', ondelete="CASCADE"), primary_key=True),
-	Column('control_type', String(20), nullable=False, default='summon'), # summon, companion, hireling
+	Column('control_type', String(20), nullable=False, default='summon'),
 	Column('is_permanent', Boolean(), default=False),
 	UniqueConstraint('owner_character_id', 'ally_character_id', name='uq_owner_ally')
 )
 
-# Вложенность предметов: что лежит внутри сумки или рюкзака
+character_conditions = Table(
+	'character_conditions',
+	Base.metadata,
+	Column('character_id', Integer, ForeignKey('characters.id', ondelete="CASCADE"), primary_key=True),
+	Column('condition_id', Integer, ForeignKey('conditions.id'), primary_key=True),
+	Column('source_character_id', Integer, ForeignKey('characters.id', ondelete="SET NULL"), nullable=True),
+	Column('source_spell_id', Integer, ForeignKey('spells.id', ondelete="SET NULL"), nullable=True),
+	Column('duration_type', String(20), default='instant'),
+	Column('duration_value', Integer, nullable=True),
+	Column('remaining_duration', Integer, nullable=True),
+	Column('concentration_required', Boolean(), default=False),
+	Column('is_active', Boolean(), default=True),
+	Column('stackable', Boolean(), default=False),
+	Column('applied_at', DateTime(timezone=True), server_default=func.now()),
+	UniqueConstraint('character_id', 'condition_id', 'source_spell_id', name='uq_char_cond_source')
+)
+
 container_items = Table(
 	'container_items',
 	Base.metadata,
@@ -107,31 +124,48 @@ container_items = Table(
 	Column('quantity', SmallInteger, nullable=False, default=1)
 )
 
-# Связь состояний: какие эффекты наложены на персонажа (Poisoned, Bless, Prone)
-character_conditions = Table(
-	'character_conditions',
-	Base.metadata,
-	Column('character_id', Integer, ForeignKey('characters.id', ondelete="CASCADE"), primary_key=True),
-	Column('condition_id', Integer, ForeignKey('conditions.id'), primary_key=True),
-	Column('source_character_id', Integer, ForeignKey('characters.id', ondelete="SET NULL"), nullable=True), # Кто наложил эффект
-	Column('source_spell_id', Integer, ForeignKey('spells.id', ondelete="SET NULL"), nullable=True),
-	Column('duration_type', String(20), default='instant'), # instant, turn, minute, hour, permanent
-	Column('duration_value', Integer, nullable=True), # Например, число раундов или кубик (1d6+3)
-	Column('remaining_duration', Integer, nullable=True),
-	Column('concentration_required', Boolean(), default=False),
-	Column('is_active', Boolean(), default=True),
-	Column('stackable', Boolean(), default=False), # Можно ли накладывать дважды (Bless от разных кастеров не стакается)
-	Column('applied_at', DateTime(timezone=True), server_default=func.now()),
-	UniqueConstraint('character_id', 'condition_id', 'source_spell_id', name='uq_char_cond_source')
-)
-
-# Ассортимент магазинов: цена конкретного предмета у конкретного торговца
 shop_inventory = Table(
 	'shop_inventory',
 	Base.metadata,
 	Column('equipment_id', Integer, ForeignKey('equipment.id', ondelete="CASCADE"), primary_key=True),
-	Column('price_cp', Integer, nullable=False) # Цена в медных монетах конкретно для этого торговца
+	Column('price_cp', Integer, nullable=False)
 )
+
+# Дополнительные M2M-таблицы для связей с DamageType
+spell_damage_types = Table(
+	'spell_damage_types',
+	Base.metadata,
+	Column('spell_id', Integer, ForeignKey('spells.id', ondelete="CASCADE"), primary_key=True),
+	Column('damage_type_id', Integer, ForeignKey('damage_types.id', ondelete="CASCADE"), primary_key=True),
+	UniqueConstraint('spell_id', 'damage_type_id', name='uq_spell_damage_type')
+)
+
+equipment_damage_types = Table(
+	'equipment_damage_types',
+	Base.metadata,
+	Column('equipment_id', Integer, ForeignKey('equipment.id', ondelete="CASCADE"), primary_key=True),
+	Column('damage_type_id', Integer, ForeignKey('damage_types.id', ondelete="CASCADE"), primary_key=True),
+	UniqueConstraint('equipment_id', 'damage_type_id', name='uq_equip_damage_type')
+)
+
+monster_damage_types = Table(
+	'monster_damage_types',
+	Base.metadata,
+	Column('monster_action_id', Integer, ForeignKey('monster_actions.id', ondelete="CASCADE"), primary_key=True),
+	Column('damage_type_id', Integer, ForeignKey('damage_types.id', ondelete="CASCADE"), primary_key=True),
+	UniqueConstraint('monster_action_id', 'damage_type_id', name='uq_monster_damage_type')
+)
+
+character_saving_throws = Table(
+	'character_saving_throws',
+	Base.metadata,
+	Column('character_id', Integer, ForeignKey('characters.id', ondelete="CASCADE"), primary_key=True),
+	Column('ability_type_id', Integer, ForeignKey('ability_types.id', ondelete="CASCADE"), primary_key=True),
+	Column('is_proficient', Boolean(), default=False),
+	UniqueConstraint('character_id', 'ability_type_id', name='uq_char_saving_throw')
+)
+
+# --- ЛОГИРОВАНИЕ И ПОЛЬЗОВАТЕЛИ ---
 
 class UserLog(Base):
 	__tablename__ = "user_logs"
@@ -171,52 +205,682 @@ class User(Base):
 	characters = relationship("Character", back_populates="user", foreign_keys="Character.user_id", passive_deletes=True)
 	logs = relationship("UserLog", back_populates="user", order_by=UserLog.timestamp.desc(), passive_deletes=True)
 	rules_created = relationship("Ruleset", back_populates="owner", foreign_keys="Ruleset.owner_id")
+	homebrew_entities = relationship("HomebrewEntity", back_populates="creator", foreign_keys="HomebrewEntity.creator_id", passive_deletes=True)
 
 	def __repr__(self):
 		return f"<User(username='{self.username}', role='{self.role}')>"
 
-# --- СПРАВОЧНИКИ СУЩНОСТЕЙ (Вариативные данные) ---
+
+# =============================================================================
+# БЛОК 2: ПРАВИЛА, РАСЫ, КЛАССЫ, ЗАКЛИНАНИЯ, ПРЕДМЕТЫ
+# =============================================================================
+
+class CalculationField(Base):
+	"""
+	Справочник всех динамически рассчитываемых полей персонажа или существа.
+	Позволяет правилам ссылаться на конкретные данные по ID, а не по строке.
+	"""
+	__tablename__ = "calculation_fields"
+	id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+	entity_type: Mapped[str] = mapped_column(String(50), nullable=False)
+	field_path: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
+	display_name: Mapped[str] = mapped_column(String(100), nullable=False)
+	data_type: Mapped[str] = mapped_column(String(20), nullable=False)
+	description: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+	def __repr__(self):
+		return f"<CalcField(path='{self.field_path}', name='{self.display_name}')>"
+
+class RulesetModifier(Base):
+	"""
+	Модификаторы правил для конкретного набора правил (Ruleset).
+	Узел вычислительного графа. Определяет, КАК меняется поле из CalculationField.
+	"""
+	__tablename__ = "ruleset_modifiers"
+	id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+	ruleset_id: Mapped[int] = mapped_column(Integer, ForeignKey("rulesets.id", ondelete="CASCADE"), nullable=False, index=True)
+	calculation_field_id: Mapped[int] = mapped_column(Integer, ForeignKey("calculation_fields.id", ondelete="CASCADE"), nullable=False, index=True)
+	depends_on_modifier_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("ruleset_modifiers.id", ondelete="SET NULL"), nullable=True, index=True)
+	priority: Mapped[int] = mapped_column(SmallInteger, default=100, nullable=False)
+	modifier_type: Mapped[str] = mapped_column(String(30), nullable=False)
+	config_json: Mapped[dict] = mapped_column(JSON, nullable=False)
+	condition_json: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+	is_active: Mapped[bool] = mapped_column(Boolean(), default=True)
+	ruleset: Mapped["Ruleset"] = relationship(back_populates="modifiers")
+	target_field: Mapped["CalculationField"] = relationship()
+	depends_on: Mapped["RulesetModifier | None"] = relationship(remote_side=[id], backref="dependent_modifiers")
+
+	__table_args__ = (
+		UniqueConstraint('ruleset_id', 'calculation_field_id', 'priority', name='uq_ruleset_field_priority'),
+	)
+
+	def __repr__(self):
+		return f"<RulesetModifier(rule={self.ruleset_id}, field='{self.calculation_field_id}', type='{self.modifier_type}')>"
+
+class Ruleset(Base):
+	"""Набор правил игры (домашние правила или выбор из пресетов)"""
+	__tablename__ = "rulesets"
+	id = Column(Integer, primary_key=True, index=True)
+	owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+	parent_ruleset_id = Column(Integer, ForeignKey("rulesets.id", ondelete="SET NULL"), nullable=True, index=True)
+	name = Column(String(100), nullable=False)
+	is_public = Column(Boolean(), default=False)
+	created_at = Column(DateTime(timezone=True), server_default=func.now())
+	characters = relationship("Character", back_populates="ruleset")
+	owner = relationship("User", back_populates="rules_created", foreign_keys=[owner_id])
+	parent_ruleset = relationship("Ruleset", remote_side=[id], backref="child_rulesets")
+
+	is_custom_ruleset: Mapped[bool] = mapped_column(Boolean(), default=False, nullable=False)
+
+	modifiers: Mapped[list["RulesetModifier"]] = relationship(
+		back_populates="ruleset", cascade="all, delete-orphan", order_by="RulesetModifier.priority"
+	)
+	homebrew_entities: Mapped[list["HomebrewEntity"]] = relationship(
+		back_populates="ruleset", foreign_keys="HomebrewEntity.ruleset_id"
+	)
+
+	def __repr__(self):
+		mode = "Custom" if self.is_custom_ruleset else "Standard 5e"
+		return f"<Ruleset(id='{self.id}', name='{self.name}', mode='{mode}')>"
+
+class Race(Base):
+	"""Расы персонажей (Human, Elf, Dwarf и т.д.)"""
+	__tablename__ = "races"
+	id = Column(Integer, primary_key=True, index=True)
+	name = Column(String(100), nullable=False, unique=True)
+	slug = Column(String(100), nullable=False, unique=True, index=True)
+	size = Column(String(20), nullable=False)
+	speed = Column(SmallInteger, nullable=False, default=30)
+	languages_base = Column(JSON, nullable=True)
+	ability_bonuses_json = Column(JSON, nullable=True)
+	traits_description = Column(Text, nullable=True)
+
+	homebrew_variants = relationship("HomebrewEntity", back_populates="parent_entity",
+	                                 foreign_keys="HomebrewEntity.parent_canon_id",
+	                                 primaryjoin="and_(Race.id == HomebrewEntity.parent_canon_id, "
+	                                             "HomebrewEntity.entity_type == EntityTypeEnum.RACE)")
+
+	def __repr__(self):
+		return f"<Race(name='{self.name}')>"
+
+class Background(Base):
+	"""Предыстории персонажей (Soldier, Criminal, Sage и т.д.)"""
+	__tablename__ = "backgrounds"
+	id = Column(Integer, primary_key=True, index=True)
+	name = Column(String(100), nullable=False, unique=True)
+	slug = Column(String(100), nullable=False, unique=True, index=True)
+	skills_granted = Column(JSON, nullable=True)
+	languages_granted = Column(JSON, nullable=True)
+	tool_proficiencies = Column(JSON, nullable=True)
+	feature_name = Column(String(100), nullable=True)
+	feature_description = Column(Text, nullable=True)
+
+	def __repr__(self):
+		return f"<Background(name='{self.name}')>"
+
+class Class_(Base):
+	"""Классы персонажей (Fighter, Wizard, Rogue и т.д.)"""
+	__tablename__ = "classes"
+	id = Column(Integer, primary_key=True, index=True)
+	name = Column(String(100), nullable=False, unique=True)
+	slug = Column(String(100), nullable=False, unique=True, index=True)
+	hit_die = Column(SmallInteger, nullable=False)
+	primary_ability = Column(String(50), nullable=True)
+	saving_throw_proficiencies = Column(JSON, nullable=True)
+	armor_proficiencies = Column(JSON, nullable=True)
+	weapon_proficiencies = Column(JSON, nullable=True)
+	tools_proficiencies = Column(JSON, nullable=True)
+	multiclass_requirements_json = Column(JSON, nullable=True)
+	description = Column(Text, nullable=True)
+	subclasses = relationship("Subclass", back_populates="parent_class")
+
+	def __repr__(self):
+		return f"<Class(name='{self.name}')>"
+
+class Subclass(Base):
+	"""Подклассы (Arcane Trickster, Champion, Wild Magic Sorcerer и т.д.)"""
+	__tablename__ = "subclasses"
+	id = Column(Integer, primary_key=True, index=True)
+	parent_class_id = Column(Integer, ForeignKey("classes.id", ondelete="CASCADE"), nullable=False, index=True)
+	name = Column(String(100), nullable=False)
+	slug = Column(String(100), nullable=False, unique=True, index=True)
+	description = Column(Text, nullable=True)
+	parent_class = relationship("Class_", back_populates="subclasses")
+
+	def __repr__(self):
+		return f"<Subclass(name='{self.name}', class='{self.parent_class.name}')>"
+
+class Spell(Base):
+	"""Заклинания"""
+	__tablename__ = "spells"
+	id = Column(Integer, primary_key=True, index=True)
+	name = Column(String(100), nullable=False, unique=True)
+	slug = Column(String(100), nullable=False, unique=True, index=True)
+	level = Column(SmallInteger, nullable=False, default=0)
+	school = Column(String(30), nullable=False)
+	casting_time = Column(String(50), nullable=False)
+	range_ = Column(String(50), nullable=False)
+	components = Column(String(100), nullable=False)
+	duration = Column(String(50), nullable=False)
+	is_ritual = Column(Boolean(), default=False)
+	classes_allowed = Column(JSON, nullable=True)
+	description = Column(Text, nullable=False)
+	higher_levels = Column(Text, nullable=True)
+
+	damage_types: Mapped[list["DamageType"]] = relationship(secondary=spell_damage_types, backref="spells")
+
+	def __repr__(self):
+		return f"<Spell(name='{self.name}', level={self.level})>"
+
+class Item(Base):
+	"""Предметы (общее определение, включая оружие, броню, расходники)"""
+	__tablename__ = "items"
+	id = Column(Integer, primary_key=True, index=True)
+	name = Column(String(100), nullable=False)
+	slug = Column(String(100), nullable=False, unique=True, index=True)
+	category = Column(SQLEnum(ItemCategory, literal_bindparam=True), nullable=False)
+	rarity = Column(SQLEnum(MagicItemRarity, literal_bindparam=True), nullable=True)
+	weight = Column(Float, nullable=False, default=0.0)
+	cost_cp = Column(Integer, nullable=True)
+	description = Column(Text, nullable=True)
+	properties_json = Column(JSON, nullable=True)
+
+	def __repr__(self):
+		return f"<Item(name='{self.name}', category='{self.category.value}')>"
+
+# =============================================================================
+# БЛОК 3: ХОУМБРЮ-ДВИЖОК И ВСПОМОГАТЕЛЬНЫЕ СПРАВОЧНИКИ
+# =============================================================================
+
+class HomebrewEntity(Base):
+	"""
+	Базовая сущность для любого кастомного контента.
+	Позволяет переопределять официальные книги (PHB, DMG) или добавлять абсолютно новые сущности.
+	"""
+	__tablename__ = "homebrew_entities"
+	id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+	creator_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+	ruleset_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("rulesets.id", ondelete="SET NULL"), index=True)
+	entity_type: Mapped[EntityTypeEnum] = mapped_column(SQLEnum(EntityTypeEnum, literal_bindparam=True), nullable=False, index=True)
+	name: Mapped[str] = mapped_column(String(100), nullable=False)
+	version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+	parent_canon_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+	parent_canon_type: Mapped[EntityTypeEnum | None] = mapped_column(SQLEnum(EntityTypeEnum, literal_bindparam=True), nullable=True)
+	freeform_content: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+	rules_patch: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+	is_approved: Mapped[bool] = mapped_column(Boolean(), default=False)
+	is_active: Mapped[bool] = mapped_column(Boolean(), default=True)
+	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
+
+	creator: Mapped["User"] = relationship(back_populates="homebrew_entities")
+	ruleset: Mapped["Ruleset"] = relationship(
+		back_populates="homebrew_entities",
+		foreign_keys=[ruleset_id]
+	)
+	parent_entity: Mapped["HomebrewEntity | None"] = relationship(
+		remote_side=[id],
+		backref="child_variants"
+	)
+
+	def __repr__(self):
+		status = "Active" if self.is_active else "Disabled"
+		return f"<HomebrewEntity(v{self.version}, type='{self.entity_type.value}', name='{self.name}', status='{status}')>"
 
 class AbilityType(Base):
-	"""Типы характеристик (Сила, Ловкость, Удача, Мана и т.д.)"""
+	"""Типы характеристик: 6 базовых (STR/DEX/CON/INT/WIS/CHA) + кастомные (Удача, Мана, Честь)"""
 	__tablename__ = "ability_types"
 	id = Column(Integer, primary_key=True, index=True)
-	name = Column(String(50), nullable=False, unique=True)
-	slug = Column(String(50), nullable=False, unique=True, index=True)
-	is_core = Column(Boolean(), default=False)
+	name = Column(String(50), nullable=False, unique=True) # Strength, Dexterity, Luck, Mana
+	abbreviation = Column(String(3), nullable=False, unique=True) # STR, DEX, LCK, MAN
+	is_custom = Column(Boolean(), default=False)
 	description = Column(Text, nullable=True)
-	character_abilities = relationship("CharacterAbilityValue", back_populates="type")
-	skill_mappings = relationship("SkillAbilityMap", back_populates="ability_type")
 
 	def __repr__(self):
-		return f"<AbilityType(name='{self.name}', slug='{self.slug}')>"
+		return f"<AbilityType(name='{self.name}', abbr='{self.abbreviation}')>"
 
 class Skill(Base):
-	"""Навыки (Скрытность, Акробатика, Магия)"""
+	"""Навыки: 18 базовых + кастомные (инструменты, ремёсла)"""
 	__tablename__ = "skills"
+	id = Column(Integer, primary_key=True, index=True)
+	name = Column(String(100), nullable=False, unique=True) # Stealth, Arcana, Thieves' Tools
+	slug = Column(String(100), nullable=False, unique=True, index=True)
+	linked_ability_abbr = Column(String(3), nullable=True) # DEX, INT
+	skill_category = Column(String(20), nullable=False, default='skill') # skill, tool, vehicle
+	description = Column(Text, nullable=True)
+	is_custom = Column(Boolean(), default=False)
+
+	def __repr__(self):
+		return f"<Skill(name='{self.name}', abil='{self.linked_ability_abbr}')>"
+
+class Feat(Base):
+	"""Черты (Alert, Lucky, Great Weapon Master и т.д.)"""
+	__tablename__ = "feats"
+	id = Column(Integer, primary_key=True, index=True)
+	name = Column(String(100), nullable=False, unique=True)
+	slug = Column(String(100), nullable=False, unique=True, index=True)
+	prerequisite_json = Column(JSON, nullable=True)
+	bonus_json = Column(JSON, nullable=True)
+	description = Column(Text, nullable=False)
+	is_homebrew = Column(Boolean(), default=False)
+
+	def __repr__(self):
+		return f"<Feat(name='{self.name}')>"
+
+class Language(Base):
+	"""Языки (Common, Elvish, Draconic, Thieves' Cant и т.д.)"""
+	__tablename__ = "languages"
+	id = Column(Integer, primary_key=True, index=True)
+	name = Column(String(100), nullable=False, unique=True)
+	slug = Column(String(100), nullable=False, unique=True, index=True)
+	script = Column(String(50), nullable=True)
+	is_exotic = Column(Boolean(), default=False)
+	is_secret = Column(Boolean(), default=False)
+	description = Column(Text, nullable=True)
+
+	def __repr__(self):
+		return f"<Language(name='{self.name}')>"
+
+class Condition(Base):
+	"""Состояния (Blinded, Charmed, Poisoned, Exhaustion и т.д.)"""
+	__tablename__ = "conditions"
+	id = Column(Integer, primary_key=True, index=True)
+	name = Column(String(100), nullable=False, unique=True)
+	slug = Column(String(100), nullable=False, unique=True, index=True)
+	effects_json = Column(JSON, nullable=True)
+	is_custom = Column(Boolean(), default=False)
+	description = Column(Text, nullable=True)
+
+	def __repr__(self):
+		return f"<Condition(name='{self.name}')>"
+
+class Organization(Base):
+	"""Организации/фракции (Гильдия Воров, Арфисты, Жентарим и т.д.)"""
+	__tablename__ = "organizations"
+	id = Column(Integer, primary_key=True, index=True)
+	name = Column(String(100), nullable=False, unique=True)
+	slug = Column(String(100), nullable=False, unique=True, index=True)
+	description = Column(Text, nullable=True)
+	alignment = Column(String(20), nullable=True)
+	leader_character_id = Column(Integer, ForeignKey("characters.id", ondelete="SET NULL"), nullable=True)
+	is_secret = Column(Boolean(), default=False)
+	created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+	leader = relationship("Character", foreign_keys=[leader_character_id])
+	members = relationship("Character", back_populates="organization", foreign_keys="Character.organization_id")
+
+	def __repr__(self):
+		return f"<Organization(name='{self.name}')>"
+
+class ShopVendor(Base):
+	"""Магазины/торговцы (стационарные лавки, странствующие караваны)"""
+	__tablename__ = "shops"
+	id = Column(Integer, primary_key=True, index=True)
+	owner_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+	location_id = Column(Integer, ForeignKey("locations.id", ondelete="SET NULL"), nullable=True, index=True)
+	name = Column(String(100), nullable=False)
+	slug = Column(String(100), nullable=False, unique=True, index=True)
+	shop_type = Column(String(50), nullable=False) # general, magic, weapons, armor, potions
+	description = Column(Text, nullable=True)
+	buy_markup_multiplier = Column(Float, default=1.0)
+	sell_discount_multiplier = Column(Float, default=0.5)
+	is_traveling = Column(Boolean(), default=False)
+	restock_frequency = Column(String(20), default='session')
+	gold_reserve = Column(Integer, default=0)
+
+	owner = relationship("User")
+	location = relationship("Location")
+
+	def __repr__(self):
+		return f"<ShopVendor(name='{self.name}', type='{self.shop_type}')>"
+
+# =============================================================================
+# БЛОК 4: ПЕРСОНАЖ, ХАРАКТЕРИСТИКИ, НАВЫКИ, УРОВНИ, СПАСБРОСКИ
+# =============================================================================
+
+class Character(Base):
+	"""Персонажи игроков и NPC"""
+	__tablename__ = "characters"
+	id = Column(Integer, primary_key=True, index=True)
+	user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+	ruleset_id = Column(Integer, ForeignKey("rulesets.id", ondelete="SET NULL"), nullable=True, index=True)
+	organization_id = Column(Integer, ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True, index=True)
+	race_id = Column(Integer, ForeignKey("races.id", ondelete="RESTRICT"), nullable=False, index=True)
+	background_id = Column(Integer, ForeignKey("backgrounds.id", ondelete="RESTRICT"), nullable=True, index=True)
+
+	name = Column(String(100), nullable=False)
+	slug = Column(String(100), nullable=False, unique=True, index=True)
+	character_type = Column(String(20), nullable=False, default="PC")
+	alignment = Column(String(20), default="Neutral")
+	deity = Column(String(100), nullable=True)
+	portrait_url = Column(String(255), nullable=True)
+	bio = Column(Text, nullable=True)
+	stats_json = Column(JSON, nullable=True)
+
+	experience = Column(Integer, nullable=False, default=0)
+	total_experience_points = Column(Integer, default=0)
+	proficiency_bonus = Column(SmallInteger, default=2)
+
+	level_history = relationship("CharacterLevel", back_populates="character", cascade="all, delete-orphan", order_by="CharacterLevel.level_number")
+	spell_slots: Mapped[list["SpellSlot"]] = relationship(
+		back_populates="character",
+		cascade="all, delete-orphan",
+		lazy="select"
+	)
+
+	@property
+	def current_level(self):
+		if not self.level_history:
+			return 0
+		return max(level.level_number for level in self.level_history)
+
+	user = relationship("User", back_populates="characters")
+	ruleset = relationship("Ruleset", back_populates="characters")
+	organization = relationship("Organization", back_populates="members")
+	race = relationship("Race")
+	background = relationship("Background")
+
+	abilities_detail: Mapped[list["CharacterAbilityValue"]] = relationship(
+		back_populates="character", cascade="all, delete-orphan", lazy="joined"
+	)
+	skills_detail: Mapped[list["SkillProficiency"]] = relationship(
+		back_populates="character", cascade="all, delete-orphan", lazy="joined"
+	)
+	saving_throws: Mapped[list["SavingThrow"]] = relationship(
+		back_populates="character", cascade="all, delete-orphan", lazy="joined"
+	)
+	feats: Mapped[list["Feat"]] = relationship(secondary=character_feats, backref="holders")
+	languages: Mapped[list["Language"]] = relationship(secondary=character_languages, backref="speakers")
+	equipment: Mapped[list["Equipment"]] = relationship(back_populates="character", cascade="all, delete-orphan")
+	controlled_allies: Mapped[list["Character"]] = relationship(
+		secondary=character_allies,
+		primaryjoin=(character_allies.c.owner_character_id == id),
+		secondaryjoin=(character_allies.c.ally_character_id == id),
+		backref="controller",
+		lazy="select"
+	)
+	conditions: Mapped[list["Condition"]] = relationship(secondary=character_conditions, backref="active_conditions")
+
+	def __repr__(self):
+		return f"<Character(name='{self.name}', lvl={self.current_level}, xp={self.experience})>"
+
+class CharacterAbilityValue(Base):
+	"""
+	Конкретное значение характеристики у персонажа.
+	Использует таблицу-справочник ability_types для поддержки кастомных статов (Мана, Удача).
+	"""
+	__tablename__ = "character_abilities"
+	character_id = Column(Integer, ForeignKey("characters.id", ondelete="CASCADE"), primary_key=True)
+	ability_type_id = Column(Integer, ForeignKey("ability_types.id", ondelete="CASCADE"), primary_key=True)
+	score = Column(SmallInteger, nullable=False, default=8)
+	character = relationship("Character", back_populates="abilities_detail")
+	type = relationship("AbilityType")
+	__table_args__ = (
+		UniqueConstraint('character_id', 'ability_type_id', name='uq_char_ability_val'),
+	)
+
+	def __repr__(self):
+		return f"<CharAbility(char={self.character_id}, abil='{self.type.name}', val={self.score})>"
+
+class SkillProficiency(Base):
+	"""
+	Владение навыком или инструментом персонажем с возможностью хранить доп. флаги (экспертиза).
+	Объединяет классические навыки (Skills) и инструменты (Tools/Vehicles).
+	"""
+	__tablename__ = "skill_proficiencies"
+	character_id: Mapped[int] = mapped_column(Integer, ForeignKey("characters.id", ondelete="CASCADE"), primary_key=True)
+	skill_id: Mapped[int] = mapped_column(Integer, ForeignKey("skills.id", ondelete="CASCADE"), primary_key=True)
+
+	proficiency_category: Mapped[str] = mapped_column(
+		String(20),
+		nullable=False,
+		default='skill',
+		index=True,
+		server_default='skill'
+	)
+
+	is_expertise: Mapped[bool] = mapped_column(Boolean(), default=False)
+	proficient: Mapped[bool] = mapped_column(Boolean(), default=True)
+	character: Mapped["Character"] = relationship(back_populates="skills_detail")
+	skill: Mapped["Skill"] = relationship()
+	__table_args__ = (
+		UniqueConstraint('character_id', 'skill_id', name='uq_char_skill_prof'),
+	)
+
+	def __repr__(self):
+		status = "Expert" if self.is_expertise else ("Yes" if self.proficient else "No")
+		return f"<SkillProf(char={self.character_id}, skill='{self.skill.name}', cat='{self.proficiency_category}', prof={status})>"
+
+class CharacterLevel(Base):
+	"""
+	История уровней персонажа. Решает проблему пересчета HP при изменении прошлых уровней.
+	Хранит данные о том, на каком этапе был взят конкретный класс/подкласс.
+	"""
+	__tablename__ = "character_levels"
+	id = Column(Integer, primary_key=True, index=True)
+	character_id = Column(Integer, ForeignKey('characters.id', ondelete="CASCADE"), nullable=False, index=True)
+	class_id = Column(Integer, ForeignKey('classes.id'), nullable=False, index=True)
+	subclass_id = Column(Integer, ForeignKey('subclasses.id'), nullable=True, index=True)
+	level_number = Column(SmallInteger, nullable=False)
+	experience_at_level = Column(Integer, nullable=False)
+	hit_dice_collected_json = Column(JSON, nullable=False)
+	features_unlocked_json = Column(JSON, nullable=True)
+	created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+	character = relationship("Character", back_populates="level_history")
+	dnd_class = relationship("Class_")
+	subclass = relationship("Subclass")
+
+	__table_args__ = (
+		UniqueConstraint('character_id', 'level_number', name='uq_character_level_num'),
+	)
+
+	def __repr__(self):
+		sub_name = f", {self.subclass.name}" if self.subclass else ""
+		return f"<CharLvl(char={self.character_id}, cls={self.dnd_class.name}{sub_name}, lvl={self.level_number})>"
+
+class SavingThrow(Base):
+	"""
+	Спасброски персонажа: владение + бонусы от предметов/эффектов.
+	"""
+	__tablename__ = "saving_throws"
+	id = Column(Integer, primary_key=True, index=True)
+	character_id = Column(Integer, ForeignKey("characters.id", ondelete="CASCADE"), nullable=False, index=True)
+	ability_type_id = Column(Integer, ForeignKey("ability_types.id", ondelete="CASCADE"), nullable=False)
+	is_proficient = Column(Boolean(), default=False)
+	bonus_override = Column(SmallInteger, nullable=True)
+	notes = Column(Text, nullable=True)
+
+	character = relationship("Character", back_populates="saving_throws")
+	ability_type = relationship("AbilityType")
+
+	__table_args__ = (
+		UniqueConstraint('character_id', 'ability_type_id', name='uq_char_save'),
+	)
+
+	def __repr__(self):
+		prof = "Prof" if self.is_proficient else "NoProf"
+		return f"<SavingThrow(char={self.character_id}, abil='{self.ability_type.abbreviation}', {prof})>"
+
+class SpellSlot(Base):
+	"""
+	Доступные ячейки заклинаний конкретного персонажа.
+	Хранит текущее состояние ресурсов мага после короткого/длинного отдыха.
+	"""
+	__tablename__ = "spell_slots"
+	id = Column(Integer, primary_key=True, index=True)
+	character_id = Column(Integer, ForeignKey('characters.id', ondelete="CASCADE"), nullable=False, index=True)
+	spell_level = Column(SmallInteger, nullable=False)
+	slots_total = Column(SmallInteger, nullable=False)
+	slots_used = Column(SmallInteger, default=0)
+	character = relationship("Character", back_populates="spell_slots")
+	__table_args__ = (
+		UniqueConstraint('character_id', 'spell_level', name='uq_char_spell_slot'),
+	)
+
+	def __repr__(self):
+		return f"<SpellSlot(char={self.character_id}, lvl={self.spell_level}, used={self.slots_used}/{self.slots_total})>"
+
+# =============================================================================
+# БЛОК 5: ИНВЕНТАРЬ, ЭКИПИРОВКА, ЭКОНОМИКА
+# =============================================================================
+
+class EquipmentSlot(Base):
+	"""Слоты для экипировки (слот оружия, слот брони, кольца и т.д.)"""
+	__tablename__ = "equipment_slots"
+	id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+	name: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
+	slot_type: Mapped[str] = mapped_column(String(20), nullable=False)
+	max_items: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1)
+	equipment: Mapped[list["Equipment"]] = relationship("Equipment", backref="slot")
+
+	def __repr__(self):
+		return f"<EquipmentSlot(name='{self.name}', type='{self.slot_type}')>"
+
+class DamageType(Base):
+	"""Типы урона (Огонь, Рубящий, Яд и т.д.)"""
+	__tablename__ = "damage_types"
 	id = Column(Integer, primary_key=True, index=True)
 	name = Column(String(50), nullable=False, unique=True)
 	slug = Column(String(50), nullable=False, unique=True, index=True)
 	description = Column(Text, nullable=True)
-	proficiencies = relationship("SkillProficiency", back_populates="skill")
-	mappings = relationship("SkillAbilityMap", back_populates="skill")
 
 	def __repr__(self):
-		return f"<Skill(name='{self.name}', slug='{self.slug}')>"
+		return f"<DamageType(name='{self.name}')>"
 
-class SkillAbilityMap(Base):
-	"""
-	Связующая таблица: определяет, какая характеристика отвечает за какой навык.
-	Позволяет Мастеру менять взаимосвязи (например, сделать 'Запугивание' от 'Удачи').
-	"""
-	__tablename__ = "skill_ability_map"
-	skill_id = Column(Integer, ForeignKey("skills.id", ondelete="CASCADE"), primary_key=True)
-	ability_type_id = Column(Integer, ForeignKey("ability_types.id", ondelete="CASCADE"), primary_key=True)
-	skill = relationship("Skill", back_populates="mappings")
-	ability_type = relationship("AbilityType", back_populates="skill_mappings")
+class Equipment(Base):
+	"""Снаряжение (конкретные экземпляры предметов в сумке или на теле)"""
+	__tablename__ = "equipment"
+	id = Column(Integer, primary_key=True, index=True)
+	item_id = Column(Integer, ForeignKey("items.id", ondelete="CASCADE"), nullable=False, index=True)
+	character_id = Column(Integer, ForeignKey('characters.id', ondelete="SET NULL"), nullable=True, index=True)
+
+	slot_id = Column(Integer, ForeignKey('equipment_slots.id'), nullable=True, index=True)
+	name_override = Column(String(100), nullable=True)
+	notes = Column(Text, nullable=True)
+	current_durability = Column(SmallInteger, nullable=True)
+	charges = Column(SmallInteger, nullable=True)
+	protection_type = Column(SQLEnum(ProtectionType, literal_bindparam=True), nullable=True)
+	ac_bonus = Column(SmallInteger, nullable=True)
+	damage_dice = Column(String(20), nullable=True)
+	damage_type = Column(String(20), nullable=True)
+	magical_effects = Column(JSON, nullable=True)
+	is_identified = Column(Boolean(), default=False)
+	requires_attunement = Column(Boolean(), default=False)
+	attunement_by_class = Column(JSON, nullable=True)
+	attunement_by_race = Column(JSON, nullable=True)
+	resale_value_modifier = Column(Float, default=1.0)
+
+	item = relationship("Item")
+	slot = relationship("EquipmentSlot", back_populates="equipment")
+	contained_items = relationship("Equipment", secondary="container_items",
+	                               primaryjoin=(id == "container_items.c.container_equipment_id"),
+	                               secondaryjoin=(id == "container_items.c.item_equipment_id"),
+	                               lazy="select", backref="parent_container")
+	damage_types: Mapped[list["DamageType"]] = relationship(secondary=equipment_damage_types, backref="equipment_items")
+	character: Mapped["Character"] = relationship("Character", back_populates="equipment", foreign_keys=[character_id])
+
+	def __repr__(self):
+		display_name = self.name_override or self.item.name
+		owner = f"char_id={self.character_id}" if self.character_id else "storage"
+		return f"<Equip(id={self.id}, name='{display_name}', owner={owner})>"
+
+class CurrencyType(Base):
+	"""Типы валюты (CP, SP, GP, Platinum, экзотические монеты)"""
+	__tablename__ = "currency_types"
+	id = Column(Integer, primary_key=True, index=True)
+	symbol = Column(String(10), nullable=False, unique=True)
+	name = Column(String(50), nullable=False)
+	conversion_to_gp = Column(Float, nullable=False, default=1.0)
+	is_standard = Column(Boolean(), default=True)
+
+	def __repr__(self):
+		return f"<CurrencyType(symbol='{self.symbol}', gp_value={self.conversion_to_gp})>"
+
+class CharacterWallet(Base):
+	"""Кошелёк персонажа: баланс по каждой валюте отдельно"""
+	__tablename__ = "character_wallets"
+	character_id = Column(Integer, ForeignKey("characters.id", ondelete="CASCADE"), primary_key=True)
+	currency_id = Column(Integer, ForeignKey("currency_types.id", ondelete="CASCADE"), primary_key=True)
+	amount = Column(Integer, nullable=False, default=0)
+	character = relationship("Character")
+	currency = relationship("CurrencyType")
+
+	def __repr__(self):
+		return f"<CharacterWallet(char={self.character_id}, cur='{self.currency.symbol}', amt={self.amount})>"
+
+class TransactionLog(Base):
+	"""Журнал транзакций (покупки, награды, штрафы, изъятие мастером)"""
+	__tablename__ = "transaction_logs"
+	id = Column(Integer, primary_key=True, index=True)
+	character_id = Column(Integer, ForeignKey("characters.id", ondelete="SET NULL"), nullable=True, index=True)
+	shop_id = Column(Integer, ForeignKey("shops.id", ondelete="SET NULL"), nullable=True, index=True)
+	dm_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+	transaction_type = Column(String(30), nullable=False)
+	currency_id = Column(Integer, ForeignKey("currency_types.id", ondelete="RESTRICT"), nullable=False)
+	amount = Column(Integer, nullable=False)
+	item_id = Column(Integer, ForeignKey("items.id", ondelete="SET NULL"), nullable=True)
+	notes = Column(Text, nullable=True)
+	timestamp = Column(DateTime(timezone=True), server_default=func.now())
+
+	character = relationship("Character")
+	shop = relationship("ShopVendor")
+	dm = relationship("User")
+	currency = relationship("CurrencyType")
+	item = relationship("Item")
+
+	def __repr__(self):
+		return (f"<TransactionLog(type='{self.transaction_type}', amount={self.amount}, "
+		        f"cur='{self.currency.symbol}')>")
+
+
+# =============================================================================
+# БЛОК 6: БОЕВАЯ СИСТЕМА, МОНСТРЫ, КАМПАНИИ, КВЕСТЫ, ЛОКАЦИИ, ЗАМЕТКИ
+# =============================================================================
+
+class Encounter(Base):
+	"""Сражение/встреча (сессия боя)"""
+	__tablename__ = "encounters"
+	id = Column(Integer, primary_key=True, index=True)
+	ruleset_id = Column(Integer, ForeignKey("rulesets.id", ondelete="CASCADE"), nullable=False, index=True)
+	name = Column(String(100), nullable=False)
+	description = Column(Text, nullable=True)
+	dm_notes = Column(Text, nullable=True)
+	initiative_order_json = Column(JSON, nullable=True)
+	is_active = Column(Boolean(), default=True)
+	started_at = Column(DateTime(timezone=True), nullable=True)
+	ended_at = Column(DateTime(timezone=True), nullable=True)
+
+	ruleset = relationship("Ruleset")
+	participants = relationship("EncounterParticipant", back_populates="encounter", cascade="all, delete-orphan")
+
+	def __repr__(self):
+		return f"<Encounter(name='{self.name}', active={self.is_active})>"
+
+class EncounterParticipant(Base):
+	"""Участники встречи (персонажи и монстры в бою)"""
+	__tablename__ = "encounter_participants"
+	id = Column(Integer, primary_key=True, index=True)
+	encounter_id = Column(Integer, ForeignKey("encounters.id", ondelete="CASCADE"), nullable=False, index=True)
+	character_id = Column(Integer, ForeignKey("characters.id", ondelete="SET NULL"), nullable=True, index=True)
+	monster_id = Column(Integer, ForeignKey("monsters.id", ondelete="SET NULL"), nullable=True, index=True)
+	initiative_roll = Column(SmallInteger, nullable=True)
+	turn_order = Column(SmallInteger, nullable=True)
+	current_hp = Column(Integer, nullable=True)
+	temp_hp = Column(Integer, default=0)
+	status_flags_json = Column(JSON, nullable=True)
+
+	encounter = relationship("Encounter", back_populates="participants")
+	character = relationship("Character")
+	monster = relationship("Monster")
+
+	def __repr__(self):
+		name = (self.character.name if self.character else
+		        (self.monster.name if self.monster else "Unknown"))
+		return f"<EncounterParticipant(enc={self.encounter_id}, name='{name}', init={self.initiative_roll})>"
 
 class Monster(Base):
-	"""Блок статистики существа (Monster Stat Block)"""
+	"""Блок статистики существа (Monster Stat Block) по стандартам D&D 5e"""
 	__tablename__ = "monsters"
 	id = Column(Integer, primary_key=True, index=True)
 	name = Column(String(100), nullable=False, unique=True)
@@ -241,6 +905,7 @@ class Monster(Base):
 	challenge_rating = Column(Float, nullable=False)
 	experience_reward = Column(Integer, nullable=False)
 	description_text = Column(Text, nullable=True)
+
 	actions = relationship("MonsterAction", back_populates="monster", cascade="all, delete-orphan")
 	traits = relationship("MonsterTrait", back_populates="monster", cascade="all, delete-orphan")
 
@@ -264,11 +929,13 @@ class MonsterAction(Base):
 	description = Column(Text, nullable=True)
 	monster = relationship("Monster", back_populates="actions")
 
+	damage_types: Mapped[list["DamageType"]] = relationship(secondary=monster_damage_types, backref="monster_actions")
+
 	def __repr__(self):
 		return f"<MonsterAction(monster_id={self.monster_id}, name='{self.name}')>"
 
 class MonsterTrait(Base):
-	"""Специальные способности (Special Abilities / Traits)"""
+	"""Специальные способности (Special Abilities / Traits) монстра"""
 	__tablename__ = "monster_traits"
 	id = Column(Integer, primary_key=True, index=True)
 	monster_id = Column(Integer, ForeignKey('monsters.id', ondelete="CASCADE"), nullable=False, index=True)
@@ -279,442 +946,193 @@ class MonsterTrait(Base):
 	def __repr__(self):
 		return f"<MonsterTrait(monster_id={self.monster_id}, name='{self.name}')>"
 
-class Organization(Base):
-	"""Организации (Гильдии воров, Арфисты, Культ Дракона)"""
-	__tablename__ = "organizations"
-	id = Column(Integer, primary_key=True, index=True)
-	name = Column(String(100), nullable=False, unique=True)
-	alignment_tendency = Column(String(20), nullable=True) # Lawful Evil, Chaotic Neutral
-	description = Column(Text, nullable=True)
-	members = relationship("Character", back_populates="organization")
-	ranks = relationship("OrganizationRank", back_populates="organization", cascade="all, delete-orphan")
-
-	def __repr__(self):
-		return f"<Organization(name='{self.name}')>"
-
-class OrganizationRank(Base):
-	"""Ранги внутри организации для механики репутации"""
-	__tablename__ = "organization_ranks"
-	id = Column(Integer, primary_key=True, index=True)
-	organization_id = Column(Integer, ForeignKey('organizations.id', ondelete="CASCADE"), nullable=False, index=True)
-	rank_name = Column(String(50), nullable=False) # Initiate, Agent, Master
-	required_reputation = Column(Integer, nullable=False, default=0)
-	benefits_json = Column(JSON, nullable=True) # Доступ к товарам, бесплатное проживание
-	organization = relationship("Organization", back_populates="ranks")
-
-	def __repr__(self):
-		return f"<OrgRank(org='{self.organization.name}', name='{self.rank_name}')>"
-
-class ShopVendor(Base):
-	"""Торговец или магазин"""
-	__tablename__ = "shops"
-	id = Column(Integer, primary_key=True, index=True)
-	name = Column(String(100), nullable=False, unique=True)
-	location_description = Column(Text, nullable=True)
-	shop_type = Column(String(30), nullable=False) # General, Blacksmith, Alchemist, Magic
-	inventory = relationship("Equipment", secondary=shop_inventory, lazy="select", backref="available_in_shops")
-
-	def __repr__(self):
-		return f"<Shop(name='{self.name}', type='{self.shop_type}')>"
-
-# --- ДОМАШНИЕ ПРАВИЛА И НАБОРЫ ПРАВИЛ ---
-
-class Ruleset(Base):
-	__tablename__ = "rulesets"
+class Campaign(Base):
+	"""Кампания (серия приключений)"""
+	__tablename__ = "campaigns"
 	id = Column(Integer, primary_key=True, index=True)
 	owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
 	name = Column(String(100), nullable=False)
+	description = Column(Text, nullable=True)
+	home_rules_json = Column(JSON, nullable=True)
 	is_public = Column(Boolean(), default=False)
 	created_at = Column(DateTime(timezone=True), server_default=func.now())
-	characters = relationship("Character", back_populates="ruleset")
-	owner = relationship("User", back_populates="rules_created", foreign_keys=[owner_id])
 
-	def __repr__(self):
-		return f"<Ruleset(id='{self.id}', name='{self.name}')>"
-
-class HomebrewEntity(Base):
-	__tablename__ = "homebrew_entities"
-	id = Column(Integer, primary_key=True, index=True)
-	creator_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-	entity_type = Column(SQLEnum(EntityTypeEnum, literal_bindparam=True), nullable=False, index=True)
-	name = Column(String(100), nullable=False)
-	parent_canon_id = Column(Integer, nullable=True)
-	parent_canon_type = Column(SQLEnum(EntityTypeEnum, literal_bindparam=True), nullable=True)
-	content_json = Column(JSON, nullable=False)
-	approved_by_dm = Column(Boolean(), default=False)
-	creator = relationship("User")
-	parent_entity = relationship("Race", viewonly=True, overlaps="homebrew_variants")
-
-	def __repr__(self):
-		return f"<HomebrewEntity(type='{self.entity_type.value}', name='{self.name}')>"
-
-# --- ОСНОВНАЯ СУЩНОСТЬ ПЕРСОНАЖА ---
-
-class Character(Base):
-	__tablename__ = "characters"
-	id = Column(Integer, primary_key=True, index=True)
-	user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-	ruleset_id = Column(Integer, ForeignKey("rulesets.id", ondelete="SET NULL"), nullable=True, index=True)
-	name = Column(String(100), nullable=False)
-	alignment = Column(String(20))
-	experience_points = Column(Integer, default=0)
-	proficiency_bonus = Column(SmallInteger, default=2)
-	# Связи
-	user = relationship("User", back_populates="characters")
-	ruleset = relationship("Ruleset", back_populates="characters")
-	classes = relationship("DnDClass", secondary=character_classes, backref="characters")
-	spells = relationship("Spell", secondary=character_spells, backref="known_by")
-	items = relationship("Item", secondary=character_items, backref="owners")
-	# Связь с Предысторией
-	background_id = Column(Integer, ForeignKey("backgrounds.id", ondelete="SET NULL"), nullable=True, index=True)
-	background = relationship("Background", backref="characters")
-	# Прямые отношения к данным характеристик и навыков
-	abilities = relationship("CharacterAbilityValue", back_populates="character", lazy="joined")
-	proficiencies = relationship("SkillProficiency", back_populates="character", lazy="joined")
-	# Прямые отношения к новым таблицам
-	known_languages = relationship("Language", secondary=character_languages, lazy="joined", backref="speakers")
-	feats = relationship("Feat", secondary=character_feats, lazy="joined", backref="holders")
-	equipment = relationship("Equipment", secondary=character_equipment, lazy="select", backref="carried_by")
-	organization_id = Column(Integer, ForeignKey('organizations.id', ondelete="SET NULL"), nullable=True, index=True)
-	organization = relationship("Organization", back_populates="members")
-
-	# Отношение контроля над миньонами (Союзниками)
-	controlled_allies = relationship("Character", secondary=character_allies,
-		primaryjoin=(character_allies.c.owner_character_id == id),
-		secondaryjoin=(character_allies.c.ally_character_id == id),
-		lazy="select",
-		backref="controller"
-	)
-	# --- НОВЫЕ ПОЛЯ ДЛЯ ПРОГРЕССИИ ---
-	total_experience_points = Column(Integer, default=0) # Итоговое число XP (денормализация для скорости)
-	# История уровней (мультикласс)
-	level_history = relationship("CharacterLevel", back_populates="character", cascade="all, delete-orphan", order_by="CharacterLevel.level_number")
-	# Логи получения опыта
-	xp_logs = relationship("ExperienceLog", back_populates="character", lazy="select")
-
-	@property
-	def current_level(self):
-		"""Свойство для быстрого доступа к текущему уровню"""
-		if not self.level_history:
-			return 0
-		return max(level.level_number for level in self.level_history)
-
-	def __repr__(self):
-		bg_name = self.background.name if self.background else "None"
-		org_name = self.organization.name if self.organization else "None"
-		return f"<Character(name='{self.name}', lvl={self.current_level}, xp={self.total_experience_points})>"
-
-# --- ВСПОМОГАТЕЛЬНЫЕ МОДЕЛИ ДАННЫХ ПЕРСОНАЖА ---
-
-class CharacterAbilityValue(Base):
-	"""
-	Конкретное значение характеристики у персонажа.
-	Отдельная модель вместо связи внутри таблицы 'characters' для гибкости.
-	"""
-	__tablename__ = "character_abilities_values"
-	id = Column(Integer, primary_key=True, index=True)
-	character_id = Column(Integer, ForeignKey("characters.id", ondelete="CASCADE"), nullable=False, index=True)
-	ability_type_id = Column(Integer, ForeignKey("ability_types.id"), nullable=False, index=True)
-	score = Column(SmallInteger, nullable=False, default=8)
-	character = relationship("Character", back_populates="abilities")
-	type = relationship("AbilityType", back_populates="character_abilities")
-	__table_args__ = (
-		UniqueConstraint('character_id', 'ability_type_id', name='uq_char_ability_val'),
-	)
-
-	def __repr__(self):
-		return f"<CharAbility(char_id={self.character_id}, abil='{self.type.slug}', val={self.score})>"
-
-class SkillProficiency(Base):
-	__tablename__ = "character_skill_proficiencies"
-	id = Column(Integer, primary_key=True, index=True)
-	character_id = Column(Integer, ForeignKey("characters.id", ondelete="CASCADE"), nullable=False, index=True)
-	skill_id = Column(Integer, ForeignKey("skills.id"), nullable=False, index=True)
-	is_expertise = Column(Boolean(), default=False)
-	proficient = Column(Boolean(), default=True)
-	character = relationship("Character", back_populates="proficiencies")
-	skill = relationship("Skill", back_populates="proficiencies")
-	__table_args__ = (
-		UniqueConstraint('character_id', 'skill_id', name='uq_char_skill_prof'),
-	)
-
-	def __repr__(self):
-		status = "Expert" if self.is_expertise else ("Yes" if self.proficient else "No")
-		return f"<SkillProf(char_id={self.character_id}, skill='{self.skill.slug}', prof={status})>"
-
-class CharacterLevel(Base):
-	"""
-	История уровней персонажа. Позволяет хранить данные о том, на каком этапе
-	был взят конкретный класс/подкласс и сколько костей хитов было получено.
-	Это решает проблему пересчета HP при изменении прошлых уровней.
-	"""
-	__tablename__ = "character_levels"
-	id = Column(Integer, primary_key=True, index=True)
-
-	character_id = Column(Integer, ForeignKey('characters.id', ondelete="CASCADE"), nullable=False, index=True)
-	class_id = Column(Integer, ForeignKey('classes.id'), nullable=False, index=True)
-	subclass_id = Column(Integer, ForeignKey('subclasses.id'), nullable=True, index=True)
-	level_number = Column(SmallInteger, nullable=False) # 1, 2, 3...
-	experience_at_level = Column(Integer, nullable=False) # Сколько XP было у чара в момент взятия этого уровня
-	hit_dice_collected_json = Column(JSON, nullable=False) # {"d8": 1} - какие кости кинул/собрал на этом уровне
-	features_unlocked_json = Column(JSON, nullable=True) # Какие черты открыл именно на этом уровне
-	created_at = Column(DateTime(timezone=True), server_default=func.now())
-	character = relationship("Character", back_populates="level_history")
-	dnd_class = relationship("DnDClass")
-	subclass = relationship("Subclass")
-	__table_args__ = (
-		UniqueConstraint('character_id', 'level_number', name='uq_character_level_num'),
-	)
-
-	def __repr__(self):
-		sub_name = f", {self.subclass.name}" if self.subclass else ""
-		return f"<CharLvl(char={self.character_id}, cls={self.dnd_class.name}{sub_name}, lvl={self.level_number})>"
-
-class ExperienceLog(Base):
-	"""Журнал начисления опыта. Нужен для аудита: за что дали опыт."""
-	__tablename__ = "experience_logs"
-	id = Column(Integer, primary_key=True, index=True)
-	character_id = Column(Integer, ForeignKey('characters.id', ondelete="CASCADE"), nullable=False, index=True)
-	session_id = Column(Integer, ForeignKey('sessions.id', ondelete="SET NULL"), nullable=True, index=True)
-	amount = Column(Integer, nullable=False) # +50, +300 xp
-	reason = Column(String(200), nullable=False) # "Убийство гоблина", "Решение загадки"
-	source_type = Column(String(30), nullable=True) # monster, quest, dm_bonus
-	source_id = Column(Integer, nullable=True) # ID монстра или квеста
-	awarded_at = Column(DateTime(timezone=True), server_default=func.now())
-	character = relationship("Character", back_populates="xp_logs")
-	session = relationship("Session") # Связь будет работать после создания таблицы Session
-
-	def __repr__(self):
-		src = f"{self.source_type}:{self.source_id}" if self.source_type else "Manual"
-		return f"<XPLog(char={self.character_id}, amt={self.amount}, src={src})>"
-
-# --- КЛАССЫ, РАСЫ, ЗАКЛИНАНИЯ, ПРЕДМЕТЫ ---
-
-class Race(Base):
-	__tablename__ = "races"
-	id = Column(Integer, primary_key=True, index=True)
-	name = Column(String(100), nullable=False, unique=True)
-	size = Column(String(20), nullable=False)
-	speed = Column(SmallInteger, nullable=False, default=30)
-	stats_modifiers = Column(JSON)
-	darkvision_range = Column(SmallInteger, nullable=True)
-	languages = Column(JSON, nullable=True)
-	homebrew_variants = relationship("HomebrewEntity", back_populates="parent_entity", foreign_keys="HomebrewEntity.parent_canon_id")
-
-	def __repr__(self):
-		return f"<Race(name='{self.name}')>"
-
-class DnDClass(Base):
-	__tablename__ = "classes"
-	id = Column(Integer, primary_key=True, index=True)
-	name = Column(String(100), nullable=False, unique=True)
-	hit_die = Column(SmallInteger, nullable=False)
-	saving_throw_proficiencies = Column(JSON, nullable=False)
-	subclasses = relationship("Subclass", back_populates="dnd_class")
-	homebrew_variants = relationship("HomebrewEntity", back_populates="parent_entity", foreign_keys="HomebrewEntity.parent_canon_id")
-
-	def __repr__(self):
-		return f"<DnDClass(name='{self.name}')>"
-
-class Subclass(Base):
-	__tablename__ = "subclasses"
-	id = Column(Integer, primary_key=True, index=True)
-	class_id = Column(Integer, ForeignKey("classes.id", ondelete="CASCADE"), nullable=False, index=True)
-	name = Column(String(100), nullable=False)
-	level_unlock = Column(SmallInteger, nullable=False, default=3)
-	dnd_class = relationship("DnDClass", back_populates="subclasses")
-
-	def __repr__(self):
-		return f"<Subclass(name='{self.name}', class_id='{self.class_id}')>"
-
-class Spell(Base):
-	__tablename__ = "spells"
-	id = Column(Integer, primary_key=True, index=True)
-	name = Column(String(100), nullable=False, unique=True)
-	level = Column(SmallInteger, nullable=False, default=0)
-	school = Column(String(50), nullable=False)
-	casting_time = Column(String(50))
-	range_val = Column(String(50))
-	components = Column(JSON, nullable=False)
-	duration = Column(String(50))
-	damage = Column(JSON, nullable=True)
-
-	def __repr__(self):
-		return f"<Spell(name='{self.name}', lvl='{self.level}')>"
-
-class Item(Base):
-	__tablename__ = "items"
-	id = Column(Integer, primary_key=True, index=True)
-	name = Column(String(100), nullable=False)
-	# Использование ENUM из person_enums.py для строгой типизации категорий предметов в БД
-	category = Column(SQLEnum(ItemCategory, literal_bindparam=True), nullable=False, index=True)
-	weight = Column(Float, nullable=True)
-	cost_cp = Column(Integer, default=0)
-	# Использование ENUM для типов защиты/резистов
-	protection_type = Column(SQLEnum(ProtectionType, literal_bindparam=True), nullable=True)
-	description = Column(Text, nullable=True)
-	properties = Column(JSON, nullable=True)
-	magic_item_data = relationship("MagicItem", uselist=False, back_populates="item", cascade="all, delete-orphan")
-
-	def __repr__(self):
-		return f"<Item(name='{self.name}', category='{self.category.value if self.category else None}')>"
-
-class Language(Base):
-	"""Справочник языков"""
-	__tablename__ = "languages"
-	id = Column(Integer, primary_key=True, index=True)
-	name = Column(String(50), nullable=False, unique=True) # Common, Elvish, Draconic
-	script = Column(String(50), nullable=True)
-	type = Column(String(20), nullable=True)
-	characters = relationship("Character", secondary=character_languages, backref="known_languages")
-
-	def __repr__(self):
-		return f"<Language(name='{self.name}')>"
-
-class Background(Base):
-	"""Предыстория персонажа"""
-	__tablename__ = "backgrounds"
-	id = Column(Integer, primary_key=True, index=True)
-	name = Column(String(100), nullable=False, unique=True)
-	skill_proficiencies = Column(JSON, nullable=False) # ["insight", "persuasion"]
-	tool_proficiencies = Column(JSON, nullable=True)
-	languages = Column(JSON, nullable=True)
-	feature_name = Column(String(100), nullable=False)
-	feature_description = Column(Text, nullable=True)
-	suggested_traits = Column(JSON, nullable=True)
-
-	def __repr__(self):
-		return f"<Background(name='{self.name}')>"
-
-class Feat(Base):
-	"""Черта (Feat)"""
-	__tablename__ = "feats"
-	id = Column(Integer, primary_key=True, index=True)
-	name = Column(String(100), nullable=False, unique=True)
-	prerequisites = Column(JSON, nullable=True)
-	summary = Column(Text, nullable=True)
-	benefit = Column(Text, nullable=False)
-	source_book = Column(String(50), nullable=True)
-	characters = relationship("Character", secondary=character_feats, backref="feats")
-
-	def __repr__(self):
-		return f"<Feat(name='{self.name}')>"
-
-class EquipmentSlot(Base):
-	"""Слоты для экипировки (слот оружия, слот брони, кольца и т.д.)"""
-	__tablename__ = "equipment_slots"
-	id = Column(Integer, primary_key=True, index=True)
-	name = Column(String(50), nullable=False, unique=True) # Main Hand, Armor, Ring
-	slot_type = Column(String(20), nullable=False) # weapon, armor, clothing, ring, feet
-	max_items = Column(SmallInteger, nullable=False, default=1)
-	equipment = relationship("Equipment", back_populates="slot")
-
-	def __repr__(self):
-		return f"<EquipmentSlot(name='{self.name}', type='{self.slot_type}')>"
-
-class MagicItem(Base):
-	"""Магический предмет. Наследует базовые поля от обычного предмета через связь."""
-	__tablename__ = "magic_items"
-	id = Column(Integer, primary_key=True, index=True)
-	item_id = Column(Integer, ForeignKey('items.id', ondelete="CASCADE"), nullable=False, unique=True)
-	requires_attunement = Column(Boolean(), default=False)
-	attunement_by_class = Column(JSON, nullable=True) # ["wizard", "warlock"]
-	attunement_by_race = Column(JSON, nullable=True)  # ["elf", "dwarf"]
-	rarity = Column(SQLEnum(MagicItemRarity, literal_bindparam=True), nullable=False, default=MagicItemRarity.COMMON)
-	description = Column(Text, nullable=True)
-	resale_value_modifier = Column(Float, default=1.0) # Множитель стоимости при продаже
-	item = relationship("Item", back_populates="magic_item_data")
-
-	def __repr__(self):
-		return f"<MagicItem(item_name='{self.item.name}', rarity='{self.rarity.value}')>"
-
-class Equipment(Base):
-	"""
-	Конкретный экземпляр экипировки у персонажа или в магазине.
-	Это связующее звено между общим справочником Items и конкретным персонажем.
-	Позволяет хранить состояние (прочность, заряды).
-	"""
-	__tablename__ = "equipment"
-	id = Column(Integer, primary_key=True, index=True)
-	character_id = Column(Integer, ForeignKey('characters.id', ondelete="SET NULL"), nullable=True, index=True)
-	item_id = Column(Integer, ForeignKey('items.id', ondelete="CASCADE"), nullable=False, index=True)
-	slot_id = Column(Integer, ForeignKey('equipment_slots.id'), nullable=True, index=True)
-	current_durability = Column(SmallInteger, nullable=True) # Прочность (для оружия/брони)
-	charges = Column(SmallInteger, nullable=True)            # Заряды (для жезлов)
-	is_identified = Column(Boolean(), default=False)         # Опознано ли свойство магии
-	slot = relationship("EquipmentSlot", back_populates="equipment")
-	item = relationship("Item", backref="equipment_instances")
-	parent_container_id = Column(Integer, ForeignKey('equipment.id', ondelete="SET NULL"), nullable=True, index=True)
-	capacity_weight = Column(Float, nullable=True) # Лимит веса в кг/фунтах
-	contained_items = relationship("Equipment", secondary=container_items,
-		primaryjoin=(id == container_items.c.container_equipment_id),
-		secondaryjoin=(id == container_items.c.item_equipment_id),
-		lazy="select", backref="parent_container")
-
-	def __repr__(self):
-		owner = f"char_id={self.character_id}" if self.character_id else "storage"
-		return f"<Equip(id={self.id}, item='{self.item.name}', owner={owner})>"
-
-class Condition(Base):
-	"""Состояния (Blinded, Poisoned, Prone, Invisible) и магические эффекты"""
-	__tablename__ = "conditions"
-	id = Column(Integer, primary_key=True, index=True)
-	name = Column(String(50), nullable=False, unique=True) # Stunned, Charmed, Bless
-	slug = Column(String(50), nullable=False, unique=True, index=True)
-	description = Column(Text, nullable=True)
-	mechanical_effects_json = Column(JSON, nullable=True)
-	# Пример структуры: {"disadvantage_attack": true, "speed_0": true, "ac_bonus": 2}
-	applied_to = relationship("Character", secondary=character_conditions, backref="active_conditions")
-
-	def __repr__(self):
-		return f"<Condition(name='{self.name}', slug='{self.slug}')>"
-
-#КОМПАНИИ
-
-class Campaign(Base):
-	"""Кампания / Мир (аналог Ruleset, но с сюжетом)"""
-	__tablename__ = "campaigns"
-	id = Column(Integer, primary_key=True, index=True)
-	name = Column(String(100), nullable=False, unique=True)
-	description = Column(Text, nullable=True)
-	dm_id = Column(Integer, ForeignKey('users.id', ondelete="SET NULL"), nullable=True, index=True)
-	is_active = Column(Boolean(), default=True)
-	homebrew_rules_json = Column(JSON, nullable=True)
-	starting_date = Column(DateTime(timezone=True), nullable=True)
+	owner = relationship("User")
 	sessions = relationship("Session", back_populates="campaign", cascade="all, delete-orphan")
-	characters = relationship("CampaignCharacter", back_populates="campaign", cascade="all, delete-orphan")
+	characters = relationship("CampaignCharacter", back_populates="campaign")
+	quests: Mapped[list["Quest"]] = relationship(back_populates="campaign", cascade="all, delete-orphan")
+	locations: Mapped[list["Location"]] = relationship(back_populates="campaign", cascade="all, delete-orphan")
 
 	def __repr__(self):
-		return f"<Campaign(name='{self.name}', active={self.is_active})>"
+		return f"<Campaign(name='{self.name}')>"
 
 class Session(Base):
-	"""Игровая сессия (встреча)"""
+	"""Игровая сессия (одна встреча/вечер игры)"""
 	__tablename__ = "sessions"
 	id = Column(Integer, primary_key=True, index=True)
-	campaign_id = Column(Integer, ForeignKey('campaigns.id', ondelete="CASCADE"), nullable=False, index=True)
-	date_played = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
+	campaign_id = Column(Integer, ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False, index=True)
+	date_played = Column(DateTime(timezone=True), nullable=False)
 	summary = Column(Text, nullable=True)
+	xp_distributed = Column(Integer, default=0)
+
 	campaign = relationship("Campaign", back_populates="sessions")
 
 	def __repr__(self):
-		return f"<Session(id='{self.id}', date='{self.date_played.date()}')>"
+		return f"<Session(date={self.date_played}, xp={self.xp_distributed})>"
 
 class CampaignCharacter(Base):
-	"""Привязка конкретного персонажа к конкретной кампании"""
+	"""Связь персонажа и кампании (роль в кампании, статус, заметки)"""
 	__tablename__ = "campaign_characters"
-	id = Column(Integer, primary_key=True, index=True)
-	campaign_id = Column(Integer, ForeignKey('campaigns.id', ondelete="CASCADE"), nullable=False, index=True)
-	character_id = Column(Integer, ForeignKey('characters.id', ondelete="CASCADE"), nullable=False, index=True)
-	role_description = Column(String(100), nullable=True)
-	death_date = Column(DateTime(timezone=True), nullable=True)
-	reputation_points = Column(Integer, default=0)
-	status = Column(String(20), default='active')
-	joined_at = Column(DateTime(timezone=True), server_default=func.now())
+	campaign_id = Column(Integer, ForeignKey("campaigns.id", ondelete="CASCADE"), primary_key=True)
+	character_id = Column(Integer, ForeignKey("characters.id", ondelete="CASCADE"), primary_key=True)
+	role_in_campaign = Column(String(50), default="Player")
+	joined_session = Column(Integer, nullable=True)
+	notes = Column(Text, nullable=True)
+	is_active = Column(Boolean(), default=True)
+
 	campaign = relationship("Campaign", back_populates="characters")
 	character = relationship("Character")
-	__table_args__ = (
-		UniqueConstraint('campaign_id', 'character_id', name='uq_campaign_character'),
-	)
 
 	def __repr__(self):
-		return f"<CampChar(camp={self.campaign_id}, char={self.character_id}, status={self.status})>"
+		return f"<CampaignCharacter(camp={self.campaign_id}, char={self.character_id}, role='{self.role_in_campaign}')>"
+
+class Quest(Base):
+	"""Квестовый движок. Хранит общую информацию о задании."""
+	__tablename__ = "quests"
+	id = Column(Integer, primary_key=True, index=True)
+	campaign_id = Column(Integer, ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False, index=True)
+	location_id = Column(Integer, ForeignKey("locations.id", ondelete="SET NULL"), nullable=True, index=True)
+	issuer_faction_id = Column(Integer, ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True, index=True)
+	title = Column(String(150), nullable=False)
+	description = Column(Text, nullable=True)
+	reward_xp = Column(Integer, default=0)
+	reward_cp = Column(Integer, default=0)
+	status = Column(String(20), default='active')
+	created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+	campaign = relationship("Campaign", back_populates="quests")
+	location = relationship("Location", back_populates="quests")
+	issuer_faction = relationship("Organization")
+	objectives: Mapped[list["QuestObjective"]] = relationship(
+		back_populates="quest",
+		cascade="all, delete-orphan",
+		order_by="QuestObjective.order_num"
+	)
+	party_assignments: Mapped[list["PartyQuestAssignment"]] = relationship(back_populates="quest")
+
+	def __repr__(self):
+		return f"<Quest(title='{self.title}', status='{self.status}')>"
+
+class QuestObjective(Base):
+	"""Конкретная цель квеста: убить X, найти Y, поговорить с Z."""
+	__tablename__ = "quest_objectives"
+	id = Column(Integer, primary_key=True, index=True)
+	quest_id = Column(Integer, ForeignKey("quests.id", ondelete="CASCADE"), nullable=False, index=True)
+	order_num = Column(Integer, nullable=False)
+	target_entity_type = Column(Enum(EntityTypeEnum), nullable=True)
+	target_entity_name = Column(String(100), nullable=True)
+	target_quantity = Column(Integer, default=1)
+	is_completed = Column(Boolean(), default=False)
+	quest = relationship("Quest", back_populates="objectives")
+
+	def __repr__(self):
+		return f"<QuestObj(quest={self.quest_id}, tgt='{self.target_entity_name} x{self.target_quantity}')>"
+
+class PartyQuestAssignment(Base):
+	"""Связь: какой персонаж или группа принял какой квест."""
+	__tablename__ = "party_quest_assignments"
+	id = Column(Integer, primary_key=True, index=True)
+	quest_id = Column(Integer, ForeignKey("quests.id", ondelete="CASCADE"), nullable=False, index=True)
+	character_id = Column(Integer, ForeignKey("characters.id", ondelete="SET NULL"), nullable=True, index=True)
+	notes_dm = Column(Text, nullable=True)
+	quest = relationship("Quest", back_populates="party_assignments")
+	character = relationship("Character")
+
+	def __repr__(self):
+		return f"<PQAssign(quest={self.quest_id}, char={self.character_id})>"
+
+class Location(Base):
+	"""Локации (города, подземелья, комнаты) с поддержкой вложенности"""
+	__tablename__ = "locations"
+	id = Column(Integer, primary_key=True, index=True)
+	campaign_id = Column(Integer, ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=True, index=True)
+	name = Column(String(150), nullable=False)
+	slug = Column(String(150), nullable=False, unique=True, index=True)
+	parent_location_id = Column(Integer, ForeignKey("locations.id", ondelete="SET NULL"), nullable=True, index=True)
+	location_type = Column(String(50), nullable=False)
+	description = Column(Text, nullable=True)
+	map_reference = Column(String(100), nullable=True)
+	biome_type = Column(String(50), nullable=True)
+	campaign = relationship("Campaign", back_populates="locations")
+	parent = relationship("Location", remote_side=[id], backref="children")
+	lore_entries: Mapped[list["LoreEntry"]] = relationship(back_populates="location")
+	quests: Mapped[list["Quest"]] = relationship(back_populates="location")
+
+	def __repr__(self):
+		return f"<Location(name='{self.name}', type='{self.location_type}')>"
+
+class NoteCategory(Base):
+	"""Категории заметок (Lore, Quest, Character, NPC, Location)"""
+	__tablename__ = "note_categories"
+	id = Column(Integer, primary_key=True, index=True)
+	name = Column(String(50), nullable=False, unique=True)
+	slug = Column(String(50), nullable=False, unique=True, index=True)
+	color_hex = Column(String(7), nullable=True)
+
+	def __repr__(self):
+		return f"<NoteCategory(name='{self.name}')>"
+
+class CharacterNote(Base):
+	"""Заметки, привязанные к персонажу (личные, для игрока, для мастера)"""
+	__tablename__ = "character_notes"
+	id = Column(Integer, primary_key=True, index=True)
+	character_id = Column(Integer, ForeignKey("characters.id", ondelete="CASCADE"), nullable=False, index=True)
+	author_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+	category_id = Column(Integer, ForeignKey("note_categories.id", ondelete="SET NULL"), nullable=True)
+	title = Column(String(200), nullable=False)
+	content = Column(Text, nullable=False)
+	is_visible_to_player = Column(Boolean(), default=False)
+	created_at = Column(DateTime(timezone=True), server_default=func.now())
+	updated_at = Column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
+	character = relationship("Character")
+	author = relationship("User")
+	category = relationship("NoteCategory")
+
+	def __repr__(self):
+		return f"<CharacterNote(title='{self.title}', char={self.character_id})>"
+
+class CampaignNote(Base):
+	"""Общие заметки по кампании (для мастера, лор, важные события)"""
+	__tablename__ = "campaign_notes"
+	id = Column(Integer, primary_key=True, index=True)
+	campaign_id = Column(Integer, ForeignKey("campaigns.id", ondelete="CASCADE"), nullable=False, index=True)
+	author_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+	category_id = Column(Integer, ForeignKey("note_categories.id", ondelete="SET NULL"), nullable=True)
+	title = Column(String(200), nullable=False)
+	content = Column(Text, nullable=False)
+	sort_order = Column(SmallInteger, default=0)
+	created_at = Column(DateTime(timezone=True), server_default=func.now())
+	campaign = relationship("Campaign")
+	author = relationship("User")
+	category = relationship("NoteCategory")
+
+	def __repr__(self):
+		return f"<CampaignNote(title='{self.title}', camp={self.campaign_id})>"
+
+class LoreEntry(Base):
+	"""Запись в базе знаний (бестиарий, история дома Нозеров, описание ритуала)."""
+	__tablename__ = "lore_entries"
+	id = Column(Integer, primary_key=True, index=True)
+	author_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+	location_id = Column(Integer, ForeignKey("locations.id", ondelete="SET NULL"), nullable=True, index=True)
+	title = Column(String(150), nullable=False)
+	content_text = Column(Text, nullable=True)
+	entry_image_url = Column(String(255), nullable=True)
+	tags_json = Column(JSON, nullable=True)
+	is_public_to_party = Column(Boolean(), default=False)
+	created_at = Column(DateTime(timezone=True), server_default=func.now())
+	author = relationship("User")
+	location = relationship("Location", back_populates="lore_entries")
+
+	def __repr__(self):
+		return f"<LoreEntry(title='{self.title}', loc={self.location_id})>"
