@@ -1,10 +1,10 @@
 # app/core/dependencies.py
 
-from Config.imports import (OAuth2PasswordBearer, Request, Depends,
+from Config.imports import (OAuth2PasswordBearer, Request,
                                  HTTPException, status, JWTError, select, selectinload, Form, DefaultForm)
 from app.core.security import decode_token
 from app.database.session import get_async_db
-from app.database.models import User # Импортируем модели
+from app.database._models import User
 
 
 # Определяем схему здесь, в глобальной области модуля

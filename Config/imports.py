@@ -1,6 +1,7 @@
 # Config/imports.py
 
 import os
+import sys
 import enum
 import base64
 import pathlib
@@ -27,6 +28,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
 from itsdangerous import URLSafeTimedSerializer
 from typing import Optional, Any, Dict, ClassVar
+from concurrent.futures import ThreadPoolExecutor
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -38,6 +40,6 @@ from sqlalchemy.exc import IntegrityError, SQLAlchemyError, ProgrammingError
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy import (func, select, Column, Integer, cast, String, Boolean, Text, Enum, Table,
                         Float, JSON, SmallInteger, CheckConstraint, LargeBinary, DateTime, ForeignKey,
-                        UniqueConstraint, delete, text, update)
+                        UniqueConstraint, delete, text, update, Index, and_, or_)
 from fastapi import FastAPI, Request, status, UploadFile, APIRouter, Depends, HTTPException, Form, File
 from sqlalchemy.orm import selectinload, declarative_base, relationship, Mapped, mapped_column, backref

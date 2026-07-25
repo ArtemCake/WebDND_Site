@@ -1,46 +1,144 @@
-<!-- templates/_menu.html -->
+{% if current_user %}
+{% set mega_menu = [
+{'title': 'Главная', 'url': '/', 'icon': 'home'},
+{'title': 'Лор', 'url': '/lore', 'icon': 'book',
+'submenu': [
+{'title': 'Миры', 'url': '/lore/worlds'},
+{'title': 'Локации', 'url': '/lore/locations'},
+{'title': 'Статьи', 'url': '/lore/articles'},
+{'title': 'Создать', 'url': '/lore/create', 'role': ['master', 'admin']},
+]
+},
+{'title': 'Кампании', 'url': '/campaigns', 'icon': 'dice',
+'submenu': [
+{'title': 'Все кампании', 'url': '/campaigns'},
+{'title': 'Мои кампании', 'url': '/campaigns/my'},
+{'title': 'Поиск', 'url': '/campaigns/search'},
+{'title': 'Создать', 'url': '/campaigns/create', 'role': ['master', 'admin']},
+]
+},
+{'title': 'Персонажи', 'url': '/characters/my', 'icon': 'user',
+'submenu': [
+{'title': 'Мои персонажи', 'url': '/characters/my'},
+{'title': 'Создать', 'url': '/characters/create'},
+]
+},
+{'title': 'Домашние правила', 'url': '/rules/homebrew', 'icon': 'settings',
+'submenu': [
+{'title': 'Библиотека', 'url': '/rules/homebrew'},
+{'title': 'Создать', 'url': '/rules/homebrew/create', 'role': ['master', 'admin']},
+{'title': 'Правила кампании', 'url': '/rules/campaign', 'role': ['master', 'admin']},
+]
+},
+{'title': 'Стол', 'url': '/table/sessions', 'icon': 'grid',
+'submenu': [
+{'title': 'Активные сессии', 'url': '/table/sessions'},
+{'title': 'История бросков', 'url': '/table/dice-history'},
+{'title': 'Новая сессия', 'url': '/table/sessions/create', 'role': ['master', 'admin']},
+]
+},
+{'title': 'Чат', 'url': '/chat', 'icon': 'message-circle',
+'submenu': [
+{'title': 'Архив', 'url': '/chat/archive'},
+]
+},
+] %}
+{% else %}
+{% set mega_menu = [
+{'title': 'Главная', 'url': '/', 'icon': 'home'},
+] %}
+{% endif %}
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark rounded" aria-label="Главное меню">
-	<div class="container-fluid">
-		<div class="collapse navbar-collapse justify-content-end" id="navbarsTop">
-			<ul class="navbar-nav mb-2 mb-lg-0">
-				<!-- Если пользователь авторизован -->
-				{% if user %}
-				<li class="nav-item">
-					<a class="nav-link active" aria-current="page" href="{{ url_for('home_page') }}">🏠 Главная</a>
-				</li>
-				<li class="nav-item dropdown">
-					<a class="nav-link dropdown-toggle" href="#" id="dropdownUser" data-bs-toggle="dropdown" aria-expanded="false">
-						👤 {{ user.username }}
-					</a>
-					<ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownUser">
-						<li><a class="dropdown-item" href="#">⚙️ Настройки профиля</a></li>
-						<li><a class="dropdown-item" href="#">📋 Мои персонажи</a></li>
-						<li class="nav-item"><a class="nav-link" href="#">Расы</a></li>
-						<li class="nav-item"><a class="nav-link" href="#">Классы</a></li>
-						<li class="nav-item"><a class="nav-link" href="#">Заклинания</a></li>
-						<li class="nav-item"><a class="nav-link" href="#">Предметы</a></li>
-						<li><hr class="dropdown-divider"></li>
-						<!-- Только для админов -->
-						{% if user.role == "admin" %}
-						<li><span class="dropdown-header">Администрирование</span></li>
-						<li><a class="dropdown-item" href="{{ url_for('admin_dashboard') }}">👑 Панель управления</a></li>
-						{% endif %}
-						
-						<li><a class="dropdown-item text-danger" href="/login?logout=1">🚪 Выйти</a></li>
-					</ul>
-				</li>
-				
-				{% else %}
-				<!-- Если пользователь НЕ авторизован -->
-				<li class="nav-item">
-					<a class="nav-link" href="{{ url_for('login_page') }}">🔐 Войти</a>
-				</li>
-				<li class="nav-item">
-					<a class="nav-link" href="{{ url_for('register_page') }}">✍️ Регистрация</a>
-				</li>
+<div class="bg-blue-500 text-white p-1 overflow-x-auto whitespace-nowrap" style="min-height: 24px"></div>
+<div class="hide-when-printing bg-gray-800 px-2 py-1 text-white flex items-center justify-between border-b-2 border-gray-900 flex-wrap"
+     style="min-height: 48px; background-color: #1f2937 !important;">
+	<div class="flex items-center space-x-1 md:space-x-4">
+		<a href="/">
+			<img src="{{ url_for('static', path='DnD.png') }}" alt="D&D Онлайн стол"
+			     style="height: 48px" class="mr-2">
+		</a>
+		{% for item in mega_menu %}
+		{% if not item.get('role') or (current_user and current_user.role in item.get('role')) %}
+		{% if item.submenu is defined %}
+		<div class="relative group">
+			<div class="inline-flex items-center space-x-1 px-2 rounded text-gray-300 hover:text-white hover:bg-gray-700"
+			     role="menuitem" style="height: 48px">
+				{% include '_menu_icon.html' %}
+				<span>{{ item.title }}</span>
+				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+					      d="M19 9l-7 7-7-7"></path>
+				</svg>
+			</div>
+			<div class="absolute z-50 hidden group-hover:block bg-gray-700 text-white rounded shadow-lg border border-gray-600 mt-0 min-w-[200px]">
+				{% for subitem in item.submenu %}
+				{% if not subitem.get('role') or (current_user and current_user.role in subitem.get('role')) %}
+				<a href="{{ subitem.url }}"
+				   class="block px-4 py-2 text-gray-300 hover:text-white hover:bg-gray-600 {% if loop.first %}rounded-t{% endif %} {% if loop.last %}rounded-b{% endif %}">
+					{{ subitem.title }}
+				</a>
 				{% endif %}
-			</ul>
+				{% endfor %}
+			</div>
 		</div>
+		{% else %}
+		<a href="{{ item.url }}"
+		   class="inline-flex items-center space-x-1 px-2 rounded text-gray-300 hover:text-white hover:bg-gray-700"
+		   role="menuitem" style="height: 48px">
+			{% include '_menu_icon.html' %}
+			<span>{{ item.title }}</span>
+		</a>
+		{% endif %}
+		{% endif %}
+		{% endfor %}
 	</div>
-</nav>
+	
+	<div class="flex items-center space-x-2">
+		{% if current_user %}
+		<div class="relative group">
+			<div class="inline-flex items-center space-x-1 px-2 rounded text-gray-300 hover:text-white hover:bg-gray-700"
+			     role="menuitem" style="height: 48px">
+				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+					      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+				</svg>
+				<span>{{ current_user.username }}</span>
+				<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+					      d="M19 9l-7 7-7-7"></path>
+				</svg>
+			</div>
+			<div class="absolute right-0 z-50 hidden group-hover:block bg-gray-700 text-white rounded shadow-lg border border-gray-600 mt-0 min-w-[200px]">
+				<a href="/profile"
+				   class="block px-4 py-2 text-gray-300 hover:text-white hover:bg-gray-600 rounded-t">
+					Профиль
+				</a>
+				<a href="/profile/settings"
+				   class="block px-4 py-2 text-gray-300 hover:text-white hover:bg-gray-600">
+					Настройки
+				</a>
+				{% if current_user.role == 'admin' %}
+				<a href="/admin"
+				   class="block px-4 py-2 text-gray-300 hover:text-white hover:bg-gray-600">
+					Админ-панель
+				</a>
+				{% endif %}
+				<a href="/logout"
+				   class="block px-4 py-2 text-gray-300 hover:text-white hover:bg-gray-600 rounded-b">
+					Выход
+				</a>
+			</div>
+		</div>
+		{% else %}
+		<a href="/login"
+		   class="inline-flex items-center space-x-1 px-2 rounded text-gray-300 hover:text-white hover:bg-gray-700"
+		   role="menuitem" style="height: 48px">
+			<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+				      d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+			</svg>
+			<span>Войти</span>
+		</a>
+		{% endif %}
+	</div>
+</div>

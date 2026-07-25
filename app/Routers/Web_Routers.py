@@ -7,7 +7,7 @@ from app.core.dependencies import get_current_user, OverloadedForm
 from app.database.session import get_async_db
 from app.core.security import create_access_token
 from app.services.user_service import UserService
-from app.database.models import User
+from app.database._models import User
 
 
 # Создаем "подписыватель" (signer) для данных.

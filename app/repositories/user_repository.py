@@ -1,7 +1,7 @@
 # app/repositories/user_repository.py
 
 from Config.imports import (AsyncSession, select, HTTPException)
-from app.database.models import User
+from app.database._models import User
 from app.core.security import verify_password
 from app.enums.user_enums import Role_enums
 

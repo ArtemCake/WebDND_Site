@@ -1,78 +1,91 @@
-# API_Routers.py
+# main.py
 
-from Config.imports import (FastAPI, asynccontextmanager, asyncio, CORSMiddleware, HTTPException, select,
-                                 StaticFiles, Jinja2Templates, base64, RequestValidationError, Request,
-                                 JSONResponse, HTMLResponse, Depends, uvicorn, APIRoute, os, pathlib)
+from Config.imports import (FastAPI, asynccontextmanager, CORSMiddleware, HTTPException, select,
+                                 StaticFiles, Jinja2Templates, base64, RequestValidationError, Request, sys,
+						JSONResponse, HTMLResponse, Depends, uvicorn, APIRoute, os, pathlib)
 from Config.Config import settings
-from app.database.session import get_async_db, get_async_session_factory
-from app.database.database import engine, metadata
+from app.database.session import get_async_session_factory
 import app.Routers.API_Routers as api_module
 import app.Routers.Web_Routers as web_module
 from app.enums.log_enums import LogAction, LogLevelEnum
 from app.services.cleanup_on_start import cleanup_old_logs
 from app.services.log_service import LogService
 from app.services.user_service import UserService
-from app.database.models import User
+from app.database._models import User
 from alembic.command import upgrade
 from alembic.config import Config
 
 
-async def apply_migrations():
+# --- ФУНКЦИЯ ПРИМЕНЕНИЯ МИГРАЦИЙ (СИНХРОННАЯ) ---
+def apply_migrations_sync():
+	"""
+	Применяет миграции БЛОКИРУЮЩИМ способом.
+	Вызывается ТОЛЬКО при старте скрипта (в if __name__ == '__main__').
+	Не использует asyncio, поэтому не конфликтует с релоадером Windows.
+	"""
 	try:
+		print("[STARTUP] Применение миграций...")
+		# ВАЖНО: Используем URL без замены драйвера.
+		# Alembic увидит postgresql:// и выберет psycopg2 сам.
 		alembic_cfg = Config("alembic.ini")
-		alembic_cfg.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("postgresql+asyncpg", "postgresql"))
+		alembic_cfg.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 		upgrade(alembic_cfg, "head")
-		await LogService.create_log(
-			username=None,
-			action=LogAction.DATABASE_MIGRATION,
-			description="✅ Миграции БД успешно применены",
-			log_level=LogLevelEnum.INFO
-		)
+		print("[STARTUP] Миграции применены успешно.")
+		# Логируем успех АССИНХРОННО после создания цикла событий (позже)
+		return True
 	except Exception as e:
-		await LogService.create_log(
-			username=None,
-			action=LogAction.DATABASE_ERROR,
-			description=f"⚠️ Ошибка при применении миграций: {str(e)}",
-			log_level=LogLevelEnum.ERROR
-		)
-		raise
+		error_msg = f"[FATAL] Ошибка применения миграций: {str(e)}"
+		print(error_msg)
+		# Здесь нельзя вызвать await LogService, так как цикла событий еще нет.
+		# Просто выводим в консоль и падаем.
+		sys.exit(1)
+
+async def create_admin_user(session_factory):
+	"""Вспомогательная функция для выноса логики админа."""
+	async with session_factory as db:
+		admin_password = settings.ADMIN_PASSWORD
+		if admin_password:
+			user_exists = await db.execute(select(User).where(User.username == "Admin"))
+			if not user_exists.scalars().first():
+				try:
+					await UserService.register_new_user(
+						db, username="Admin",
+						password=admin_password.strip(),
+						role="admin",
+						gdpr_consent=True
+					)
+					await db.commit()
+					await LogService.create_log(
+						username="Admin",
+						action=LogAction.REGISTER_SUCCESS,
+						description="✅ Администратор успешно создан.",
+						log_level=LogLevelEnum.INFO
+					)
+				except HTTPException as e:
+					await LogService.create_log(
+						username="Admin",
+						action=LogAction.REGISTER_FAILED,
+						description=f"⚠️ Не удалось создать админа: {e.detail}",
+						log_level=LogLevelEnum.ERROR
+					)
+					raise
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-
-	async with engine.begin() as conn:
-		await conn.run_sync(metadata.create_all)
-	# Создание глобальной сессии (фабрики)
-	async_session = get_async_db()
-	app.state.async_session = async_session
-	async with (async_session as db):
-		admin_password=settings.ADMIN_PASSWORD
-
-	if admin_password:
-		user_exists = await db.execute(select(User).where(User.username == "Admin"))
-		if not user_exists.scalars().first():
-			try:
-				await UserService.register_new_user(db, username="Admin", password=admin_password.strip(), role="admin", gdpr_consent=True)
-				await LogService.create_log(
-					username="Admin",
-					action=LogAction.REGISTER_SUCCESS,
-					description="✅ Администратор успешно создан.",
-					log_level=LogLevelEnum.INFO
-				)
-			except HTTPException as e:
-				await LogService.create_log(
-					username="Admin",
-					action=LogAction.REGISTER_FAILED,
-					description=f"⚠️ Не удалось создать админа: {e.detail}",
-					log_level=LogLevelEnum.ERROR
-				)
-				raise
-	await cleanup_old_logs()
-	session_factory = get_async_session_factory
+	"""
+	Lifespan теперь отвечает только за настройку состояния приложения.
+	Миграции к этому моменту УЖЕ выполнены.
+	"""
+	# Создаем фабрику сессий (асинхронную)
+	session_factory = get_async_session_factory()
 	app.state.session_factory = session_factory
 	app.state.settings = settings
-	await asyncio.sleep(1)
-	yield # Точка, где приложение начинает работать
+	# Создаем админа (теперь таблицы точно есть)
+	await create_admin_user(session_factory)
+	await cleanup_old_logs()
+	yield
+	# Корректное закрытие пулов соединений при остановке сервера
+	await (await get_async_session_factory())().close()
 
 def use_multipart_form_dep(dep):
 	if hasattr(dep, "func"):
@@ -181,7 +194,7 @@ for route in app.router.routes:
 
 
 if __name__ == "__main__":
-	asyncio.run(apply_migrations())
+	apply_migrations_sync()
 	uvicorn.run(
 		"main:app",
 		host="127.0.0.1",

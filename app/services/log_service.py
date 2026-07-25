@@ -1,7 +1,7 @@
 # app/services/log_service.py
 
 from Config.imports import logging
-from app.database.models import UserLog, AppLog
+from app.database._models import UserLog, AppLog
 from app.database.session import get_async_logs_db
 from app.enums.log_enums import LogAction, LogLevelEnum
 
