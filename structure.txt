@@ -1,101 +1,102 @@
 WebDND_Site/
 │
-├── [01].gitignore
-├── [02]main.py
-├── [03]requirements.txt
-├── [04]amvera.yml
-├── [05]structure.txt
-├── [06]LICENSE
-├── [07]alembic.ini
-├── [08].eslintrc.js
-├── [09]eslint.config.mjs
-├── [10]package.json
-├── [11]package-lock.json
-├── [12]rename-script.js
-├── [13]vite.config.js
+├── .gitignore
+├── main.py
+├── requirements.txt
+├── amvera.yml
+├── structure.txt
+├── LICENSE
+├── alembic.ini
+├── .eslintrc.js
+├── eslint.config.mjs
+├── package.json
+├── package-lock.json
+├── rename-script.js
+├── vite.config.js
 │
 ├── versions/
 │   ├── versions/
-│   ├── [14]README
-│   ├── [15]env.py
-│   └── [16]script.py.mako
+│   ├── README
+│   ├── env.py
+│   └── script.py.mako
 │
 ├── data/
-│   └── [17].env
+│   └── .env
 │
 ├── Config/
-│   ├── [18]Config.py
-│   └── [19]imports.py
+│   ├── Config.py
+│   └── imports.py
 │
 ├── app/
 │	├── database/
-│	│   ├── base.py              # Класс Base
-│	│   ├── session.py           # Engine, get_async_db
+│	│   ├── database.py
+│	│   ├── _models.py
+│	│   ├── session.py
 │	│   └── models/              # ПАПКА ДЛЯ МОДЕЛЕЙ
-│	│          ├──[61] associations.py
-│	│          ├──[62] character.py
-│	│          ├──[63] combat.py
-│	│          ├──[64] core.py
-│	│          ├──[65] dnd.py
-│	│          ├──[66] homebrew_entity.py
-│	│          ├──[67] inventory.py
-│	│          ├──[68] references.py
-│	│          ├──[69] user.py
-│	│          └──[70] world.py
+│	│          ├── associations.py
+│	│          ├── character.py
+│	│          ├── combat.py
+│	│          ├── core.py
+│	│          ├── dnd.py
+│	│          ├── homebrew_entity.py
+│	│          ├── inventory.py
+│	│          ├── references.py
+│	│          ├── user.py
+│	│          └── world.py
 │   ├── core/
-│   │   ├── [23]security.py
-│   │   └── [24]dependencies.py
+│   │   ├── security.py
+│   │   └── dependencies.py
 │   ├── enums/
-│   │   ├── [25]log_enums.py
-│   │   ├── [56]person_enums.py
-│   │   ├── [59]db_enums.py
-│   │   └── [26]user_enums.py
+│   │   ├── log_enums.py
+│   │   ├── person_enums.py
+│   │   ├── db_enums.py
+│   │   └── user_enums.py
 │   ├── repositories/
-│   │   └── [27]user_repository.py
+│   │   └── user_repository.py
 │   ├── Routers/
-│   │   ├── [60]API_Routers.py
-│   │   └── [28]Web_Routers.py
+│   │   ├── API_Routers.py
+│   │   └── Web_Routers.py
 │   └── services/
-│   │   ├── [54]cleanup_on_start.py
-│   │   ├── [55]log_service.py
-│   │   ├── [29]user_service.py
-│       └── [30]auth_service.py
+│   │   ├── cleanup_on_start.py
+│   │   ├── log_service.py
+│   │   ├── user_service.py
+│       └── auth_service.py
 │
 ├── static/
 │   ├── css/
 │   │   ├── modules/
-│   │   │    ├── [31]_auth.css
-│   │   │    ├── [32]_base.css
-│   │   │    ├── [33]_base-content.css
-│   │   │    ├── [34]_forms.css
-│   │   │    ├── [35]_header.css
-│   │   │    ├── [36]_password-toggle.css
-│   │   │    ├── [37]_reset.css
-│   │   │    └── [38]_variables.css
-│   │   ├── [39]style.min.css
-│   │   └── [40]style.css
+│   │   │    ├── _auth.css
+│   │   │    ├── _base.css
+│   │   │    ├── _base-content.css
+│   │   │    ├── _forms.css
+│   │   │    ├── _header.css
+│   │   │    ├── _password-toggle.css
+│   │   │    ├── _reset.css
+│   │   │    └── _variables.css
+│   │   ├── style.min.css
+│   │   └── style.css
 │   │
 │   ├── docs/
-│   │   ├── [41]privacy_policy.md
-│   │   └── [42]terms_of_service.md
+│   │   ├── privacy_policy.md
+│   │   └── terms_of_service.md
 │   │
 │   ├── js/
 │   │   ├── modules/
-│   │   │    ├── [43]cookieBanner.js
-│   │   │    └── [44]passwordToggle.js
-│   │   ├── [45]main.min.js
-│   │   └── [46]main.js
+│   │   │    ├── cookieBanner.js
+│   │   │    └── passwordToggle.js
+│   │   ├── main.min.js
+│   │   └── main.js
 │
 └──templates/
     ├── admin/
     │
     ├── _macros/
-    │     ├── [57]card.html
-    │     └── [47]cookieBaner.html
-    ├── [48]_menu.html
-    ├── [49]document.html
-    ├── [58]races_list.html
-    ├── [50]login.html
-    ├── [51]register.html
-    ├── [52]Base.html
-    └── [53]index.html
+    │     ├── card.html
+    │     └── cookieBaner.html
+    ├── _menu.html
+    ├── document.html
+    ├── races_list.html
+    ├── login.html
+    ├── register.html
+    ├── Base.html
+    └── index.html
