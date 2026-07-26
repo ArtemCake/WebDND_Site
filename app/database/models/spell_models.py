@@ -1,10 +1,16 @@
 # app/database/models/spell_models.py
 
 from Config.imports import (
-	Integer, String, Text, Boolean, JSONB, ForeignKey,
+	Integer, String, Text, Boolean, JSONB, ForeignKey, Table, Column,
 	relationship, datetime, DateTime, func, Mapped, mapped_column)
 from app.database.database import Base
 
+
+spell_damage_types = Table(
+	'spell_damage_types', Base.metadata,
+	Column('spell_id', Integer, ForeignKey('spells.id', ondelete="CASCADE"), primary_key=True),
+	Column('damage_type_id', Integer, ForeignKey('damage_types.id', ondelete="CASCADE"), primary_key=True)
+)
 
 # Связующая таблица Класс <-> Заклинание (какие заклы доступны классу по умолчанию)
 class ClassSpellLink(Base):
@@ -24,7 +30,7 @@ class ClassSpellLink(Base):
 	# На каком уровне класса это заклинание становится доступно (если применимо)
 	available_at_level: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-	base_class: Mapped["Class"] = relationship(back_populates="spells")
+	base_class: Mapped["Class"] = relationship(back_populates="class_spells")
 	spell: Mapped["Spell"] = relationship()
 
 class Spell(Base):
@@ -59,6 +65,11 @@ class Spell(Base):
 
 	classes: Mapped[list["Class"]] = relationship(
 		secondary="class_spells",
+		back_populates="spells"
+	)
+
+	damage_type: Mapped["DamageType | None"] = relationship(
+		secondary="spell_damage_types",
 		back_populates="spells"
 	)
 

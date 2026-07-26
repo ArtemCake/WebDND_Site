@@ -95,7 +95,13 @@ class User(Base):
 		passive_deletes=True,
 		cascade="all, delete-orphan"
 	)
-
+	active_encounters: Mapped[list["Encounter"]] = relationship(
+		"Encounter",
+		back_populates="dungeon_master",
+		foreign_keys="Encounter.dungeon_master_id",
+		cascade="all, delete-orphan",
+		overlaps="encounters_created" # Важно для разрешения конфликтов отношений
+	)
 	logs: Mapped[list[UserLog]] = relationship(
 		"UserLog",
 		back_populates="user",

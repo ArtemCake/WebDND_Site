@@ -29,6 +29,13 @@ class Encounter(Base):
 		index=True
 	)
 
+	dungeon_master_id: Mapped[int | None] = mapped_column(
+		Integer,
+		ForeignKey("users.id", ondelete="SET NULL"),
+		nullable=True,
+		index=True
+	)
+
 	name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
 	description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
@@ -39,9 +46,9 @@ class Encounter(Base):
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 	# --- СВЯЗИ ---
-	dungeon_master: Mapped["User"] = relationship(
-		back_populates="encounters_created",
-		foreign_keys="Encounter.dungeon_master_id" # Нужно будет добавить поле в User
+	dungeon_master: Mapped["User | None"] = relationship(
+		back_populates="active_encounters",
+		foreign_keys=[dungeon_master_id]
 	)
 
 	# Прямая связь со списком монстров-шаблонов
@@ -144,7 +151,7 @@ class ActiveEffect(Base):
 	)
 	combat_tracker: Mapped["CombatTracker | None"] = relationship(
 		back_populates="active_effects",
-		foreign_keys="[combat_tracker_id]"
+		foreign_keys=[combat_tracker_id]
 	)
 
 	# Связи с владельцем (для удобства запросов)
@@ -185,6 +192,16 @@ class CombatTracker(Base):
 
 	# --- СВЯЗИ ---
 	encounter: Mapped["Encounter | None"] = relationship(back_populates="combat_tracker")
+
+	dungeon_master: Mapped["User | None"] = relationship(
+		viewonly=True,
+		# Явно пишем условие соединения с использованием foreign()
+		primaryjoin="and_(foreign(CombatTracker.encounter_id) == Encounter.id, "
+		            "foreign(User.id) == Encounter.dungeon_master_id)",
+		remote_side=[Encounter.dungeon_master_id],
+		foreign_keys=[encounter_id]
+	)
+
 	location: Mapped["Location | None"] = relationship()
 
 	initiative_rolls: Mapped[list["InitiativeRoll"]] = relationship(
@@ -192,6 +209,7 @@ class CombatTracker(Base):
 		order_by="desc(InitiativeRoll.initiative_score)",
 		cascade="all, delete-orphan"
 	)
+
 
 	# Эффекты, действующие на уровне всего боя (например, Bless)
 	active_effects: Mapped[list["ActiveEffect"]] = relationship(

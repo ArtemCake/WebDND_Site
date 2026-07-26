@@ -1,51 +1,40 @@
-# app/database/_models.py
-
-# --- ПЕРЕЭКСПОРТ МОДЕЛЕЙ ДЛЯ УДОБСТВА ИМПОРТА ---
-
-# Блоки данных
-# app/database/models/__init__.py
-
 """
-Публичный интерфейс базы данных проекта WebDND_Site.
-Этот файл агрегирует все SQLAlchemy-модели для удобного импорта в роутеры и сервисы.
-Использование:
-    from app.database.models import User, Character, Encounter, Token
+Единый интерфейс базы данных проекта WebDND_Site.
+Гарантирует правильный порядок загрузки моделей во избежание Circular Import Errors.
 """
 
-# --- Базовые сущности ---
-from app.database.models.user_models import (User, UserLog, AppLog)
+# --- 1. БАЗОВЫЕ СПРАВОЧНИКИ И СИСТЕМНЫЕ СУЩНОСТИ ---
+# Сначала грузим всё, что ни от кого не зависит или имеет минимум связей.
+from app.database.models.srd_models import (
+	DamageType, Resistance, AbilityScore,
+	CharacterAbilityValue, AbilityDefinition
+)
+from app.database.models.lore_models import LoreArticle, LoreTag, ArticleTagLink
+from app.database.models.spell_models import Spell, ClassSpellLink
+from app.database.models.bestiary_models import Monster
+from app.database.models.combat_models import Condition, ActiveEffect# ВАЖНО: Условия ДО боя
+
+# --- 2. ПОЛЬЗОВАТЕЛИ И ОРГАНИЗАЦИЯ КАМПАНИЙ ---
+# Теперь можно грузить пользователей (они ссылаются на SRD выше)
+from app.database.models.user_models import User, UserLog, AppLog
 from app.database.models.campaign_models import (Campaign, CampaignPlayerLink)
-from app.database.models.srd_models import (DamageType, Resistance
-, AbilityScore, CharacterAbilityValue, AbilityDefinition)
+from app.database.models.combat_models import  Encounter
 
-# --- Игровые сущности (Core) ---
-from app.database.models.core_game_models import (Character, Race, Class, Subclass
-, Background, CharacterClassLink)
-from app.database.models.bestiary_models import (Monster)
+# --- 3. ГЕЙМПЛЕЙ (Сложные игровые зависимости) ---
+# ТОЛЬКО ПОСЛЕ ТОГО, КАК ЗАГРУЖЕНЫ USER И CAMPAIGN
+from app.database.models.core_game_models import (
+	Character, Race, Class, Subclass, Background,
+	CharacterClassLink
+)
 
-# --- Лор и Контент ---
-from app.database.models.lore_models import (LoreArticle, LoreTag, ArticleTagLink)
-from app.database.models.assets_models import (AssetLibraryEntry)
+# --- 4. ВИРТУАЛЬНЫЙ СТОЛ И БОЙ ---
+# Карты, токены и бой зависят от Пользователей, Кампаний и Персонажей
+from app.database.models.map_models import Location, Token, Wall, LightSource
+from app.database.models.combat_models import CombatTracker, InitiativeRoll
 
-# --- Боевая система ---
-from app.database.models.combat_models import (CombatTracker, InitiativeRoll
-, Condition, ActiveEffect,	Encounter)
-
-# --- Предметы ---
-from app.database.models.inventory_models import (Item, MagicItemProperty, InventoryItem, CurrencyPouch)
-
-# --- Заклинания и Правила ---
-from app.database.models.spell_models import (Spell, ClassSpellLink)
-
-# --- Карты ---
-from app.database.models.map_models import (Location, Token, Wall, LightSource)
-from app.database.database import metadata
-
-# --- КОНФИГУРАЦИЯ ALEMBIC ---
-
-# Это критически важная часть для автоматических миграций.
-# Мы собираем ВСЕ таблицы со всех Base-классов (если у вас их несколько)
-# или просто используем metadata нашего единого Base.
+# --- АГРЕГАЦИЯ МЕТАДАННЫХ ДЛЯ ALEMBIC ---
+# Импортируем Base только после того, как ВСЕ классы объявлены выше
+from .database import metadata
 
 def get_sorted_table_names():
 	"""

@@ -24,8 +24,9 @@ class DamageType(Base):
 	homebrew_rules: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
 	spells: Mapped[list["Spell"]] = relationship(
+		secondary="spell_damage_types", # Имя ТАБЛИЦЫ СТРОКОЙ!
 		back_populates="damage_type",
-		cascade="all, delete-orphan"
+		lazy="selectin" # Оптимизация загрузки
 	)
 	resistances: Mapped[list["Resistance"]] = relationship(back_populates="damage_type")
 
@@ -51,13 +52,17 @@ class Resistance(Base):
 		primary_key=True
 	)
 
+	character: Mapped["Character"] = relationship(
+		back_populates="resistances",
+		foreign_keys=[character_id]
+	)
+
 	# Значение сопротивления.
 	# -1 (Иммунитет), 0.5 (Сопротивление), 2 (Уязвимость), 1 (Обычный урон)
 	modifier: Mapped[float] = mapped_column(default=0.5, nullable=False)
 
 	notes: Mapped[str | None] = mapped_column(String(200), nullable=True) # Источник: Расовая черта, Кольцо защиты...
 
-	character: Mapped["Character"] = relationship(back_populates="resistances")
 	damage_type: Mapped["DamageType"] = relationship(back_populates="resistances")
 
 	def __repr__(self) -> str:

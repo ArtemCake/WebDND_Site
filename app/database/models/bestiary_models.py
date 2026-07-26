@@ -61,9 +61,11 @@ class Monster(Base):
 		back_populates="monster_template",
 		cascade="all, delete-orphan"
 	)
-	combat_encounters: Mapped[list["CombatEncounter"]] = relationship(
+
+	combat_encounters: Mapped[list["Encounter"]] = relationship(
 		secondary="encounter_monsters",
-		back_populates="monsters"
+		back_populates="monsters",
+		lazy="selectin" # Оптимизация загрузки
 	)
 
 	def __repr__(self) -> str:

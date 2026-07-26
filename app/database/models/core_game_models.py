@@ -86,7 +86,11 @@ class Class(Base):
 
 	characters: Mapped[list["CharacterClassLink"]] = relationship(back_populates="base_class")
 	subclasses: Mapped[list["Subclass"]] = relationship("Subclass", back_populates="parent_class", cascade="all, delete-orphan")
-	spells: Mapped[list["Spell"]] = relationship("Spell", secondary="class_spells", back_populates="classes")
+	spells: Mapped[list["Spell"]] = relationship(
+		secondary="class_spells",
+		back_populates="classes",
+		lazy="selectin"
+	)
 
 	def __repr__(self) -> str:
 		status = "Homebrew" if self.is_homebrew else "SRD"
@@ -159,6 +163,12 @@ class Character(Base):
 		index=True
 	)
 
+	active_effects: Mapped[list["ActiveEffect"]] = relationship(
+		back_populates="character",
+		cascade="all, delete-orphan",
+		passive_deletes=True
+	)
+
 	name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
 	level: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 	experience: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -201,8 +211,8 @@ class Character(Base):
 	# --- СВЯЗИ ---
 	owner: Mapped["User | None"] = relationship(
 		back_populates="characters",
-		foreign_keys=user_id, # Явно указываем FK
-		lazy="selectin" # Оптимизация загрузки
+		foreign_keys="Character.user_id", # Явное указание FK обязательно!
+		lazy="selectin" # Оптимизация запроса
 	)
 
 	campaign: Mapped["Campaign | None"] = relationship(back_populates="characters")
