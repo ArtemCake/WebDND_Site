@@ -60,6 +60,10 @@ class Token(Base):
 		Integer, ForeignKey("locations.id", ondelete="CASCADE"), nullable=False, index=True
 	)
 
+	campaign_id: Mapped[int | None] = mapped_column(
+		Integer, ForeignKey("campaigns.id", ondelete="SET NULL"), nullable=True, index=True
+	)
+
 	character_id: Mapped[int | None] = mapped_column(
 		ForeignKey("characters.id", ondelete="SET NULL"), nullable=True, index=True
 	)

@@ -12,6 +12,12 @@ spell_damage_types = Table(
 	Column('damage_type_id', Integer, ForeignKey('damage_types.id', ondelete="CASCADE"), primary_key=True)
 )
 
+spell_classes = Table(
+	'spell_classes', Base.metadata,
+	Column('spell_id', Integer, ForeignKey('spells.id', ondelete="CASCADE"), primary_key=True),
+	Column('class_id', Integer, ForeignKey('classes.id', ondelete="CASCADE"), primary_key=True)
+)
+
 # Связующая таблица Класс <-> Заклинание (какие заклы доступны классу по умолчанию)
 class ClassSpellLink(Base):
 	__tablename__ = "class_spells"

@@ -27,7 +27,7 @@ class CampaignPlayerLink(Base):
 	joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 	campaign: Mapped["Campaign"] = relationship()
-	user: Mapped["User"] = relationship(back_populates="joined_campaigns")
+	user: Mapped["User"] = relationship(back_populates="link_user")
 
 class Campaign(Base):
 	"""
@@ -87,9 +87,13 @@ class Campaign(Base):
 
 	monsters: Mapped[list["Monster"]] = relationship(
 		back_populates="campaign",
-		foreign_keys="Campaign.id == Token.campaign_id",
+		foreign_keys="Monster.campaign_id",
 		cascade="all, delete-orphan",
 		lazy="selectin"
+	)
+
+	invitations: Mapped[list["Invitation"]] = relationship(
+		back_populates="campaign"
 	)
 
 	def __repr__(self) -> str:
@@ -157,3 +161,16 @@ class Invitation(Base):
 	# --- СВЯЗИ ---
 	campaign: Mapped["Campaign"] = relationship(back_populates="invitations")
 	inviter: Mapped["User | None"] = relationship()
+
+class Lobby(Base):
+	__tablename__ = "lobbies"
+
+	id: Mapped[int] = mapped_column(Integer, primary_key=True)
+	owner_id: Mapped[int] = mapped_column(
+		Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+	)
+	name: Mapped[str] = mapped_column(String(100), nullable=False)
+	is_active: Mapped[bool] = mapped_column(Boolean(), default=True)
+
+	# Обратная связь к пользователю
+	owner: Mapped["User"] = relationship(back_populates="lobbies_owned")

@@ -7,6 +7,7 @@ from Config.imports import (
 from app.database.database import Base
 from app.enums.log_enums import LogLevelEnum, LogAction
 from app.enums.user_enums import Role_enums
+from app.database.models.lore_models import LoreArticle
 
 
 class UserLog(Base):
@@ -136,6 +137,13 @@ class User(Base):
 		secondary="campaign_players",
 		back_populates="players"
 	)
+	link_user: Mapped[list["CampaignPlayerLink"]] = relationship(
+		"CampaignPlayerLink",
+		back_populates="user",
+		cascade="all, delete-orphan",
+		passive_deletes=True
+	)
+
 	homebrew_assets: Mapped[list["AssetLibraryEntry"]] = relationship(
 		back_populates="owner",
 		foreign_keys="AssetLibraryEntry.owner_id",
@@ -172,8 +180,9 @@ class User(Base):
 	)
 
 	authored_lore_articles: Mapped[list["LoreArticle"]] = relationship(
+		"LoreArticle",
 		back_populates="author",
-		foreign_keys="User.id==LoreArticle.author_id",
+		foreign_keys=[LoreArticle.author_id], # <-- Явное указание через список надежнее
 		cascade="all, delete-orphan",
 		passive_deletes=True
 	)

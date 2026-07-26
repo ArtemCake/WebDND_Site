@@ -1,11 +1,18 @@
 # app/database/models/core_game_models.py
 
 from Config.imports import (
-	Integer, String, Text, Boolean, JSONB, ForeignKey,
+	Integer, String, Text, Boolean, JSONB, ForeignKey, Table, Column,
 	relationship, datetime, DateTime, func, Mapped, mapped_column)
 from app.database.database import Base
 
+
 # --- СВЯЗУЮЩИЕ МОДЕЛИ ---
+
+background_skills = Table(
+	'background_skills', Base.metadata,
+	Column('background_id', Integer, ForeignKey('backgrounds.id', ondelete="CASCADE"), primary_key=True),
+	Column('skill_id', Integer, ForeignKey('skills.id', ondelete="CASCADE"), primary_key=True)
+)
 
 class CharacterClassLink(Base):
 	"""
@@ -81,7 +88,11 @@ class Race(Base):
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 	characters: Mapped[list["Character"]] = relationship(back_populates="race")
-	traits: Mapped[list["Trait"]] = relationship("Trait", back_populates="race", cascade="all, delete-orphan")
+
+	traits: Mapped[list["Trait"]] = relationship(
+		secondary="race_traits",
+		back_populates="races"
+	)
 
 	def __repr__(self) -> str:
 		status = "Homebrew" if self.is_homebrew else "SRD"
@@ -120,6 +131,12 @@ class Class(Base):
 		viewonly=True,
 		uselist=True,
 		back_populates="classes"
+	)
+
+	skills: Mapped[list["Skill"]] = relationship(
+		secondary="class_skills",
+		back_populates="classes",
+		lazy="selectin"
 	)
 
 	def __repr__(self) -> str:
@@ -264,8 +281,10 @@ class Character(Base):
 
 	conditions: Mapped[list["Condition"]] = relationship(
 		"Condition",
-		back_populates="character",
-		cascade="all, delete-orphan"
+		secondary="character_conditions", # <-- Тоже кавычки!
+		back_populates="characters",
+		cascade="all, delete-orphan",
+		passive_deletes=True
 	)
 
 	inventory_items: Mapped[list["InventoryItem"]] = relationship(
@@ -291,6 +310,12 @@ class Character(Base):
 		back_populates="character",
 		cascade="all, delete-orphan",
 		passive_deletes=True
+	)
+
+	traits: Mapped[list["Trait"]] = relationship(
+		secondary="character_traits",
+		back_populates="characters",
+		lazy="selectin"
 	)
 
 	def __repr__(self) -> str:
@@ -373,3 +398,4 @@ class HomebrewEntity(Base):
 
 
 	owner: Mapped["User | None"] = relationship(back_populates="homebrew_entities")
+

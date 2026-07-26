@@ -98,6 +98,12 @@ class Condition(Base):
 		cascade="all, delete-orphan"
 	)
 
+	characters: Mapped[list["Character"]] = relationship(
+		secondary="character_conditions",
+		back_populates="conditions",
+		lazy="selectin"
+	)
+
 	def __repr__(self) -> str:
 		status = "Homebrew" if self.is_homebrew else "SRD"
 		return f"<Condition(id={self.id}, name='{self.name}', status={status})>"
@@ -194,11 +200,7 @@ class CombatTracker(Base):
 	encounter: Mapped["Encounter | None"] = relationship(back_populates="combat_tracker")
 
 	dungeon_master: Mapped["User | None"] = relationship(
-		viewonly=True,
-		# Явно пишем условие соединения с использованием foreign()
-		primaryjoin="and_(foreign(CombatTracker.encounter_id) == Encounter.id, "
-		            "foreign(User.id) == Encounter.dungeon_master_id)",
-		remote_side=[Encounter.dungeon_master_id],
+		back_populates="active_encounters",
 		foreign_keys=[encounter_id]
 	)
 
