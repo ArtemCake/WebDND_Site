@@ -2,9 +2,9 @@
 
 from Config.imports import datetime, timedelta, delete
 from app.database.session import get_async_logs_db
-from app.database._models import UserLog, LogLevelEnum
+from app.database._models import UserLog
 from app.services.log_service import LogService
-from app.enums.log_enums import LogAction
+from app.enums.log_enums import LogAction, LogLevelEnum
 import logging
 
 

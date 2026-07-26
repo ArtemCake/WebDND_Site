@@ -89,10 +89,9 @@ class User(Base):
 	use_custom_items: Mapped[bool] = mapped_column(Boolean(), default=True)
 
 	# --- СВЯЗИ ---
-	characters: Mapped[list["Character"]] = relationship(
-		"Character",
-		back_populates="user",
-		foreign_keys="Character.user_id",
+	characters: Mapped[list["Character"]] = relationship( # <-- Убрали префикс пути
+		back_populates="owner",
+		foreign_keys="Character.user_id", # Важно указать явно!
 		passive_deletes=True,
 		cascade="all, delete-orphan"
 	)

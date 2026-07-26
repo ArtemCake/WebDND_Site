@@ -77,7 +77,7 @@ class Token(Base):
 	is_locked: Mapped[bool] = mapped_column(Boolean(), default=False)
 	is_visible_to_players: Mapped[bool] = mapped_column(Boolean(), default=True)
 
-	metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+	custom_rules: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
 	custom_asset_id: Mapped[int | None] = mapped_column(ForeignKey("asset_library_entries.id", ondelete="SET NULL"), nullable=True, index=True)
 

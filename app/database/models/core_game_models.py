@@ -199,7 +199,12 @@ class Character(Base):
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now())
 
 	# --- СВЯЗИ ---
-	owner: Mapped["User | None"] = relationship(back_populates="characters")
+	owner: Mapped["User | None"] = relationship(
+		back_populates="characters",
+		foreign_keys=user_id, # Явно указываем FK
+		lazy="selectin" # Оптимизация загрузки
+	)
+
 	campaign: Mapped["Campaign | None"] = relationship(back_populates="characters")
 
 	race: Mapped["Race | None"] = relationship()

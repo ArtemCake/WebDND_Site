@@ -38,7 +38,7 @@ class AssetLibraryEntry(Base):
 
 	is_public_gallery: Mapped[bool] = mapped_column(Boolean(), default=False) # Разрешить другим мастерам использовать этот асссет?
 
-	metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True) # { width, height, duration_sec }
+	custom_rules: Mapped[dict | None] = mapped_column(JSONB, nullable=True) # { width, height, duration_sec }
 
 	uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
