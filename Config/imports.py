@@ -31,6 +31,7 @@ from typing import Optional, Any, Dict, ClassVar
 from concurrent.futures import ThreadPoolExecutor
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy.dialects.postgresql import ENUM as PG_ENUM
 from pydantic_settings import BaseSettings, SettingsConfigDict

@@ -3,15 +3,7 @@
 # --- ПЕРЕЭКСПОРТ МОДЕЛЕЙ ДЛЯ УДОБСТВА ИМПОРТА ---
 
 # Блоки данных
-from app.database.models.user import *
-from app.database.models.core import *
-from app.database.models.dnd import *
-from app.database.models.character import *
-from app.database.models.inventory import *
-from app.database.models.world import *
-from app.database.models.homebrew_entity import *
-from app.database.models.combat import *
-from app.database.models.references import *
+from app.database.models.user_models import *
 from app.database.database import metadata
 
 # --- КОНФИГУРАЦИЯ ALEMBIC ---

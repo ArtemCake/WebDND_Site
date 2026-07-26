@@ -32,17 +32,18 @@ WebDND_Site/
 │	│   ├── database.py
 │	│   ├── _models.py
 │	│   ├── session.py
-│	│   └── models/              # ПАПКА ДЛЯ МОДЕЛЕЙ
-│	│          ├── associations.py
-│	│          ├── character.py
-│	│          ├── combat.py
-│	│          ├── core.py
-│	│          ├── dnd.py
-│	│          ├── homebrew_entity.py
-│	│          ├── inventory.py
-│	│          ├── references.py
-│	│          ├── user.py
-│	│          └── world.py
+│	│   └── models/
+│	│          ├── assets_models.py
+│	│          ├── bestiary_models.py
+│	│          ├── campaign_models.py
+│	│          ├── combat_models.py
+│	│          ├── core_game_models.py
+│	│          ├── inventory_models.py
+│	│          ├── lore_models.py
+│	│          ├── map_models.py
+│	│          ├── spell_models.py
+│	│          ├── srd_models.py
+│	│          └── user_models.py
 │   ├── core/
 │   │   ├── security.py
 │   │   └── dependencies.py
