@@ -55,11 +55,18 @@ class Monster(Base):
 
 	# --- СВЯЗИ ---
 	creator: Mapped["User | None"] = relationship()
-	campaign: Mapped["Campaign | None"] = relationship(back_populates="monsters")
 
 	tokens: Mapped[list["Token"]] = relationship(
-		back_populates="monster_template",
-		cascade="all, delete-orphan"
+		back_populates="monster",
+		primaryjoin="Monster.id == Token.monster_id",
+		cascade="all, delete-orphan",
+		lazy="selectin"
+	)
+
+	campaign: Mapped["Campaign | None"] = relationship(
+		back_populates="monsters",
+		foreign_keys=[campaign_id],
+		lazy="selectin"
 	)
 
 	combat_encounters: Mapped[list["Encounter"]] = relationship(

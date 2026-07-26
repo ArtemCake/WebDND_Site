@@ -2,7 +2,7 @@
 
 from Config.imports import (
 	Integer, String, Text, Boolean, DateTime, func, ForeignKey,
-	relationship, datetime, Mapped, mapped_column)
+	relationship, datetime, Mapped, mapped_column, JSONB,UUID)
 from app.database.database import Base
 
 
@@ -79,6 +79,81 @@ class Campaign(Base):
 		back_populates="joined_campaigns"
 	)
 
+	lore_articles: Mapped[list["LoreArticle"]] = relationship(
+		back_populates="campaign",
+		cascade="all, delete-orphan",
+		passive_deletes=True
+	)
+
+	monsters: Mapped[list["Monster"]] = relationship(
+		back_populates="campaign",
+		foreign_keys="Campaign.id == Token.campaign_id",
+		cascade="all, delete-orphan",
+		lazy="selectin"
+	)
+
 	def __repr__(self) -> str:
 		privacy = "Private" if self.is_private else "Public"
 		return f"<Campaign(id={self.id}, name='{self.name}', DM={self.owner_id}, status={privacy})>"
+
+class Session(Base):
+	"""
+	Хранит данные серверной сессии пользователя.
+	Используется реже, чем JWT, если нужно хранить тяжелые данные на сервере.
+	"""
+	__tablename__ = "sessions"
+
+	id: Mapped[str] = mapped_column(
+		String(128), # Обычно здесь хранится ID куки или JTI токена
+		primary_key=True,
+		default=lambda: str(UUID.uuid4())
+	)
+
+	user_id: Mapped[int | None] = mapped_column(
+		ForeignKey("users.id", ondelete="CASCADE"),
+		nullable=True,
+		index=True
+	)
+
+	data: Mapped[dict | None] = mapped_column(JSONB) # Сериализованные данные сессии
+
+	expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+
+	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+	user: Mapped["User | None"] = relationship(back_populates="sessions")
+
+class Invitation(Base):
+	"""
+	Приглашение пользователя в кампанию по ссылке или ID.
+	"""
+	__tablename__ = "invitations"
+
+	id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+
+	campaign_id: Mapped[int] = mapped_column(
+		Integer,
+		ForeignKey("campaigns.id", ondelete="CASCADE"),
+		nullable=False,
+		index=True
+	)
+
+	inviter_id: Mapped[int | None] = mapped_column(
+		Integer,
+		ForeignKey("users.id", ondelete="SET NULL"),
+		nullable=True,
+		index=True
+	) # Кто пригласил
+
+	invite_code: Mapped[str] = mapped_column(String(32), unique=True, nullable=False, index=True)
+
+	status: Mapped[str] = mapped_column(String(20), default="PENDING") # PENDING, ACCEPTED, REVOKED, EXPIRED
+
+	expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+	used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+	# --- СВЯЗИ ---
+	campaign: Mapped["Campaign"] = relationship(back_populates="invitations")
+	inviter: Mapped["User | None"] = relationship()

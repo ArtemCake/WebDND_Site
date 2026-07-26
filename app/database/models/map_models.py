@@ -64,6 +64,11 @@ class Token(Base):
 		ForeignKey("characters.id", ondelete="SET NULL"), nullable=True, index=True
 	)
 
+	# ДЛЯ ТОКЕНОВ МОНСТРОВ — добавь эту колонку
+	monster_id: Mapped[int | None] = mapped_column(
+		ForeignKey("monsters.id", ondelete="SET NULL"), nullable=True, index=True
+	)
+
 	x_coord: Mapped[float] = mapped_column(Float(), nullable=False, default=0.0)
 	y_coord: Mapped[float] = mapped_column(Float(), nullable=False, default=0.0)
 	z_index: Mapped[int] = mapped_column(Integer, default=0)
@@ -88,6 +93,13 @@ class Token(Base):
 	active_effects: Mapped[list["ActiveEffect"]] = relationship(
 		back_populates="token",
 		cascade="all, delete-orphan"
+	)
+
+		# Связь на монстра (обратная к Monster.tokens)
+	monster: Mapped["Monster | None"] = relationship(
+		back_populates="tokens",
+		foreign_keys=[monster_id],
+		lazy="selectin"
 	)
 
 	def __repr__(self) -> str:

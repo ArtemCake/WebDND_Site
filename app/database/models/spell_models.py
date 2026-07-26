@@ -30,7 +30,7 @@ class ClassSpellLink(Base):
 	# На каком уровне класса это заклинание становится доступно (если применимо)
 	available_at_level: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-	base_class: Mapped["Class"] = relationship(back_populates="class_spells")
+	base_class: Mapped["Class"] = relationship()
 	spell: Mapped["Spell"] = relationship()
 
 class Spell(Base):
@@ -68,12 +68,18 @@ class Spell(Base):
 		back_populates="spells"
 	)
 
-	damage_type: Mapped["DamageType | None"] = relationship(
+	damage_types: Mapped[list["DamageType"]] = relationship(
 		secondary="spell_damage_types",
-		back_populates="spells"
+		back_populates="spells",
+		lazy="selectin"
 	)
 
-	character_spells: Mapped[list["CharacterSpell"]] = relationship(back_populates="spell")
+	character_spells: Mapped[list["CharacterSpell"]] = relationship(
+		back_populates="spell",
+		cascade="all, delete-orphan",
+		passive_deletes=True,
+		lazy="selectin"  # опционально: чтобы подгружать сразу
+	)
 
 	def __repr__(self) -> str:
 		status = "Homebrew" if self.is_homebrew else "SRD"

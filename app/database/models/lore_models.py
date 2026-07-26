@@ -46,10 +46,25 @@ class LoreArticle(Base):
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=func.now())
 
-	# --- СВЯЗИ ---
-	campaign: Mapped["Campaign"] = relationship(back_populates="lore_articles")
+	# --- ВНЕШНИЕ КЛЮЧИ ---
+	author_id: Mapped[int | None] = mapped_column(
+		Integer,
+		ForeignKey("users.id", ondelete="SET NULL"),
+		nullable=True,
+		index=True
+	)
 
-	author: Mapped["User | None"] = relationship() # Если нужно знать автора конкретной правки
+	# --- СВЯЗИ ---
+	campaign: Mapped["Campaign"] = relationship(
+		back_populates="lore_articles",
+		foreign_keys=[campaign_id]
+	)
+
+	author: Mapped["User | None"] = relationship(
+		back_populates="authored_lore_articles",  # опционально: если есть обратная связь в User
+		foreign_keys=[author_id],
+		lazy="selectin"
+	)
 
 	children: Mapped[list["LoreArticle"]] = relationship(
 		back_populates="parent",
@@ -69,7 +84,7 @@ class LoreArticle(Base):
 	)
 
 	def __repr__(self) -> str:
-		return f"<LoreArticle(id={self.id}, title='{self.title}', type={self.article_type})>"
+			return f"<LoreArticle(id={self.id}, title='{self.title}', type={self.article_type})>"
 
 class LoreTag(Base):
 	"""

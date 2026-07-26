@@ -7,7 +7,7 @@
 # Сначала грузим всё, что ни от кого не зависит или имеет минимум связей.
 from app.database.models.srd_models import (
 	DamageType, Resistance, AbilityScore,
-	CharacterAbilityValue, AbilityDefinition
+	CharacterAbilityValue
 )
 from app.database.models.lore_models import LoreArticle, LoreTag, ArticleTagLink
 from app.database.models.spell_models import Spell, ClassSpellLink
@@ -24,8 +24,7 @@ from app.database.models.combat_models import  Encounter
 # ТОЛЬКО ПОСЛЕ ТОГО, КАК ЗАГРУЖЕНЫ USER И CAMPAIGN
 from app.database.models.core_game_models import (
 	Character, Race, Class, Subclass, Background,
-	CharacterClassLink
-)
+	CharacterClassLink)
 
 # --- 4. ВИРТУАЛЬНЫЙ СТОЛ И БОЙ ---
 # Карты, токены и бой зависят от Пользователей, Кампаний и Персонажей

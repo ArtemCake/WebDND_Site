@@ -24,10 +24,10 @@ class DamageType(Base):
 	homebrew_rules: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
 	spells: Mapped[list["Spell"]] = relationship(
-		secondary="spell_damage_types", # Имя ТАБЛИЦЫ СТРОКОЙ!
-		back_populates="damage_type",
-		lazy="selectin" # Оптимизация загрузки
+		secondary="spell_damage_types",
+		back_populates="damage_types"
 	)
+
 	resistances: Mapped[list["Resistance"]] = relationship(back_populates="damage_type")
 
 	def __repr__(self) -> str:
@@ -70,22 +70,18 @@ class Resistance(Base):
 		return f"<Resistance(char={self.character_id}, dmg={self.damage_type.name}, mod={mod_map.get(self.modifier, 'Custom')})>"
 
 class AbilityScore(Base):
-	"""
-	Справочник характеристик (STR, DEX, CON...).
-	Позволяет расширять список за пределы стандартных 6 атрибутов.
-	"""
 	__tablename__ = "ability_scores"
 
 	id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-	name: Mapped[str] = mapped_column(String(20), nullable=False, unique=True, index=True) # strength, dexterity
-	short_name: Mapped[str] = mapped_column(String(3), nullable=False, unique=True) # STR, DEX
-
+	name: Mapped[str] = mapped_column(String(20), nullable=False, unique=True, index=True)
+	short_name: Mapped[str] = mapped_column(String(3), nullable=False, unique=True)
 	description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 	is_enabled: Mapped[bool] = mapped_column(Boolean(), default=True, server_default="true", index=True)
 	is_homebrew: Mapped[bool] = mapped_column(Boolean(), default=False, index=True)
 	homebrew_rules: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
+	# Одна связь, которая ссылается на CharacterAbilityValue
 	values: Mapped[list["CharacterAbilityValue"]] = relationship(
 		back_populates="ability_score",
 		cascade="all, delete-orphan"
@@ -96,10 +92,6 @@ class AbilityScore(Base):
 		return f"<AbilityScore(id={self.id}, name='{self.short_name}', status={status})>"
 
 class CharacterAbilityValue(Base):
-	"""
-	Конкретное значение характеристики для конкретного персонажа.
-	Разделено от справочника, чтобы хранить бонусы мастерства или временные изменения.
-	"""
 	__tablename__ = "character_ability_values"
 
 	character_id: Mapped[int] = mapped_column(
@@ -109,38 +101,23 @@ class CharacterAbilityValue(Base):
 	)
 	ability_score_id: Mapped[int] = mapped_column(
 		Integer,
-		ForeignKey("abilities.id", ondelete="RESTRICT"), # См. примечание ниже
+		ForeignKey("ability_scores.id", ondelete="RESTRICT"),
 		primary_key=True
 	)
 
-	score: Mapped[int] = mapped_column(Integer, nullable=False) # Базовое значение (обычно 3..20)
-	bonus: Mapped[int] = mapped_column(Integer, nullable=False) # Модификатор (округленный floor((score-10)/2))
+	# Имя должно точно совпадать с back_populates в AbilityScore.values
+	ability_score: Mapped["AbilityScore"] = relationship(
+		back_populates="values",
+		foreign_keys=[ability_score_id]
+	)
 
-	proficient: Mapped[bool] = mapped_column(Boolean(), default=False) # Есть ли владение спасброском?
-	save_bonus: Mapped[int | None] = mapped_column(Integer, nullable=True) # Бонус спасброска (если профайент)
+	score: Mapped[int] = mapped_column(Integer, nullable=False)
+	bonus: Mapped[int] = mapped_column(Integer, nullable=False)
+
+	proficient: Mapped[bool] = mapped_column(Boolean(), default=False)
+	save_bonus: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 	character: Mapped["Character"] = relationship(back_populates="ability_scores")
-	ability_definition: Mapped["AbilityDefinition"] = relationship()
 
 	def __repr__(self) -> str:
-		return f"<CharAbility(char={self.character_id}, abil='{self.ability_definition.short_name}', val={self.score})>"
-
-class AbilityDefinition(Base):
-	"""
-	Справочник самих названий характеристик (STR, DEX...).
-	Вынесен отдельно, чтобы Мастер мог создать свою систему статов.
-	"""
-	__tablename__ = "abilities"
-
-	id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-	name: Mapped[str] = mapped_column(String(50), nullable=False, unique=True)
-	short_name: Mapped[str] = mapped_column(String(3), nullable=False, unique=True) # STR, INT
-	description: Mapped[str | None] = mapped_column(Text, nullable=True)
-
-	is_enabled: Mapped[bool] = mapped_column(Boolean(), default=True, server_default="true", index=True)
-	is_homebrew: Mapped[bool] = mapped_column(Boolean(), default=False, index=True)
-
-	scores: Mapped[list[CharacterAbilityValue]] = relationship(back_populates="ability_definition")
-
-	def __repr__(self) -> str:
-		return f"<AbilityDef(id={self.id}, name='{self.name}')>"
+		return f"<CharAbility(char={self.character_id}, abil='{self.ability_score.short_name}', val={self.score})>"

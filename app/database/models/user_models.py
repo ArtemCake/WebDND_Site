@@ -89,80 +89,10 @@ class User(Base):
 	use_custom_items: Mapped[bool] = mapped_column(Boolean(), default=True)
 
 	# --- СВЯЗИ ---
-	characters: Mapped[list["Character"]] = relationship( # <-- Убрали префикс пути
-		back_populates="owner",
-		foreign_keys="Character.user_id", # Важно указать явно!
-		passive_deletes=True,
-		cascade="all, delete-orphan"
-	)
-	active_encounters: Mapped[list["Encounter"]] = relationship(
-		"Encounter",
-		back_populates="dungeon_master",
-		foreign_keys="Encounter.dungeon_master_id",
-		cascade="all, delete-orphan",
-		overlaps="encounters_created" # Важно для разрешения конфликтов отношений
-	)
-	logs: Mapped[list[UserLog]] = relationship(
-		"UserLog",
-		back_populates="user",
-		order_by=UserLog.timestamp.desc(),
-		passive_deletes=True,
-		cascade="all, delete-orphan"
-	)
-
-	rules_created: Mapped[list["Ruleset"]] = relationship(
-		"Ruleset",
-		back_populates="owner",
-		foreign_keys="Ruleset.owner_id",
-		cascade="all, delete-orphan"
-	)
-
-	homebrew_entities: Mapped[list["HomebrewEntity"]] = relationship(
-		"HomebrewEntity",
-		back_populates="creator",
-		foreign_keys="HomebrewEntity.creator_id",
-		passive_deletes=True,
-		cascade="all, delete-orphan"
-	)
-
-	lobbies_owned: Mapped[list["Lobby"]] = relationship(
-		"Lobby",
-		back_populates="owner",
-		cascade="all, delete-orphan"
-	)
-
-	campaigns_owned: Mapped[list["Campaign"]] = relationship(
-		"Campaign",
-		back_populates="dungeon_master",
-		cascade="all, delete-orphan"
-	)
-
-	table_args = (
-		Index('ix_users_username_active', 'username', postgresql_where=(is_active == True)),
-	)
-
-	def __repr__(self) -> str:
-		status = "Active" if self.is_active else "Banned"
-		return f"<User(id={self.id}, username='{self.username}', role={self.role.value}, status={status})>"
-	"""
-	Основная модель пользователя системы.
-	"""
-	__tablename__ = "users"
-	id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-	username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
-	hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
-	is_active: Mapped[bool] = mapped_column(Boolean(), default=True)
-	role: Mapped[Role_enums] = mapped_column(Enum(Role_enums, native_enum=True, create_constraint=False),
-	                                         default=Role_enums.PLAYER,
-	                                         nullable=False)
-	gdpr_consent: Mapped[bool] = mapped_column(Boolean(), default=False)
-	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-
-	# --- СВЯЗИ ---
 	# Персонажи этого пользователя
 	characters: Mapped[list["Character"]] = relationship(
 		"Character",
-		back_populates="user",
+		back_populates="owner",
 		foreign_keys="Character.user_id",
 		passive_deletes=True,
 		cascade="all, delete-orphan"
@@ -184,9 +114,8 @@ class User(Base):
 	)
 	# Кастомный контент (хоумбрю), созданный пользователем
 	homebrew_entities: Mapped[list["HomebrewEntity"]] = relationship(
-		"HomebrewEntity",
-		back_populates="creator",
-		foreign_keys="HomebrewEntity.creator_id",
+		back_populates="owner",
+		foreign_keys="HomebrewEntity.owner_id",
 		passive_deletes=True,
 		cascade="all, delete-orphan"
 	)
@@ -204,22 +133,49 @@ class User(Base):
 		cascade="all, delete-orphan"
 	)
 	joined_campaigns: Mapped[list["Campaign"]] = relationship(
-		   secondary="campaign_players",
-		     back_populates="players"
-		 )
+		secondary="campaign_players",
+		back_populates="players"
+	)
 	homebrew_assets: Mapped[list["AssetLibraryEntry"]] = relationship(
-		     "AssetLibraryEntry",
-		     back_populates="owner",
-		     foreign_keys="AssetLibraryEntry.owner_id",
-		     passive_deletes=True,
-		     cascade="all, delete-orphan"
-		 )
+		back_populates="owner",
+		foreign_keys="AssetLibraryEntry.owner_id",
+		passive_deletes=True,
+		cascade="all, delete-orphan"
+	)
 
 	encounters_created: Mapped[list["Encounter"]] = relationship(
-	     "Encounter",
-	     back_populates="dungeon_master",
-	     foreign_keys="Encounter.dungeon_master_id",
-	     cascade="all, delete-orphan"
+		"Encounter",
+		back_populates="dungeon_master",
+		foreign_keys="Encounter.dungeon_master_id",
+		cascade="all, delete-orphan"
+	)
+
+	active_encounters: Mapped[list["Encounter"]] = relationship(
+		"Encounter",
+		back_populates="dungeon_master",
+		foreign_keys="Encounter.dungeon_master_id",
+		cascade="all, delete-orphan",
+		overlaps="encounters_created" # Важно для разрешения конфликтов отношений
+	)
+
+
+	lobbies_owned: Mapped[list["Lobby"]] = relationship(
+		"Lobby",
+		back_populates="owner",
+		cascade="all, delete-orphan"
+	)
+
+	campaigns_owned: Mapped[list["Campaign"]] = relationship(
+		"Campaign",
+		back_populates="dungeon_master",
+		cascade="all, delete-orphan"
+	)
+
+	authored_lore_articles: Mapped[list["LoreArticle"]] = relationship(
+		back_populates="author",
+		foreign_keys="User.id==LoreArticle.author_id",
+		cascade="all, delete-orphan",
+		passive_deletes=True
 	)
 
 	# Индекс для быстрого поиска активных пользователей по нику
