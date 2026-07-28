@@ -1,7 +1,7 @@
 # main.py
 
 from Config.imports import (FastAPI, asynccontextmanager, CORSMiddleware, HTTPException, select,
-                                 StaticFiles, Jinja2Templates, base64, RequestValidationError, Request, sys,
+                        StaticFiles, Jinja2Templates, base64, RequestValidationError, Request, asyncio,
 						JSONResponse, HTMLResponse, Depends, uvicorn, APIRoute, os, pathlib)
 from Config.Config import settings
 from app.database.session import get_async_session_factory
@@ -14,31 +14,33 @@ from app.services.user_service import UserService
 from app.database._models import User
 from alembic.command import upgrade
 from alembic.config import Config
+from app.database.database import engine, metadata
 
 
 # --- ФУНКЦИЯ ПРИМЕНЕНИЯ МИГРАЦИЙ (СИНХРОННАЯ) ---
-def apply_migrations_sync():
-	"""
-	Применяет миграции БЛОКИРУЮЩИМ способом.
-	Вызывается ТОЛЬКО при старте скрипта (в if __name__ == '__main__').
-	Не использует asyncio, поэтому не конфликтует с релоадером Windows.
-	"""
+async def apply_migrations():
 	try:
+
 		print("[STARTUP] Применение миграций...")
-		# ВАЖНО: Используем URL без замены драйвера.
-		# Alembic увидит postgresql:// и выберет psycopg2 сам.
+
 		alembic_cfg = Config("alembic.ini")
-		alembic_cfg.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+		alembic_cfg.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("postgresql+asyncpg", "postgresql"))
 		upgrade(alembic_cfg, "head")
-		print("[STARTUP] Миграции применены успешно.")
-		# Логируем успех АССИНХРОННО после создания цикла событий (позже)
-		return True
+		await LogService.create_log(
+			username=None,
+			action=LogAction.DATABASE_MIGRATION,
+			description="✅ Миграции БД успешно применены",
+			log_level=LogLevelEnum.INFO
+		)
+		print("[STARTUP] ✅ Миграции БД успешно применены")
 	except Exception as e:
-		error_msg = f"[FATAL] Ошибка применения миграций: {str(e)}"
-		print(error_msg)
-		# Здесь нельзя вызвать await LogService, так как цикла событий еще нет.
-		# Просто выводим в консоль и падаем.
-		sys.exit(1)
+		await LogService.create_log(
+			username=None,
+			action=LogAction.DATABASE_ERROR,
+			description=f"⚠️ Ошибка при применении миграций: {str(e)}",
+			log_level=LogLevelEnum.ERROR
+		)
+		raise
 
 async def create_admin_user(session_factory):
 	"""Вспомогательная функция для выноса логики админа."""
@@ -76,16 +78,29 @@ async def lifespan(app: FastAPI):
 	Lifespan теперь отвечает только за настройку состояния приложения.
 	Миграции к этому моменту УЖЕ выполнены.
 	"""
-	# Создаем фабрику сессий (асинхронную)
-	session_factory = get_async_session_factory()
-	app.state.session_factory = session_factory
-	app.state.settings = settings
-	# Создаем админа (теперь таблицы точно есть)
-	await create_admin_user(session_factory)
-	await cleanup_old_logs()
-	yield
-	# Корректное закрытие пулов соединений при остановке сервера
-	await (await get_async_session_factory())().close()
+	try:
+		print("[STARTUP] Проверка и создание таблиц...")
+		# 2. Асинхронное создание всех таблиц из метаданных моделей.
+		# Если таблицы существуют - команда отработает мгновенно.
+		# Если нет - создаст всё дерево ForeignKey без ошибок циклов.
+		async with engine.begin() as conn:
+			await conn.run_sync(metadata.create_all)
+		print("[STARTUP] Таблицы проверены/созданы успешно.")
+		# Теперь создаем фабрику пулов для самого FastAPI
+		session_factory = get_async_session_factory()
+		app.state.session_factory = session_factory
+		app.state.settings = settings
+		# 3. Создаем админа через сервис (таблицы уже точно есть)
+		await create_admin_user(session_factory)
+		await cleanup_old_logs()
+		yield
+		# Корректное закрытие пулов соединений при остановке сервера
+		await (await get_async_session_factory())().close()
+	finally:
+		# Важно корректно закрыть даже этот временный движок
+		await engine.dispose()
+		# Закрытие основного пула сессии
+		await (await get_async_session_factory())().close()
 
 def use_multipart_form_dep(dep):
 	if hasattr(dep, "func"):
@@ -194,7 +209,7 @@ for route in app.router.routes:
 
 
 if __name__ == "__main__":
-	apply_migrations_sync()
+	asyncio.run(apply_migrations())
 	uvicorn.run(
 		"main:app",
 		host="127.0.0.1",

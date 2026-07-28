@@ -2,7 +2,7 @@
 
 from Config.imports import (
 	Integer, String, Text, Boolean, JSONB, ForeignKey, Table, Column,
-	relationship, datetime, DateTime, func, Mapped, mapped_column)
+	relationship, datetime, DateTime, func, Mapped, mapped_column, remote)
 from app.database.database import Base
 
 
@@ -12,6 +12,12 @@ background_skills = Table(
 	'background_skills', Base.metadata,
 	Column('background_id', Integer, ForeignKey('backgrounds.id', ondelete="CASCADE"), primary_key=True),
 	Column('skill_id', Integer, ForeignKey('skills.id', ondelete="CASCADE"), primary_key=True)
+)
+
+character_conditions = Table(
+	'character_conditions', Base.metadata,
+	Column('character_id', Integer, ForeignKey('characters.id', ondelete="CASCADE"), primary_key=True),
+	Column('condition_id', Integer, ForeignKey('conditions.id', ondelete="CASCADE"), primary_key=True)
 )
 
 class CharacterClassLink(Base):
@@ -281,9 +287,9 @@ class Character(Base):
 
 	conditions: Mapped[list["Condition"]] = relationship(
 		"Condition",
-		secondary="character_conditions", # <-- Тоже кавычки!
+		secondary="character_conditions",
 		back_populates="characters",
-		cascade="all, delete-orphan",
+		cascade="all",
 		passive_deletes=True
 	)
 
@@ -301,8 +307,8 @@ class Character(Base):
 	)
 
 	resistances: Mapped[list["Resistance"]] = relationship(
-		back_populates="character", # <-- ОНА ССЫЛАЕТСЯ НА "CHARACTER"
-		cascade="all, delete-orphan",
+		back_populates="character",
+		cascade="all",
 		passive_deletes=True
 	)
 
@@ -358,11 +364,18 @@ class Ruleset(Base):
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 	# --- СВЯЗИ ---
-	campaign: Mapped["Campaign"] = relationship(back_populates="ruleset")
+	campaign: Mapped["Campaign"] = relationship(
+		"Campaign",
+		#back_populates="ruleset",
+		foreign_keys=[campaign_id],
+		uselist=False,
+		overlaps="characters"
+	)
 
 	owner: Mapped["User | None"] = relationship(
 		back_populates="rules_created",
-		foreign_keys=[owner_id]
+		foreign_keys=[owner_id], # <--- Явно указываем локальный FK
+		overlaps="joined_campaigns, campaigns_owned" # Указываем другие связи User, использующие users.id
 	)
 
 	def __repr__(self) -> str:

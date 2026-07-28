@@ -71,6 +71,7 @@ class Spell(Base):
 
 	classes: Mapped[list["Class"]] = relationship(
 		secondary="class_spells",
+		viewonly=True,
 		back_populates="spells"
 	)
 

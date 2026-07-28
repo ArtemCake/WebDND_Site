@@ -2,7 +2,7 @@
 
 from Config.imports import (
 	Integer, String, Text, Boolean, DateTime, func, ForeignKey,
-	relationship, datetime, Mapped, mapped_column, JSONB,UUID)
+	relationship, datetime, Mapped, mapped_column, JSONB,UUID, remote)
 from app.database.database import Base
 
 
@@ -76,7 +76,9 @@ class Campaign(Base):
 
 	players: Mapped[list["User"]] = relationship(
 		secondary="campaign_players",
-		back_populates="joined_campaigns"
+		back_populates="joined_campaigns",
+		viewonly=True,
+		overlaps="link_user"
 	)
 
 	lore_articles: Mapped[list["LoreArticle"]] = relationship(
@@ -94,6 +96,14 @@ class Campaign(Base):
 
 	invitations: Mapped[list["Invitation"]] = relationship(
 		back_populates="campaign"
+	)
+
+	ruleset: Mapped["Ruleset | None"] = relationship(
+		"Ruleset",
+		back_populates="campaign",
+		foreign_keys=[ruleset_id],
+		uselist=False,
+		overlaps="characters, dungeon_master"
 	)
 
 	def __repr__(self) -> str:
@@ -174,3 +184,4 @@ class Lobby(Base):
 
 	# Обратная связь к пользователю
 	owner: Mapped["User"] = relationship(back_populates="lobbies_owned")
+

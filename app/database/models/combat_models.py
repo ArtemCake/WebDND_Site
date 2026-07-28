@@ -1,8 +1,8 @@
 # app/database/models/combat_models.py
 
 from Config.imports import (
-	Integer, String, Boolean, ForeignKey, JSONB, Text, func, Table,
-	relationship, datetime, DateTime, Mapped, mapped_column, Column)
+	Integer, String, Boolean, ForeignKey, foreign, and_, JSONB, Text, func, Table,
+	relationship, datetime, DateTime, Mapped, mapped_column, Column, remote)
 from app.database.database import Base
 
 
@@ -29,13 +29,6 @@ class Encounter(Base):
 		index=True
 	)
 
-	dungeon_master_id: Mapped[int | None] = mapped_column(
-		Integer,
-		ForeignKey("users.id", ondelete="SET NULL"),
-		nullable=True,
-		index=True
-	)
-
 	name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
 	description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
@@ -45,10 +38,21 @@ class Encounter(Base):
 
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
+	dungeon_master_id: Mapped[int | None] = mapped_column(
+		Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+	)
+
 	# --- СВЯЗИ ---
 	dungeon_master: Mapped["User | None"] = relationship(
-		back_populates="active_encounters",
-		foreign_keys=[dungeon_master_id]
+		back_populates="created_encounters",
+		foreign_keys=[dungeon_master_id],
+		lazy="selectin"
+	)
+
+	combat_tracker: Mapped["CombatTracker | None"] = relationship(
+		uselist=False,
+		back_populates="encounter",
+		passive_deletes=True
 	)
 
 	# Прямая связь со списком монстров-шаблонов
@@ -196,14 +200,18 @@ class CombatTracker(Base):
 	started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 	ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-	# --- СВЯЗИ ---
-	encounter: Mapped["Encounter | None"] = relationship(back_populates="combat_tracker")
-
-	dungeon_master: Mapped["User | None"] = relationship(
-		back_populates="active_encounters",
-		foreign_keys=[encounter_id]
+	dungeon_master_id: Mapped[int | None] = mapped_column(
+		Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
 	)
 
+	# --- СВЯЗИ ---
+	creator: Mapped["User | None"] = relationship(  # Новое уникальное имя
+		back_populates="trackers_owned",
+		foreign_keys=[dungeon_master_id],
+		lazy="selectin"
+	)
+
+	encounter: Mapped["Encounter | None"] = relationship(back_populates="combat_tracker")
 	location: Mapped["Location | None"] = relationship()
 
 	initiative_rolls: Mapped[list["InitiativeRoll"]] = relationship(
@@ -211,7 +219,6 @@ class CombatTracker(Base):
 		order_by="desc(InitiativeRoll.initiative_score)",
 		cascade="all, delete-orphan"
 	)
-
 
 	# Эффекты, действующие на уровне всего боя (например, Bless)
 	active_effects: Mapped[list["ActiveEffect"]] = relationship(
@@ -262,3 +269,4 @@ class InitiativeRoll(Base):
 	def __repr__(self) -> str:
 		entity_name = self.token.character.name if self.token and self.token.character else "NPC"
 		return f"<Initiative(id={self.id}, Entity='{entity_name}', Score={self.initiative_score})>"
+

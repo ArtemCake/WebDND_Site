@@ -43,4 +43,4 @@ from sqlalchemy import (func, select, Column, Integer, cast, String, Boolean, Te
                         Float, JSON, SmallInteger, CheckConstraint, LargeBinary, DateTime, ForeignKey,
                         UniqueConstraint, delete, text, update, Index, and_, or_)
 from fastapi import FastAPI, Request, status, UploadFile, APIRouter, Depends, HTTPException, Form, File
-from sqlalchemy.orm import selectinload, declarative_base, relationship, Mapped, mapped_column, backref
+from sqlalchemy.orm import selectinload, declarative_base, relationship, Mapped, mapped_column, backref, foreign, remote

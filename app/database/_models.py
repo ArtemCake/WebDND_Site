@@ -28,7 +28,7 @@ from app.database.models.combat_models import Encounter, CombatTracker, Initiati
 
 # --- 3. ГЕЙМПЛЕЙ ---
 from app.database.models.core_game_models import (
-	Race, Class, Subclass, Background,
+	Race, Class, Subclass, Background, Character,
 	CharacterClassLink, CharacterSpell, Ruleset, HomebrewEntity
 )
 
