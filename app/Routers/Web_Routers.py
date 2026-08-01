@@ -22,25 +22,11 @@ async def home_page(request: Request, user: User = Depends(get_current_user)):
 	"""
 	Главная страница. Редирект на профиль или логин.
 	"""
-	page_data = {
-		"title": "D&D Мастерская",          # Для тега <title>
-		"welcome_message": "Добро пожаловать в Личный Кабинет!", # Приветствие
-		"description": (
-			"Здесь вы сможете создавать миры, вести игры, "
-			"хранить лор и управлять персонажами."
-		),
-		"features": [
-			"Хранение лора миров",
-			"Создание карточек персонажей",
-			"Инструменты для Мастера"
-		]
-	}
 	templates = request.app.state.templates
 	response = templates.TemplateResponse(
 	request=request,
 	name="index.html",
-	context={"context": page_data,
-	         "user": user}
+	# context={"user": user}
 	)
 	return response
 
@@ -52,12 +38,12 @@ async def register_page(request: Request):
 		templates = request.app.state.templates
 		response = templates.TemplateResponse(
 			request=request,
-			name="register.html",
+			name="auth/register.html",
 			context={"username_value": ""}
 		)
 		return response
 	except Exception as e:
-		raise HTTPException(status_code=500, detail="Ошибка загрузки формы регистрации")
+		raise HTTPException(status_code=500, detail=f"Ошибка загрузки формы регистрации: {e}")
 
 @web_router.post("/register")
 async def register_user(request: Request,
@@ -76,7 +62,7 @@ async def register_user(request: Request,
 			templates = request.app.state.templates
 			return templates.TemplateResponse(
 				request=request,
-				name="register.html",
+				name="auth/register.html",
 				context={"error": message,
 				         "username_value": username}
 			)
@@ -89,12 +75,12 @@ async def login_page(request: Request):
 		templates = request.app.state.templates
 		response = templates.TemplateResponse(
 			request=request,
-			name="login.html",
+			name="auth/login.html",
 			context={"username_value": ""}
 		)
 		return response
 	except Exception as e:
-		raise HTTPException(status_code=500, detail="Ошибка загрузки формы входа")
+		raise HTTPException(status_code=500, detail=f"Ошибка загрузки формы входа: {e}")
 
 @web_router.post("/login")
 async def login(request: Request,
@@ -135,7 +121,7 @@ async def login(request: Request,
 			templates = request.app.state.templates
 			return templates.TemplateResponse(
 				request=request,
-				name="login.html",
+				name="auth/login.html",
 				context={"error": message,
 				         "username_value": username}
 			)

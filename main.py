@@ -15,7 +15,6 @@ from app.database._models import User
 from alembic.command import upgrade
 from alembic.config import Config
 from app.database.database import engine, metadata
-from app.services.menu_service import build_menu
 
 
 # --- ФУНКЦИЯ ПРИМЕНЕНИЯ МИГРАЦИЙ (СИНХРОННАЯ) ---
@@ -120,24 +119,6 @@ app = FastAPI(
 	version=settings.VERSION,
 	lifespan=lifespan,
 )
-
-@app.middleware("http")
-async def add_global_context(request: Request, call_next):
-	response = await call_next(request)
-
-	# Определяем роль текущего пользователя
-	user_role = None
-	if request.state.current_user: # Предполагаем, что ты сохраняешь юзера в state после авторизации
-		user_role = getattr(request.state.current_user, 'role', 'player')
-
-	# Строим меню
-	menu_tree = build_menu(user_role)
-
-	# Добавляем переменные в контекст ответа (response)
-	# Важно использовать response.headers или специальные методы для модификации HTML,
-	# но проще всего передавать через TemplateResponse напрямую в роутах.
-
-	return response
 
 class ProxyHeaderMiddleware:
 	"""

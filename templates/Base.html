@@ -11,7 +11,7 @@
 	<link rel="stylesheet" href="{{ url_for('static', filename='css/style.min.css') }}">
 	
 	{# Favicon (заглушка) #}
-	<link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+	<link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='image/favicon.ico') }}">
 	
 	{# HTMX для динамического контента без перезагрузки страницы #}
 	<script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztopefRwxYBIb7tH5j6+9XaPpLlLhJdMlW5k5yIqF5VnTgOoBvCwN5yI" crossorigin="anonymous"></script>
@@ -21,30 +21,14 @@
 {# --- Хедер (Шапка) --- #}
 <header class="bg-white shadow-sm border-b sticky top-0 z-50">
 	<div class="container mx-auto px-4 py-4 flex justify-between items-center">
-		<a href="{{ url_for('index') }}" class="text-2xl font-bold text-primary hover:text-primary-dark transition-colors">
-			D&D Master Tool
-		</a>
 		
 		<!-- Десктопное меню -->
 		<nav class="hidden md:flex space-x-6 text-sm font-medium">
 			{% include 'menu.html' %}
 		</nav>
 		
-		<!-- Мобильное меню (кнопка-бургер) -->
-		<button id="mobile-menu-button" class="md:hidden p-2 rounded-md hover:bg-gray-100 focus:outline-none">
-			<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"/>
-			</svg>
-		</button>
 	</div>
 </header>
-
-{# --- Мобильное меню (выезжающее) --- #}
-<div id="mobile-menu" class="md:hidden hidden bg-white border-b">
-	<div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-		{% include 'menu.html' %}
-	</div>
-</div>
 
 {# --- Основной контент --- #}
 <main class="flex-grow container mx-auto px-4 py-6">
