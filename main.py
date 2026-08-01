@@ -171,11 +171,6 @@ app.state.project_root = BASE_DIR
 # Получаем окружение Jinja2 из глобального объекта templates
 env = templates.env
 
-@app.on_event("startup")
-async def add_app_to_templates():
-	# Добавляем экземпляр приложения в глобальные переменные всех шаблонов
-	env.globals["app"] = app
-
 def static_url(filename: str) -> str:
 	return f"/static/{filename.lstrip('/')}"
 

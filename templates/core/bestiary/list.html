@@ -1,2 +1,81 @@
 <!-- templates/core/bestiary/list.html -->
 
+{% extends "Base.html" %}
+
+{% from "_macros/card.html" import data_card, filter_bar %}
+
+{% block title %}{{ title }} | D&D Мастерская{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+	
+	<div class="flex justify-between items-center mb-6">
+		<h1 class="text-2xl font-bold text-gray-800">Бестиарий</h1>
+		{% if user.role == 'master' %}
+		<a href="#" class="btn btn-primary btn-sm">+ Новое существо</a>
+		{% endif %}
+	</div>
+	
+	{{
+	filter_bar(
+	request=request,
+	action_url=url_for('core.bestiary'),
+	search_query=request.query_params.get('q', ''),
+	filters=[
+	{
+	"name": "cr",
+	"label": "Сложность (CR)",
+	"type": "select",
+	"options": [
+	{"value": "", "label": "Любая"},
+	{"value": "0", "label": "CR 0 (Безобидный)"},
+	{"value": "1/8", "label": "CR 1/8"},
+	{"value": "1/4", "label": "CR 1/4"},
+	{"value": "1/2", "label": "CR 1/2"},
+	{"value": "1", "label": "CR 1"}
+	]
+	},
+	{
+	"name": "type",
+	"label": "Тип существа",
+	"type": "select",
+	"options": [
+	{"value": "", "label": "Любой"},
+	{"value": "aberration", "label": "Аберрация"},
+	{"value": "beast", "label": "Зверь"},
+	{"value": "dragon", "label": "Дракон"}
+	]
+	}
+	]
+	)
+	}}
+	
+	<div id="monster-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+		
+		{% if monsters %}
+		{% for monster in monsters %}
+		
+		{{
+		data_card(
+		url=url_for('core.monster_detail', monster_id=monster.id),
+		title=monster.name,
+		
+		cr=monster.challenge_rating,
+		type=monster.creature_type,
+		body=monster.description|striptags|truncate(120),
+
+		footer_text=("HP: " + monster.hp|string + " | AC: " + monster.armor_class|string)
+		)
+		}}
+		
+		{% endfor %}
+		{% else %}
+		<div class="col-span-full text-center py-12 text-gray-500 bg-white rounded-lg shadow p-8">
+			<svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.143 5.143l.857.857M15 15H9m6 0v-3.57a2 2 0 00-.75-1.57L9 6m6 6l2.71 2.71a2 2 0 010 2.82l-3.5 3.5a2 2 0 01-2.83 0L6 18"/></svg>
+			<p class="text-xl font-semibold">Ничего не найдено</p>
+			<p class="text-gray-400 mt-1">В бестиарии пока пусто или фильтры слишком строгие.</p>
+		</div>
+		{% endif %}
+	</div>
+</div>
+{% endblock %}
