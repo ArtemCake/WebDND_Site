@@ -1,46 +1,63 @@
-<!-- templates/base.html -->
+<!-- templates/_base.html -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
 	<meta charset="UTF-8">
+	<title>{% block title %}D&D Мастерская{% endblock %}</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<!-- Open Graph / Social Media cards -->
-	<meta property="og:title" content="{{ self.title()|default('D&D Мастерская') }}">
-	<meta property="og:description" content="Инструменты для Мастера DnD 5e: билдер персонажей, генератор энкаунтеров.">
-	<!-- Заголовок страницы. Если дочерний шаблон не задаст свой, будет использоваться этот -->
-	<title>{% block title %}{{ request.app.state.settings.PROJECT_NAME }}{% endblock %}</title>
-	{% import "_macros/cookieBaner.html" as macros %}
-	<!-- Подключение CSS-файла -->
+	
+	<!-- Библиотека HTMX для AJAX-запросов без JS-кода -->
+	<script src="https://unpkg.com/htmx.org@2.0.4"></script>
+	
+	<!-- Твои стили (Tailwind CSS билд) -->
 	<link rel="stylesheet" href="/static/css/style.min.css">
 </head>
-<body>
+<body class="bg-gray-50 text-gray-900 font-sans antialiased min-h-screen flex flex-col">
 
-<!-- Блок для шапки сайта -->
-{% block header %}
-<header class="site-header">
-	<h1>D&D Мастерская</h1>
-	{% include '_menu.html' %}
-</header>
-{% endblock %}
+<!-- Динамическое меню из _menu.html -->
+{% include '_menu.html' %}
 
-<main class="container">
-	<!-- Основной блок контента. Именно сюда каждая страница будет вставлять свое содержимое -->
+<!-- Основной контент страницы -->
+<main class="flex-grow container mx-auto px-4 py-6 max-w-screen-xl">
+	
+	<!-- Блок системных сообщений (Flash messages) -->
+	{% with messages = get_flashed_messages(with_categories=true) %}
+	{% if messages %}
+	<div id="flash-messages" class="mb-6 space-y-2">
+		{% for category, message in messages %}
+		<div class="p-3 rounded border-l-4 shadow-sm"
+		     role="alert"
+		     hx-swap-oob="true"
+		     {% if category == 'success' %}
+				class="bg-green-50 border-green-500 text-green-700"
+			 {% endif %}
+			{% if category == 'error' %}
+				class="bg-red-50 border-red-500 text-red-700"
+			{% endif %}>
+		{{ message }}
+	</div>
+	{% endfor %}
+	</div>
+	{% endif %}
+	{% endwith %}
+	
+	<!-- Уникальное содержимое каждой страницы -->
 	{% block content %}
-	<p>Основной контент страницы появится здесь.</p>
+	<div class="text-center py-20 text-gray-400">
+		<h2 class="text-2xl font-bold mb-2">Шаблон готов</h2>
+		<p>Контент этой страницы будет загружен здесь.</p>
+	</div>
 	{% endblock %}
 </main>
 
-<!-- Блок для подвала сайта -->
-{% block footer %}
-<footer class="site-footer">
-	<p>&copy; {{ year|default(2026) }} D&D Сайт. Все права защищены.</p>
+<!-- Подвал сайта -->
+<footer class="bg-gray-800 text-gray-300 py-6 mt-12 border-t border-gray-700">
+	<div class="container mx-auto text-center text-sm">
+		&copy; {{ current_year|default(2026) }} WebDND_Site. Инструменты для Мастера DnD 5e.
+	</div>
 </footer>
-{% endblock %}
 
-<div id='modal'>
-	{{ macros.render_cookie_banner() }}
-</div>
+<!-- Глобальные скрипты -->
 <script type="module" src="/static/js/main.min.js" defer></script>
-
 </body>
 </html>

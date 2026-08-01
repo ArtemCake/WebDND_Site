@@ -1,0 +1,10 @@
+{# templates/macros/_menu_icon.html #}
+{#
+Универсальный компонент для отображения иконок в меню.
+Сейчас это пустая заглушка (рендерит пустой тег),
+чтобы верстка не ломалась. Позже сюда можно вставить Tabler Icons или Heroicons.
+#}
+{% if item.icon %}
+{# Пример для Tabler Icons: <i class="ti ti-{{ item.icon }}"></i> #}
+<span class="w-4 h-4 inline-block" aria-hidden="true"></span>
+{% endif %}

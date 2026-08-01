@@ -24,3 +24,5 @@ class AuthService:
         )
 
         return True, access_token, "Вход выполнен успешно."
+
+

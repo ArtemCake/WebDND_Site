@@ -1,24 +1,69 @@
 <!-- templates/index.html -->
+{% extends "_base.html" %}
 
-{% extends 'base.html' %}
-
-{% block title %}
-Главная | {{ context.title }}
-{% endblock %}
+{% block title %}Главная | D&D Мастерская{% endblock %}
 
 {% block content %}
-<p>Вы вошли как: <strong>{{ user.username }}</strong></p>
-<section class="intro">
-	<h2>{{ context.welcome_message }}</h2>
-	<p>{{ context.description }}</p>
-</section>
-
-<section class="features-list">
-	<h3>Основные возможности:</h3>
-	<ul>
-		{% for feature in context.features %}
-		<li>{{ feature }}</li>
-		{% endfor %}
-	</ul>
-</section>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+	
+	<!-- Центральная колонка: Приветствие -->
+	<div class="lg:col-span-2 space-y-6">
+		<header>
+			<h1 class="text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl">
+				Твоя цифровая Книга Игрока и Бестиарий
+			</h1>
+			<p class="mt-4 text-xl text-gray-600">
+				Управляй кампаниями, создавай персонажей за пару кликов и бросай кубики онлайн.
+			</p>
+		</header>
+		
+		<!-- Секция возможностей -->
+		<section class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-8 border-t">
+			<div class="bg-white p-6 rounded-lg shadow hover:shadow-md transition">
+				<h3 class="font-semibold text-lg mb-2 flex items-center"><span class="mr-2">🎲</span>Виртуальный стол</h3>
+				<p class="text-gray-600 text-sm">Полигональные сетки, токены, автоматический расчет линии видимости и трекер инициативы.</p>
+			</div>
+			<div class="bg-white p-6 rounded-lg shadow hover:shadow-md transition">
+				<h3 class="font-semibold text-lg mb-2 flex items-center"><span class="mr-2">📖</span>SRD 5e Справочники</h3>
+				<p class="text-gray-600 text-sm">Полный доступ к монстрам, заклинаниям и предметам с умным поиском по фильтрам.</p>
+			</div>
+			<div class="bg-white p-6 rounded-lg shadow hover:shadow-md transition">
+				<h3 class="font-semibold text-lg mb-2 flex items-center"><span class="mr-2">🏰</span>Кампании</h3>
+				<p class="text-gray-600 text-sm">Раздельные пространства для разных групп игроков со своими заметками мастера.</p>
+			</div>
+			<div class="bg-white p-6 rounded-lg shadow hover:shadow-md transition">
+				<h3 class="font-semibold text-lg mb-2 flex items-center"><span class="mr-2">✍️</span>Домашние правила</h3>
+				<p class="text-gray-600 text-sm">Создавай свои расы, классы и магические предметы, расширяя базу данных.</p>
+			</div>
+		</section>
+	</div>
+	
+	<!-- Правая колонка: Статус пользователя -->
+	<aside class="space-y-4">
+		<div class="bg-white p-6 rounded-lg shadow border">
+			{% if current_user %}
+			<h2 class="text-xl font-bold mb-4">С возвращением, {{ current_user.username }}!</h2>
+			<a href="/campaigns/my" class="inline-flex w-full justify-center items-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700">
+				Мои кампании
+			</a>
+			<a href="/characters/my" class="mt-3 inline-flex w-full justify-center items-center px-4 py-2 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-gray-50 hover:bg-gray-100">
+				Мои персонажи
+			</a>
+			{% else %}
+			<h2 class="text-xl font-bold mb-4">Начать приключение</h2>
+			<p class="text-gray-600 text-sm mb-4">Присоединяйся к тысячам мастеров, которые уже ведут игры у нас.</p>
+			<a href="{{ url_for('register_page') }}" class="inline-flex w-full justify-center items-center px-4 py-2 border border-transparent text-base font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700">
+				Регистрация
+			</a>
+			<a href="{{ url_for('login_page') }}" class="mt-3 inline-flex w-full justify-center items-center px-4 py-2 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-gray-50 hover:bg-gray-100">
+				Войти
+			</a>
+			{% endif %}
+		</div>
+		
+		<div class="bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-lg text-sm hidden" role="alert" id="maintenance-banner">
+			<strong>Важно:</strong> В воскресенье с 03:00 до 04:00 пройдут технические работы (10 минут).
+		</div>
+	</aside>
+</div>
 {% endblock %}

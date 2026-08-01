@@ -142,8 +142,7 @@ async def login(request: Request,
 
 @web_router.post("/users/me/delete", include_in_schema=False)
 @web_router.delete("/users/me/delete", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_own_account(request: Request,
-                             user: User = Depends(get_current_user)):
+async def delete_own_account(request: Request, user: User = Depends(get_current_user)):
 	if not user or not hasattr(user, 'id'):
 		return RedirectResponse(url="/login")
 	db_manager = get_async_db()
@@ -185,7 +184,6 @@ def get_document_content(request: Request, filename: str) -> str:
 			return f.read()
 	except FileNotFoundError:
 		raise HTTPException(status_code=404, detail="Документ не найден")
-
 
 @web_router.get("/privacy", response_class=HTMLResponse)
 async def privacy_policy(request: Request):

@@ -89,15 +89,44 @@ WebDND_Site/
 │   │   └── main.js
 │
 └──templates/
-    ├── admin/
-    │
-    ├── _macros/
-    │     ├── card.html
-    │     └── cookieBaner.html
-    ├── _menu.html
-    ├── document.html
-    ├── races_list.html
-    ├── login.html
-    ├── register.html
-    ├── Base.html
-    └── index.html
+   ├── _base.html          # Главный скелет сайта (header, footer, HTMX-скрипты)
+   ├── _menu.html          # Динамическое меню (которое мы уже обсудили)
+   ├── index.html          # Главная страница (лендинг)
+   │
+   ├── auth/               # Блок авторизации
+   │   ├── login.html
+   │   └── register.html
+   │
+   ├── core/               # Основные справочники SRD
+   │   ├── bestiary/       # Бестиарий
+   │   │   ├── list.html   # Список монстров с фильтрами
+   │   │   └── detail.html # Карточка одного монстра
+   │   │
+   │   ├── spells/         # Заклинания
+   │   │   ├── list.html
+   │   │   └── detail.html
+   │   │
+   │   └── items/          # Предметы экипировки
+   │       ├── list.html
+   │       └── detail.html
+   │
+   ├── campaign/           # Работа с кампаниями
+   │   ├── dashboard.html  # Плитка всех кампаний игрока/мастера
+   │   ├── view.html       # Экран активной кампании (заметки, игроки)
+   │   └── npcs.html       # Журнал НПС
+   │
+   ├── vtt/                # Виртуальный стол
+   │   ├── board.html      # Само поле боя (Canvas + токены)
+   │   └── initiative.html # Трекер инициативы
+   │
+   ├── profile/            # Личный кабинет
+   │   ├── settings.html
+   │   └── characters.html # Коллекция персонажей пользователя
+   │
+   └── macros/             # Переиспользуемые компоненты
+       ├── card.html       # Стандартная карточка сущности
+       ├── filter_bar.html # Панель фильтров для списков
+       ├── cookieBaner.html # Банер об использовании cookie на сайте
+       └── pagination.html # Постраничная навигация
+
+       
