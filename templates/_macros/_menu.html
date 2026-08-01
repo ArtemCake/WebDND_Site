@@ -1,0 +1,49 @@
+<!-- templates/_macros/_menu.html -->
+
+{% macro render_menu(request, current_path, user_role) %}
+<nav class="sidebar">
+	<div class="logo">WebDND</div>
+	
+	<div class="menu-section-header">Справочники (SRD)</div>
+	<ul class="menu-list">
+		{{ nav_link(request, 'core.spells', 'Заклинания', current_path) }}
+		{{ nav_link(request, 'core.items', 'Предметы', current_path) }}
+		{{ nav_link(request, 'core.bestiary', 'Бестиарий', current_path) }}
+	</ul>
+	
+	<div class="menu-section-header">Мир</div>
+	<ul class="menu-list">
+		{{ nav_link(request, 'lore.index', 'История и локации', current_path) }}
+	</ul>
+	
+	{% if user_role != 'master' %}
+	<div class="menu-section-header">Мой персонаж</div>
+	<ul class="menu-list">
+		{{ nav_link(request, 'profile.characters', 'Коллекция', current_path) }}
+		{{ nav_link(request, 'profile.inventory', 'Инвентарь', current_path) }}
+	</ul>
+	{% endif %}
+	
+	{% if user_role == 'master' %}
+	<div class="menu-section-header">Мастерская</div>
+	<ul class="menu-list">
+		{{ nav_link(request, 'campaign.dashboard', 'Мои кампании', current_path) }}
+		{{ nav_link(request, 'campaign.npcs', 'Журнал НПС', current_path) }}
+		{{ nav_link(request, 'vtt.board', 'Виртуальный стол', current_path) }}
+	</ul>
+	{% endif %}
+	
+	<div class="menu-section-header">Стол</div>
+	<ul class="menu-list">
+		{{ nav_link(request, 'vtt.initiative', 'Инициатива', current_path) }}
+	</ul>
+</nav>
+{% endmacro %}
+
+{% macro nav_link(request, endpoint_name, label, current_path) %}
+<li class="menu-item {% if current_path.startswith('/' + endpoint_name.split('.')[0]) or current_path.endswith(endpoint_name.split('.')[-1]) %}active{% endif %}">
+	<a href="{{ request.url_for(endpoint_name) }}">{{ label }}</a>
+</li>
+{% endmacro %}
+
+

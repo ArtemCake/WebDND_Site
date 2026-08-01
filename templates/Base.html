@@ -1,4 +1,4 @@
-{# templates/_base.html #}
+<!-- templates/Base.html -->
 
 <!DOCTYPE html>
 <html lang="ru" data-theme="light">
@@ -8,10 +8,8 @@
 	<title>{% block title %}WebDND_Site{% endblock %}</title>
 	
 	{# --- Подключение стилей --- #}
-	<link rel="stylesheet" href="{{ url_for('static', filename='css/style.min.css') }}">
-	
-	{# Favicon (заглушка) #}
-	<link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='image/favicon.ico') }}">
+	<link rel="stylesheet" href="{{ static_url('css/style.min.css') }}">
+	<link rel="stylesheet" href="{{ static_url('image/favicon.ico') }}">
 	
 	{# HTMX для динамического контента без перезагрузки страницы #}
 	<script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztopefRwxYBIb7tH5j6+9XaPpLlLhJdMlW5k5yIqF5VnTgOoBvCwN5yI" crossorigin="anonymous"></script>
@@ -21,29 +19,17 @@
 {# --- Хедер (Шапка) --- #}
 <header class="bg-white shadow-sm border-b sticky top-0 z-50">
 	<div class="container mx-auto px-4 py-4 flex justify-between items-center">
-		
-		<!-- Десктопное меню -->
-		<nav class="hidden md:flex space-x-6 text-sm font-medium">
-			{% include 'menu.html' %}
+		<!-- Меню (теперь оно обычное, без hidden/md:) -->
+		<nav class="flex space-x-6 text-sm font-medium">
+			{% from "_macros/_menu.html" import render_menu %}
+			{{ render_menu(request=request, current_path=request.url.path, user_role=user.role if user else 'player') }}
 		</nav>
-		
 	</div>
 </header>
 
 {# --- Основной контент --- #}
 <main class="flex-grow container mx-auto px-4 py-6">
 	{# Блок для вывода flash-сообщений #}
-	{% with messages = get_flashed_messages(with_categories=true) %}
-	{% if messages %}
-	<div class="mb-6">
-		{% for category, message in messages %}
-		<div class="alert alert-{{ 'success' if category == 'success' else 'error' }} mb-4">
-			{{ message }}
-		</div>
-		{% endfor %}
-	</div>
-	{% endif %}
-	{% endwith %}
 	
 	{# Основное содержимое страницы #}
 	{% block content %}
@@ -59,18 +45,6 @@
 	<div class="container mx-auto px-4 py-8">
 		<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
 			<div>
-				<h3 class="text-lg font-semibold mb-4">WebDND</h3>
-				<p class="text-sm text-gray-400">Лучший инструмент для ведения D&D игр онлайн.</p>
-			</div>
-			<div>
-				<h4 class="font-semibold mb-4">Навигация</h4>
-				<ul class="space-y-2 text-sm">
-					<li><a href="#" class="hover:text-white transition-colors">Главная</a></li>
-					<li><a href="#" class="hover:text-white transition-colors">Бестиарий</a></li>
-					<li><a href="#" class="hover:text-white transition-colors">Заклинания</a></li>
-				</ul>
-			</div>
-			<div>
 				<h4 class="font-semibold mb-4">Поддержка</h4>
 				<p class="text-sm text-gray-400">По всем вопросам обращайтесь к Мастеру.</p>
 			</div>
@@ -81,7 +55,9 @@
 	</div>
 </footer>
 
-<script src="{{ url_for('static', filename='js/main.min.js') }}" defer></script>
+<script src="{{ static_url('js/main.min.js') }}" defer></script>
 
 </body>
 </html>
+
+

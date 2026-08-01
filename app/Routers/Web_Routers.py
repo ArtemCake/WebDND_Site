@@ -26,7 +26,7 @@ async def home_page(request: Request, user: User = Depends(get_current_user)):
 	response = templates.TemplateResponse(
 	request=request,
 	name="index.html",
-	# context={"user": user}
+	context={"user": user}
 	)
 	return response
 
@@ -223,4 +223,63 @@ async def logout(request: Request):
 	response.delete_cookie("access_token")
 	response.delete_cookie("temp_user_id")
 	return response
+
+#Роутеры меню
+
+@web_router.get("/core/spells", response_class=HTMLResponse, name="core.spells")
+async def spells_list(request: Request):
+	return _render_section_page(request, "Заклинания")
+
+@web_router.get("/core/items", response_class=HTMLResponse, name="core.items")
+async def items_list(request: Request):
+	return _render_section_page(request, "Предметы")
+
+@web_router.get("/core/bestiary", response_class=HTMLResponse, name="core.bestiary")
+async def bestiary_list(request: Request):
+	return _render_section_page(request, "Бестиарий")
+
+@web_router.get("/lore", response_class=HTMLResponse, name="lore.index")
+async def lore_page(request: Request):
+	return _render_section_page(request, "Лор и история")
+
+@web_router.get("/campaign/dashboard", response_class=HTMLResponse, name="campaign.dashboard")
+async def campaign_dashboard(request: Request):
+	return _render_section_page(request, "Панель кампаний")
+
+@web_router.get("/campaign/npcs", response_class=HTMLResponse, name="campaign.npcs")
+async def npcs_journal(request: Request):
+	return _render_section_page(request, "Журнал НПС")
+
+@web_router.get("/vtt/board", response_class=HTMLResponse, name="vtt.board")
+async def vtt_board(request: Request):
+	return _render_section_page(request, "Виртуальный стол")
+
+@web_router.get("/vtt/initiative", response_class=HTMLResponse, name="vtt.initiative")
+async def initiative_tracker(request: Request):
+	return _render_section_page(request, "Трекер инициативы")
+
+@web_router.get("/profile/characters", response_class=HTMLResponse, name="profile.characters")
+async def characters_list(request: Request):
+	"""Страница со списком персонажей пользователя."""
+	return _render_section_page(request, "Мои персонажи")
+
+@web_router.get("/profile/inventory", response_class=HTMLResponse, name="profile.inventory")
+async def inventory_view(request: Request):
+	"""Инвентарь выбранного персонажа."""
+	return _render_section_page(request, "Инвентарь")
+
+@web_router.get("/profile/settings", response_class=HTMLResponse, name="profile.settings")
+async def settings_page(request: Request):
+	"""Настройки аккаунта."""
+	return _render_section_page(request, "Настройки")
+
+# Универсальная функция-заглушка
+def _render_section_page(request: Request, title: str):
+	templates = request.app.state.templates
+	return templates.TemplateResponse(
+		request=request,
+		name="section_stub.html",
+		context={"title": title}
+	)
+
 

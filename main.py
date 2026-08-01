@@ -112,11 +112,15 @@ def use_multipart_form_dep(dep):
 				param["__class__"] = "multipart_form"
 	return dep
 
+BASE_DIR = pathlib.Path(__file__).parent.resolve()
+
 # --- СОЗДАНИЕ ПРИЛОЖЕНИЯ ---
 app = FastAPI(
 	title=settings.PROJECT_NAME,
 	description=settings.DESCRIPTION,
 	version=settings.VERSION,
+	static_folder=str(BASE_DIR / "static"),
+	static_url="/static",
 	lifespan=lifespan,
 )
 
@@ -159,14 +163,23 @@ app.add_middleware(
 	allow_headers=["*"]
 )
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
-BASE_DIR = pathlib.Path(__file__).parent.resolve()
+app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 os.environ['PROJECT_ROOT'] = str(BASE_DIR)
 app.state.templates = templates
 app.state.project_root = BASE_DIR
 # Получаем окружение Jinja2 из глобального объекта templates
 env = templates.env
+
+@app.on_event("startup")
+async def add_app_to_templates():
+	# Добавляем экземпляр приложения в глобальные переменные всех шаблонов
+	env.globals["app"] = app
+
+def static_url(filename: str) -> str:
+	return f"/static/{filename.lstrip('/')}"
+
+env.globals["static_url"] = static_url
 
 # Определяем функцию фильтра
 def b64encode_filter(value):
@@ -217,3 +230,5 @@ if __name__ == "__main__":
 		log_level="info",
 		reload=True
 	)
+
+
