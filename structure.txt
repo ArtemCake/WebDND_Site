@@ -1,3 +1,5 @@
+#structure.txt
+
 WebDND_Site/
 │
 ├── .gitignore
@@ -84,12 +86,14 @@ WebDND_Site/
 │   ├── js/
 │   │   ├── modules/
 │   │   │    ├── cookieBanner.js
+│   │   │    ├── menuToggle.js
 │   │   │    └── passwordToggle.js
 │   │   ├── main.min.js
 │   │   └── main.js
 │
 └──templates/
-   ├── _base.html          # Главный скелет сайта (header, footer, HTMX-скрипты)
+   ├── Base.html          # Главный скелет сайта (header, footer, HTMX-скрипты)
+   ├── document.html
    ├── _menu.html          # Динамическое меню (которое мы уже обсудили)
    ├── index.html          # Главная страница (лендинг)
    │
@@ -129,4 +133,3 @@ WebDND_Site/
        ├── cookieBaner.html # Банер об использовании cookie на сайте
        └── pagination.html # Постраничная навигация
 
-       

@@ -1,63 +1,103 @@
-<!-- templates/_base.html -->
+{# templates/_base.html #}
+
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-theme="light">
 <head>
 	<meta charset="UTF-8">
-	<title>{% block title %}D&D Мастерская{% endblock %}</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>{% block title %}WebDND_Site{% endblock %}</title>
 	
-	<!-- Библиотека HTMX для AJAX-запросов без JS-кода -->
-	<script src="https://unpkg.com/htmx.org@2.0.4"></script>
+	{# --- Подключение стилей --- #}
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/style.min.css') }}">
 	
-	<!-- Твои стили (Tailwind CSS билд) -->
-	<link rel="stylesheet" href="/static/css/style.min.css">
+	{# Favicon (заглушка) #}
+	<link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+	
+	{# HTMX для динамического контента без перезагрузки страницы #}
+	<script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztopefRwxYBIb7tH5j6+9XaPpLlLhJdMlW5k5yIqF5VnTgOoBvCwN5yI" crossorigin="anonymous"></script>
 </head>
-<body class="bg-gray-50 text-gray-900 font-sans antialiased min-h-screen flex flex-col">
+<body class="bg-bg-light text-text min-h-screen flex flex-col font-sans antialiased">
 
-<!-- Динамическое меню из _menu.html -->
-{% include '_menu.html' %}
+{# --- Хедер (Шапка) --- #}
+<header class="bg-white shadow-sm border-b sticky top-0 z-50">
+	<div class="container mx-auto px-4 py-4 flex justify-between items-center">
+		<a href="{{ url_for('index') }}" class="text-2xl font-bold text-primary hover:text-primary-dark transition-colors">
+			D&D Master Tool
+		</a>
+		
+		<!-- Десктопное меню -->
+		<nav class="hidden md:flex space-x-6 text-sm font-medium">
+			{% include 'menu.html' %}
+		</nav>
+		
+		<!-- Мобильное меню (кнопка-бургер) -->
+		<button id="mobile-menu-button" class="md:hidden p-2 rounded-md hover:bg-gray-100 focus:outline-none">
+			<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"/>
+			</svg>
+		</button>
+	</div>
+</header>
 
-<!-- Основной контент страницы -->
-<main class="flex-grow container mx-auto px-4 py-6 max-w-screen-xl">
-	
-	<!-- Блок системных сообщений (Flash messages) -->
+{# --- Мобильное меню (выезжающее) --- #}
+<div id="mobile-menu" class="md:hidden hidden bg-white border-b">
+	<div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+		{% include 'menu.html' %}
+	</div>
+</div>
+
+{# --- Основной контент --- #}
+<main class="flex-grow container mx-auto px-4 py-6">
+	{# Блок для вывода flash-сообщений #}
 	{% with messages = get_flashed_messages(with_categories=true) %}
 	{% if messages %}
-	<div id="flash-messages" class="mb-6 space-y-2">
+	<div class="mb-6">
 		{% for category, message in messages %}
-		<div class="p-3 rounded border-l-4 shadow-sm"
-		     role="alert"
-		     hx-swap-oob="true"
-		     {% if category == 'success' %}
-				class="bg-green-50 border-green-500 text-green-700"
-			 {% endif %}
-			{% if category == 'error' %}
-				class="bg-red-50 border-red-500 text-red-700"
-			{% endif %}>
-		{{ message }}
-	</div>
-	{% endfor %}
+		<div class="alert alert-{{ 'success' if category == 'success' else 'error' }} mb-4">
+			{{ message }}
+		</div>
+		{% endfor %}
 	</div>
 	{% endif %}
 	{% endwith %}
 	
-	<!-- Уникальное содержимое каждой страницы -->
+	{# Основное содержимое страницы #}
 	{% block content %}
-	<div class="text-center py-20 text-gray-400">
-		<h2 class="text-2xl font-bold mb-2">Шаблон готов</h2>
-		<p>Контент этой страницы будет загружен здесь.</p>
+	<div class="text-center py-20 text-gray-500">
+		<h1>Страница в разработке</h1>
+		<p class="text-gray-500">Контент скоро появится.</p>
 	</div>
 	{% endblock %}
 </main>
 
-<!-- Подвал сайта -->
-<footer class="bg-gray-800 text-gray-300 py-6 mt-12 border-t border-gray-700">
-	<div class="container mx-auto text-center text-sm">
-		&copy; {{ current_year|default(2026) }} WebDND_Site. Инструменты для Мастера DnD 5e.
+{# --- Футер --- #}
+<footer class="bg-gray-900 text-gray-300 mt-auto">
+	<div class="container mx-auto px-4 py-8">
+		<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+			<div>
+				<h3 class="text-lg font-semibold mb-4">WebDND</h3>
+				<p class="text-sm text-gray-400">Лучший инструмент для ведения D&D игр онлайн.</p>
+			</div>
+			<div>
+				<h4 class="font-semibold mb-4">Навигация</h4>
+				<ul class="space-y-2 text-sm">
+					<li><a href="#" class="hover:text-white transition-colors">Главная</a></li>
+					<li><a href="#" class="hover:text-white transition-colors">Бестиарий</a></li>
+					<li><a href="#" class="hover:text-white transition-colors">Заклинания</a></li>
+				</ul>
+			</div>
+			<div>
+				<h4 class="font-semibold mb-4">Поддержка</h4>
+				<p class="text-sm text-gray-400">По всем вопросам обращайтесь к Мастеру.</p>
+			</div>
+		</div>
+		<div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-500">
+			&copy; {{ current_date|default('2026') }} WebDND_Site. Все права защищены.
+		</div>
 	</div>
 </footer>
 
-<!-- Глобальные скрипты -->
-<script type="module" src="/static/js/main.min.js" defer></script>
+<script src="{{ url_for('static', filename='js/main.min.js') }}" defer></script>
+
 </body>
 </html>

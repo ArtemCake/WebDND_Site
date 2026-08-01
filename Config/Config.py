@@ -1,4 +1,4 @@
-# Config/web_config.py
+# Config/Config.py
 
 from Config.imports import (BaseSettings, SettingsConfigDict, os)
 
