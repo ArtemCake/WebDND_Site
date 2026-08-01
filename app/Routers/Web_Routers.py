@@ -6,8 +6,9 @@ from Config.imports import (os, URLSafeTimedSerializer, APIRouter, Request, asyn
 from app.core.dependencies import get_current_user, OverloadedForm
 from app.database.session import get_async_db
 from app.core.security import create_access_token
+from app.services.srd_service import SRDService
 from app.services.user_service import UserService
-from app.database._models import User
+from app.database._models import User, Item, Spell, Monster
 
 
 # Создаем "подписыватель" (signer) для данных.
@@ -227,16 +228,85 @@ async def logout(request: Request):
 #Роутеры меню
 
 @web_router.get("/core/spells", response_class=HTMLResponse, name="core.spells")
-async def spells_list(request: Request):
-	return _render_section_page(request, "Заклинания")
+async def spells_list(request: Request,
+                      user: User = Depends(get_current_user)):
+	templates = request.app.state.templates
+	q = request.query_params.get("q", "")
+
+	level_param = request.query_params.get("level")
+	level_filter = {"level": int(level_param)} if level_param and level_param.isdigit() else {}
+
+	db_manager = get_async_db()
+	async with (db_manager as db):
+		# Вызываем МЕТОД СЕРВИСА, который внутри себя дергает REPO
+		spells = await SRDService.get_srd_data(
+			db,
+			model=Spell,
+			search_query=q,
+			filters=level_filter
+		)
+
+		return templates.TemplateResponse(
+			request=request,
+			name="core/spells/list.html",
+			context={"title": "Заклинания",
+			         "spells": spells,
+			         "user": user}
+		)
 
 @web_router.get("/core/items", response_class=HTMLResponse, name="core.items")
-async def items_list(request: Request):
-	return _render_section_page(request, "Предметы")
+async def items_list(request: Request,
+                     user: User = Depends(get_current_user)):
+	templates = request.app.state.templates
+	q = request.query_params.get("q", "")
+
+	level_param = request.query_params.get("level")
+	level_filter = {"level": int(level_param)} if level_param and level_param.isdigit() else {}
+
+	db_manager = get_async_db()
+	async with (db_manager as db):
+		# Вызываем МЕТОД СЕРВИСА, который внутри себя дергает REPO
+		items = await SRDService.get_srd_data(
+			db,
+			model=Item,
+			search_query=q,
+			filters=level_filter
+		)
+
+		return templates.TemplateResponse(
+			request=request,
+			name="core/items/list.html",
+			context={"title": "Предметы",
+			         "items": items,
+			         "user": user}
+		)
 
 @web_router.get("/core/bestiary", response_class=HTMLResponse, name="core.bestiary")
-async def bestiary_list(request: Request):
-	return _render_section_page(request, "Бестиарий")
+async def bestiary_list(request: Request,
+                        user: User = Depends(get_current_user)):
+	templates = request.app.state.templates
+	q = request.query_params.get("q", "")
+
+	level_param = request.query_params.get("level")
+	level_filter = {"level": int(level_param)} if level_param and level_param.isdigit() else {}
+
+	db_manager = get_async_db()
+	async with (db_manager as db):
+		# Вызываем МЕТОД СЕРВИСА, который внутри себя дергает REPO
+		bestiarys = await SRDService.get_srd_data(
+			db,
+			model=Monster,
+			search_query=q,
+			filters=level_filter
+		)
+
+		return templates.TemplateResponse(
+			request=request,
+			name="core/bestiary/list.html",
+			context={"title": "Монстры",
+			         "items": bestiarys,
+			         "user": user}
+		)
 
 @web_router.get("/lore", response_class=HTMLResponse, name="lore.index")
 async def lore_page(request: Request):

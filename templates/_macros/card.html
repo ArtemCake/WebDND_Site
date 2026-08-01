@@ -1,2 +1,90 @@
 <!-- templates/macros/card.html -->
 
+{# --- МАКРОС КАРТОЧКИ ДАННЫХ --- #}
+{% macro data_card(url, title, level=None, school=None, type=None, cr=None, body="", image_url=None, footer_text="") %}
+<div class="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200 border border-gray-100 overflow-hidden flex flex-col">
+	
+	{% if image_url %}
+	<img alt="{{ title }}" class="h-48 w-full object-cover" id="019fbf04-3aad-7e3c-b481-eef7066915d9">
+	{% endif %}
+	
+	<div class="p-4 flex flex-col flex-grow">
+		<div class="flex-grow">
+			<h3 class="text-lg font-semibold text-gray-800 mb-1">
+				<a href="{{ url }}" class="hover:text-blue-600">{{ title }}</a>
+			</h3>
+			
+			{# БЛОК ПОДЗАГОЛОВКА (собираем части в зависимости от справочника) #}
+			{% set parts = [] %}
+			{% if level is not none %}{% set _ = parts.append("Ур. " ~ level) %}{% endif %}
+			{% if school %}{% set _ = parts.append(school) %}{% endif %}
+			{% if type %}{% set _ = parts.append(type) %}{% endif %}
+			{% if cr %}{% set _ = parts.append("CR " ~ cr) %}{% endif %}
+			
+			{% if parts|length > 0 %}
+			<p class="text-xs text-gray-500 mb-2">{{ parts | join(" | ") }}</p>
+			{% elif subtitle %}
+			<p class="text-xs text-gray-500 mb-2">{{ subtitle }}</p>
+			{% endif %}
+			
+			<p class="text-gray-700 leading-relaxed text-sm line-clamp-3">{{ body }}</p>
+		</div>
+		
+		{% if footer_text %}
+		<div class="mt-4 pt-4 border-t border-gray-100 text-xs text-gray-500 break-words">
+			{{ footer_text }}
+		</div>
+		{% endif %}
+	</div>
+</div>
+{% endmacro %}
+
+
+{# --- МАКРОС ПАНЕЛИ ФИЛЬТРОВ --- #}
+{% macro filter_bar(request, action_url, search_query="", filters=[]) %}
+<form method="GET" action="{{ action_url }}" hx-get="{{ action_url }}" hx-target="#spell-list" hx-push-url="true"
+      class="bg-white p-4 rounded-lg shadow-sm mb-6 space-y-4">
+	
+	<div class="flex flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0 items-end">
+		
+		<!-- Сохраняем поисковый запрос -->
+		{% if search_query %}
+		<input type="hidden" name="q" value="{{ search_query }}">
+		{% endif %}
+		
+		<!-- Поле поиска -->
+		<div class="flex-grow relative">
+			<label class="block text-xs font-medium text-gray-700 mb-1 sr-only">Поиск</label>
+			<input type="text"
+			       name="q"
+			       value="{{ search_query }}"
+			       placeholder="Поиск по названию..."
+			       class="w-full px-3 py-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+		</div>
+		
+		<!-- Динамические фильтры из словаря -->
+		{% for f in filters %}
+		<div>
+			<label class="block text-xs font-medium text-gray-700 mb-1">{{ f.label }}</label>
+			{% if f.type == 'select' %}
+			<select name="{{ f.name }}" class="px-3 py-2 border rounded w-full text-sm">
+				{% for opt in f.options %}
+				<option value="{{ opt.value }}"
+				        {% if request.query_params.get(f.name) == opt.value %}selected{% endif %}>
+					{{ opt.label }}
+				</option>
+				{% endfor %}
+			</select>
+			{% endif %}
+		</div>
+		{% endfor %}
+		
+		<!-- Кнопка действия -->
+		<div class="w-full md:w-auto">
+			<button type="submit" class="inline-flex justify-center items-center w-full md:w-auto px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+				Применить
+			</button>
+		</div>
+	</div>
+</form>
+{% endmacro %}

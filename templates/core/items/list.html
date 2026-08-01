@@ -1,3 +1,66 @@
 <!-- templates/core/items/list.html -->
 
+{% extends "Base.html" %}
 
+{% from "_macros/card.html" import data_card, filter_bar %}
+
+{% block title %}{{ title }} | D&D Мастерская{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+	
+	<div class="flex justify-between items-center mb-6">
+		<h1 class="text-2xl font-bold text-gray-800">Справочник Предметов</h1>
+		{% if user.role == 'master' %}
+		<a href="#" class="btn btn-primary btn-sm">+ Новый предмет</a>
+		{% endif %}
+	</div>
+	
+	{{
+	filter_bar(
+	request=request,
+	action_url=url_for('core.items'),
+	search_query=request.query_params.get('q', ''),
+	filters=[
+	{
+	"name": "type",
+	"label": "Тип",
+	"type": "select",
+	"options": [
+	{"value": "", "label": "Любой"},
+	{"value": "weapon", "label": "Оружие"},
+	{"value": "armor", "label": "Доспехи"},
+	{"value": "potion", "label": "Зелье"}
+	]
+	}
+	]
+	)
+	}}
+	
+	<div id="item-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+		
+		{% if items %}
+		{% for item in items %}
+		
+		{{
+		data_card(
+		url=url_for('core.item_detail', item_id=item.id),
+		title=item.name,
+		
+		type=item.type.value if hasattr(item.type, 'value') else item.type,
+		body=item.description|striptags|truncate(120),
+		footer_text=(item.cost|string + " зм | Вес: " + item.weight|string)
+		)
+		}}
+		
+		{% endfor %}
+		{% else %}
+		<div class="col-span-full text-center py-12 text-gray-500 bg-white rounded-lg shadow p-8">
+			<svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.143 5.143l.857.857M15 15H9m6 0v-3.57a2 2 0 00-.75-1.57L9 6m6 6l2.71 2.71a2 2 0 010 2.82l-3.5 3.5a2 2 0 01-2.83 0L6 18"/></svg>
+			<p class="text-xl font-semibold">Ничего не найдено</p>
+			<p class="text-gray-400 mt-1">Попробуйте изменить параметры поиска.</p>
+		</div>
+		{% endif %}
+	</div>
+</div>
+{% endblock %}

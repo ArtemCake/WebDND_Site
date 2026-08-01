@@ -1,1 +1,76 @@
 <!-- templates/core/spells/list.html -->
+
+{% extends "Base.html" %}
+
+{% from "_macros/card.html" import data_card, filter_bar %}
+
+{% block title %}{{ title }} | D&D Мастерская{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+	
+	<!-- Заголовок страницы -->
+	<div class="flex justify-between items-center mb-6">
+		<h1 class="text-2xl font-bold text-gray-800">Справочник Заклинаний</h1>
+		{% if user.role == 'master' %}
+		<a href="#" class="btn btn-primary btn-sm">+ Новое заклинание</a>
+		{% endif %}
+	</div>
+	
+	<!-- Панель фильтров (используем макрос) -->
+	{{
+	filter_bar(
+	request=request,
+	action_url=url_for('core.spells'),
+	search_query=request.query_params.get('q', ''),
+	filters=[
+	{
+	"name": "level",
+	"label": "Уровень",
+	"type": "select",
+	"options": [
+	{"value": "", "label": "Любой"},
+	{"value": "0", "label": "Заговоры (0)"},
+	{"value": "1", "label": "1 круг"},
+	{"value": "2", "label": "2 круг"},
+	{"value": "3", "label": "3 круг"},
+	{"value": "4", "label": "4 круг"},
+	{"value": "5", "label": "5 круг"},
+	{"value": "6", "label": "6 круг"},
+	{"value": "7", "label": "7 круг"},
+	{"value": "8", "label": "8 круг"},
+	{"value": "9", "label": "9 круг"}
+	]
+	}
+	]
+	)
+	}}
+	
+	<!-- Сетка результатов -->
+	<div id="spell-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+		
+		{% if spells %}
+		{% for spell in spells %}
+		
+		{{
+		data_card(
+		url=url_for('core.spell_detail', spell_id=spell.id),
+		title=spell.name,
+		level=spell.level,
+		school=spell.school_of_magic,
+		body=spell.description|striptags|truncate(120),
+		footer_text=spell.classes|join(', ') if spell.classes else '—'
+		)
+		}}
+		
+		{% endfor %}
+		{% else %}
+		<div class="col-span-full text-center py-12 text-gray-500 bg-white rounded-lg shadow p-8">
+			<svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.143 5.143l.857.857M15 15H9m6 0v-3.57a2 2 0 00-.75-1.57L9 6m6 6l2.71 2.71a2 2 0 010 2.82l-3.5 3.5a2 2 0 01-2.83 0L6 18"/></svg>
+			<p class="text-xl font-semibold">Ничего не найдено</p>
+			<p class="text-gray-400 mt-1">Попробуйте изменить параметры поиска или сбросить фильтр уровня.</p>
+		</div>
+		{% endif %}
+	</div>
+</div>
+{% endblock %}
