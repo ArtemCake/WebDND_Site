@@ -1,15 +1,23 @@
 # app/enums/person_enums.py
 
-from Config.imports import (enum, Optional, Any, Dict, PG_ENUM, SchemaType)
+from Config.imports import (enum, Optional, Any, PG_ENUM, SchemaType)
 
 
-class ItemCategory(str, enum.Enum):
-	"""Категории предметов инвентаря."""
-	WEAPON = "weapon"
-	ARMOR = "armor"
-	GEAR = "gear"  # Свитки, зелья, компоненты
-	WONDROUS_ITEM = "wondrous_item"
+class ItemType(str, enum.Enum):
+	WEAPON = "Оружие"
+	ARMOR = "Доспех"
+	POTION = "Зелье"
+	SCROLL = "Свиток"
+	WONDROUS_ITEM = "Чудесный предмет"
+	def __str__(self) -> str:
+		return self.value
 
+class ItemRarity(str, enum.Enum):
+	COMMON = "Обычный"
+	UNCOMMON = "Необычный"
+	RARE = "Редкий"
+	VERY_RARE = "Очень редкий"
+	LEGENDARY = "Легендарный"
 	def __str__(self) -> str:
 		return self.value
 
@@ -63,6 +71,32 @@ class MagicItemRarity(str, enum.Enum):
 	VERY_RARE = "very_rare" # Мощные артефакты, +3 к характеристикам
 	LEGENDARY = "legendary" # Уникальные предметы мирового масштаба
 	ARTIFACT = "artifact"   # Объекты божественной силы (Молот Тора, Око Грюма)
+
+	def __str__(self) -> str:
+		return self.value
+
+class Size(str, enum.Enum):
+	TINY = "Крошечный"
+	SMALL = "Маленький"
+	MEDIUM = "Средний"
+	LARGE = "Большой"
+	HUGE = "Огромный"
+	GARGANTUAN = "Гигантский"
+
+	def __str__(self) -> str:
+		return self.value
+
+class SpellRarity(str, enum.Enum):
+	"""
+	Редкость магических предметов согласно правилам D&D 5e.
+	Используется для определения силы предмета и его стоимости.
+	"""
+	COMMON = "Обычное"
+	UNCOMMON = "Необычное"
+	RARE = "Редкое"
+	VERY_RARE = "Очень редкое"
+	LEGENDARY = "Легендарное"
+	ARTIFACT = "Артефакт"
 
 	def __str__(self) -> str:
 		return self.value

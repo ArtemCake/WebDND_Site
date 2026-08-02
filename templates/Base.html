@@ -22,7 +22,8 @@
 		<!-- Меню (теперь оно обычное, без hidden/md:) -->
 		<nav class="flex space-x-6 text-sm font-medium">
 			{% from "_macros/_menu.html" import render_menu %}
-			{{ render_menu(request=request, current_path=request.url.path, user_role=user.role if user else 'player') }}
+			
+			{{ render_menu(request=request, current_path=request.url.path, user_role=user_role if user else 'player') }}
 		</nav>
 	</div>
 </header>

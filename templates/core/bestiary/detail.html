@@ -1,1 +1,129 @@
 <!-- templates/core/bestiary/detail.html -->
+
+{% extends "Base.html" %}
+
+{% from "macros/card.html" import data_card, filter_bar %}
+
+{% block title %}{{ monster.name }} (CR {{ monster.challenge_rating }}) | D&D Мастерская{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6 max-w-6xl">
+	
+	<!-- Хлебные крошки -->
+	<nav class="text-sm text-gray-500 mb-4" aria-label="Breadcrumb">
+		<a href="{{ url_for('core.bestiary') }}" class="hover:text-blue-600">&larr; Назад в бестиарий</a>
+	</nav>
+	
+	<!-- Заголовок с PRO-фичей: Challenge Rating крупным шрифтом -->
+	<header class="mb-8 border-b pb-4">
+		<div class="flex justify-between items-start">
+			<div>
+				<h1 class="text-3xl font-extrabold text-gray-900">{{ monster.name }}</h1>
+				<p class="text-xl text-gray-600 mt-1">
+					{{ monster.size }} {{ monster.creature_type }}
+					{% if monster.alignment %}• {{ monster.alignment }}{% endif %}
+				</p>
+			</div>
+			<div class="px-4 py-2 bg-red-100 text-red-800 rounded-full text-sm font-bold border-2 border-red-300">
+				CR {{ monster.challenge_rating }}
+			</div>
+		</div>
+	</header>
+	
+	<!-- Основная сетка -->
+	<div class="grid lg:grid-cols-3 gap-8">
+		
+		<!-- Колонка 1: Блоки статистики -->
+		<div class="lg:col-span-1 space-y-6">
+			
+			<!-- Характеристики (Stats) -->
+			<div class="bg-white rounded-lg shadow p-6">
+				<h3 class="font-semibold text-gray-800 mb-4 text-center">Характеристики</h3>
+				<div class="grid grid-cols-2 gap-2 text-center text-sm">
+					<div>
+						<div class="font-bold text-lg">{{ monster.strength }}</div>
+						<div class="text-gray-500">СИЛ</div>
+					</div>
+					<div>
+						<div class="font-bold text-lg">{{ monster.dexterity }}</div>
+						<div class="text-gray-500">ЛОВ</div>
+					</div>
+					<div>
+						<div class="font-bold text-lg">{{ monster.constitution }}</div>
+						<div class="text-gray-500">ТЕЛ</div>
+					</div>
+					<div>
+						<div class="font-bold text-lg">{{ monster.intelligence }}</div>
+						<div class="text-gray-500">ИНТ</div>
+					</div>
+					<div>
+						<div class="font-bold text-lg">{{ monster.wisdom }}</div>
+						<div class="text-gray-500">МУД</div>
+					</div>
+					<div>
+						<div class="font-bold text-lg">{{ monster.charisma }}</div>
+						<div class="text-gray-500">ХАР</div>
+					</div>
+				</div>
+			</div>
+			
+			<!-- Основные параметры -->
+			<div class="bg-white rounded-lg shadow p-6 space-y-3">
+				<h3 class="font-semibold text-gray-800 mb-4">Параметры</h3>
+				<p><strong>Класс Доспеха:</strong> {{ monster.armor_class }}</p>
+				<p><strong>HP:</strong> {{ monster.hp }}</p>
+				<p><strong>Скорость:</strong> {{ monster.speed }}</p>
+				<p><strong>Спасброски:</strong> {{ monster.saving_throws or '—' }}</p>
+				<p><strong>Навыки:</strong> {{ monster.skills or '—' }}</p>
+				<p><strong>Уязвимости:</strong> {{ monster.damage_vulnerabilities or '—' }}</p>
+				<p><strong>Иммунитет урона:</strong> {{ monster.damage_immunities or '—' }}</p>
+				<p><strong>Сопротивление:</strong> {{ monster.damage_resistances or '—' }}</p>
+			</div>
+		
+		</div>
+		
+		<!-- Колонка 2: Действия и описание -->
+		<div class="lg:col-span-2 space-y-6">
+			
+			<!-- Способности (Действия / Legendary Actions) -->
+			{% if monster.special_abilities %}
+			<div class="bg-white rounded-lg shadow p-6">
+				<h3 class="font-semibold text-gray-800 mb-4">Способности</h3>
+				<div class="prose prose-slate dark:prose-invert max-w-none">
+					{{ monster.special_abilities | safe }}
+				</div>
+			</div>
+			{% endif %}
+			
+			<!-- Действия -->
+			{% if monster.actions %}
+			<div class="bg-white rounded-lg shadow p-6">
+				<h3 class="font-semibold text-gray-800 mb-4">Действия</h3>
+				<div class="prose prose-slate dark:prose-invert max-w-none">
+					{{ monster.actions | safe }}
+				</div>
+			</div>
+			{% endif %}
+			
+			<!-- Легендарные действия -->
+			{% if monster.legendary_actions %}
+			<div class="bg-white rounded-lg shadow p-6">
+				<h3 class="font-semibold text-gray-800 mb-4">Легендарные действия</h3>
+				<div class="prose prose-slate dark:prose-invert max-w-none">
+					{{ monster.legendary_actions | safe }}
+				</div>
+			</div>
+			{% endif %}
+			
+			<!-- Описание существа -->
+			{% if monster.description %}
+			<div class="bg-white rounded-lg shadow p-6 prose prose-slate dark:prose-invert max-w-none">
+				{{ monster.description | safe }}
+			</div>
+			{% endif %}
+		
+		</div>
+	
+	</div>
+</div>
+{% endblock %}

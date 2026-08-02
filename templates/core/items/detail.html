@@ -1,2 +1,84 @@
 <!-- templates/core/items/detail.html -->
 
+{% extends "Base.html" %}
+
+{% from "macros/card.html" import data_card, filter_bar %}
+
+{% block title %}{{ item.name }}| D&D Мастерская{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6 max-w-5xl">
+	
+	<!-- Хлебные крошки -->
+	<nav class="text-sm text-gray-500 mb-4" aria-label="Breadcrumb">
+		<a href="{{ url_for('core.items') }}" class="hover:text-blue-600">&larr; Назад к предметам</a>
+	</nav>
+	
+	<!-- Главный заголовок -->
+	<header class="mb-8 border-b pb-4">
+		<h1 class="text-3xl font-extrabold text-gray-900">{{ item.name }}</h1>
+		
+		{% set parts = [] %}
+		{% if item.type %}{% set _ = parts.append(item.type.value if hasattr(item.type, 'value') else item.type) %}{% endif %}
+		{% if item.rarity %}{% set _ = parts.append(item.rarity) %}{% endif %}
+		
+		{% if parts|length > 0 %}
+		<p class="text-lg text-gray-600 mt-1">{{ parts | join(" • ") }}</p>
+		{% endif %}
+	</header>
+	
+	<!-- Сетка контента -->
+	<div class="grid lg:grid-cols-3 gap-8">
+		
+		<!-- Левая колонка: Параметры предмета -->
+		<div class="lg:col-span-1 space-y-6">
+			
+			<!-- Карточка характеристик -->
+			<div class="bg-white rounded-lg shadow p-6">
+				<h3 class="font-semibold text-gray-800 mb-4 flex items-center">
+					<svg class="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-.895 2-3 2m4.752-9l-2.793 2.793a2 2 0 00-2.828 0L4.247 9m4.752 9a2 2 0 012.828 0l2.793-2.793a2 2 0 000-2.828L17.753 9M4.247 9l2.793-2.793A2 2 0 019 4.247l2.793 2.793A2 2 0 0013.753 9z"/></svg>
+					Свойства
+				</h3>
+				<ul class="space-y-2 text-sm">
+					<li><strong>Категория:</strong> {{ item.type.value if item.type else '—' }}</li>
+					<li><strong>Редкость:</strong> {{ item.rarity or 'Обычный' }}</li>
+					<li><strong>Стоимость:</strong> {{ item.cost or '—' }} зм</li>
+					<li><strong>Вес:</strong> {{ item.weight or '—' }} кг</li>
+					{% if item.attunement %}
+					<li><strong>Требование:</strong> Требуется настройка (Attunement)</li>
+					{% endif %}
+				</ul>
+			</div>
+			
+			<!-- Классы (если предмет привязан к классу, например оружие Паладина) -->
+			{% if item.classes %}
+			<div class="bg-white rounded-lg shadow p-6">
+				<h3 class="font-semibold text-gray-800 mb-4">Особые классы</h3>
+				<div class="flex flex-wrap gap-2">
+					{% for char_class in item.classes %}
+					<span class="px-3 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded-full">
+                            {{ char_class.name }}
+                        </span>
+					{% endfor %}
+				</div>
+			</div>
+			{% endif %}
+		
+		</div>
+		
+		<!-- Правая колонка: Описание -->
+		<div class="lg:col-span-2">
+			<div class="bg-white rounded-lg shadow p-6 prose prose-slate dark:prose-invert max-w-none">
+				
+				{% if item.description %}
+				{{ item.description | safe }}
+				{% else %}
+				<p class="text-gray-400 italic">Описание отсутствует.</p>
+				{% endif %}
+			
+			</div>
+		</div>
+	
+	</div>
+</div>
+{% endblock %}

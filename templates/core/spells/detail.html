@@ -1,1 +1,86 @@
 <!-- templates/core/spells/detail.html -->
+
+{% extends "Base.html" %}
+
+{% block title %}{{ spell.name }} | D&D Мастерская{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6 max-w-5xl">
+	
+	<!-- Хлебные крошки -->
+	<nav class="text-sm text-gray-500 mb-4" aria-label="Breadcrumb">
+		<a href="{{ url_for('core.spells') }}" class="hover:text-blue-600">&larr; Назад к списку заклинаний</a>
+	</nav>
+	
+	<!-- Главный заголовок -->
+	<header class="mb-8 border-b pb-4">
+		<h1 class="text-3xl font-extrabold text-gray-900">{{ spell.name }}</h1>
+		<p class="text-lg text-gray-600 mt-1">
+			{% set parts = [] %}
+			{% if spell.level is not none %}{% set _ = parts.append("Ур. " ~ spell.level) %}{% endif %}
+			{% if spell.school_of_magic %}{% set _ = parts.append(spell.school_of_magic) %}{% endif %}
+			{{ parts | join(" • ") }}
+		</p>
+	</header>
+	
+	<!-- Сетка контента -->
+	<div class="grid lg:grid-cols-3 gap-8">
+		
+		<!-- Левая колонка: Основные данные -->
+		<div class="lg:col-span-1 space-y-6">
+			
+			<!-- Карточка параметров -->
+			<div class="bg-white rounded-lg shadow p-6">
+				<h3 class="font-semibold text-gray-800 mb-4 flex items-center">
+					<svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+					Время
+				</h3>
+				<ul class="space-y-2 text-sm">
+					<li><strong>Время накладывания:</strong> {{ spell.casting_time or '—' }}</li>
+					<li><strong>Дистанция:</strong> {{ spell.range or '—' }}</li>
+					<li><strong>Компоненты:</strong> {{ spell.components or '—' }}</li>
+					<li><strong>Длительность:</strong> {{ spell.duration or '—' }}</li>
+				</ul>
+			</div>
+			
+			<!-- Классы -->
+			{% if spell.classes %}
+			<div class="bg-white rounded-lg shadow p-6">
+				<h3 class="font-semibold text-gray-800 mb-4">Классы</h3>
+				<div class="flex flex-wrap gap-2">
+					{% for char_class in spell.classes %}
+					<span class="px-3 py-1 bg-indigo-100 text-indigo-800 text-xs font-medium rounded-full">
+                            {{ char_class.name }}
+                        </span>
+					{% endfor %}
+				</div>
+			</div>
+			{% endif %}
+		
+		</div>
+		
+		<!-- Правая колонка: Описание -->
+		<div class="lg:col-span-2">
+			<div class="bg-white rounded-lg shadow p-6 prose prose-slate dark:prose-invert max-w-none">
+				
+				{# Блок описания #}
+				{% if spell.description %}
+				{{ spell.description | safe }}
+				{% else %}
+				<p class="text-gray-400 italic">Описание отсутствует.</p>
+				{% endif %}
+				
+				<hr class="my-6 border-gray-200">
+				
+				{# Блок Высших уровней (At Higher Levels), если есть #}
+				{% if spell.damage_at_higher_levels or spell.description_at_higher_levels %}
+				<h2 class="text-xl font-bold text-gray-800">На более высоких уровнях</h2>
+				<p>{{ spell.description_at_higher_levels or spell.damage_at_higher_levels }}</p>
+				{% endif %}
+			
+			</div>
+		</div>
+	
+	</div>
+</div>
+{% endblock %}

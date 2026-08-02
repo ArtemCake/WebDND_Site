@@ -1,11 +1,14 @@
 # app/Routers/Web_Routers.py
 
 from Config.Config import settings
-from Config.imports import (os, URLSafeTimedSerializer, APIRouter, Request, asyncio, Markup, markdown,
+from Config.imports import (os, URLSafeTimedSerializer, APIRouter, Request, select, Markup, markdown,
                             Depends, HTTPException, RedirectResponse, status, HTMLResponse)
 from app.core.dependencies import get_current_user, OverloadedForm
+from app.database.models.user_models import UserLog, AppLog
 from app.database.session import get_async_db
 from app.core.security import create_access_token
+from app.repositories.srd_repository import SRDRepository
+from app.schemas.spell_schema import SpellCreate, SpellUpdate
 from app.services.srd_service import SRDService
 from app.services.user_service import UserService
 from app.database._models import User, Item, Spell, Monster
@@ -27,7 +30,7 @@ async def home_page(request: Request, user: User = Depends(get_current_user)):
 	response = templates.TemplateResponse(
 	request=request,
 	name="index.html",
-	context={"user": user}
+	context={"user_role": user.role.value}
 	)
 	return response
 
@@ -155,7 +158,7 @@ async def delete_own_account(request: Request, user: User = Depends(get_current_
 			return templates.TemplateResponse(
 				request=request,
 				name="profile.html",
-				context={"user": user, "error": message}
+				context={"user_role": user.role.value, "error": message}
 			)
 
 def get_document_content(request: Request, filename: str) -> str:
@@ -227,31 +230,219 @@ async def logout(request: Request):
 
 #Роутеры меню
 
+# ==============================================================================
+# === СПРАВОЧНИК ЗАКЛИНАНИЙ (CRUD + List) ======================================
+# ==============================================================================
+
 @web_router.get("/core/spells", response_class=HTMLResponse, name="core.spells")
-async def spells_list(request: Request,
-                      user: User = Depends(get_current_user)):
-	templates = request.app.state.templates
-	q = request.query_params.get("q", "")
-
-	level_param = request.query_params.get("level")
-	level_filter = {"level": int(level_param)} if level_param and level_param.isdigit() else {}
-
+async def spells_list(
+		request: Request,
+		user: User = Depends(get_current_user),
+		search_query: str = "",
+		level: int = None
+):
+	"""Отображение страницы со списком всех заклинаний."""
 	db_manager = get_async_db()
 	async with (db_manager as db):
-		# Вызываем МЕТОД СЕРВИСА, который внутри себя дергает REPO
-		spells = await SRDService.get_srd_data(
-			db,
-			model=Spell,
-			search_query=q,
-			filters=level_filter
-		)
-
+		spells = await SRDService.get_spells_list(db, search_query=search_query, level=level)
+		templates = request.app.state.templates
 		return templates.TemplateResponse(
 			request=request,
 			name="core/spells/list.html",
-			context={"title": "Заклинания",
-			         "spells": spells,
-			         "user": user}
+			context={
+				"title": "Заклинания",
+				"spells": spells,
+				"user_role": user.role.value,
+				"current_search": search_query,
+				"current_level": level
+			}
+		)
+
+# --- ДЕТАЛЬНАЯ СТРАНИЦА (READ) ---
+@web_router.get("/core/spells/{spell_id}", response_class=HTMLResponse, name="core.spells.detail")
+async def spell_detail(
+		request: Request,
+		user: User = Depends(get_current_user),
+		spell_id: int = None
+):
+	"""Страница с подробным описанием одного заклинания."""
+	if not spell_id:
+		raise HTTPException(status_code=404)
+
+	db_manager = get_async_db()
+	async with (db_manager as db):
+		spell = await SRDService.get_spell_by_id(db, spell_id)
+
+		if not spell:
+			raise HTTPException(status_code=404, detail="Заклинание не найдено")
+		templates = request.app.state.templates
+		return templates.TemplateResponse(
+			request=request,
+			name="core/spells/detail.html",
+			context={"title": spell.name,
+			         "spell": spell,
+			         "user_role": user.role.value}
+		)
+
+# --- СОЗДАНИЕ (CREATE) ---
+@web_router.get("/core/spells/create", response_class=HTMLResponse, name="core.spells.create")
+async def spell_create_form(request: Request, user: User = Depends(get_current_user)):
+	"""Отображает пустую форму создания нового заклинания."""
+	if user.role.value != 'master':
+		raise HTTPException(status_code=403, detail="Доступ запрещен")
+	templates = request.app.state.templates
+	return templates.TemplateResponse(
+		request=request,
+		name="core/spells/form.html",
+		context={"title": "Новое заклинание",
+		         "spell": None,
+		         "error": None,
+		         "user_role": user.role.value}
+	)
+
+@web_router.post("/core/spells/", name="core.spells.store")
+async def spell_store(
+		request: Request,
+		payload: SpellCreate,
+		user: User = Depends(get_current_user)
+):
+	"""Обрабатывает POST-запрос на создание заклинания."""
+	if user.role.value != 'master':
+		raise HTTPException(status_code=403)
+
+	db_manager = get_async_db()
+	async with (db_manager as db):
+		success, message, obj = await SRDService.create_spell(db, payload)
+
+		# Если запрос пришел от HTMX (наш фильтр или форма), возвращаем кусок HTML
+		if "HX-Request" in request.headers:
+			spells = await SRDService.get_spells_list(db)
+			templates = request.app.state.templates
+
+			if success:
+				# При успехе обновляем сетку карточек
+				return templates.TemplateResponse(
+					request=request,
+					name="core/spells/list.html",
+					context={"spells": spells,
+					         "user_role": user.role.value}
+				)
+			else:
+				# При ошибке возвращаем форму с текстом ошибки
+				return templates.TemplateResponse(
+					request=request,
+					name="core/spells/form.html",
+					context={"title": "Ошибка создания",
+					         "error": message,
+					         "spell_data": payload,
+					         "user_role": user.role.value},
+					status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
+				)
+
+		# Обычный веб-запрос (не HTMX) - делаем редирект
+		if success:
+			return RedirectResponse(url="/core/spells", status_code=status.HTTP_303_SEE_OTHER)
+		else:
+			# В случае системной ошибки при обычном запросе можно вернуть на форму
+			return RedirectResponse(url="/core/spells/create", status_code=status.HTTP_303_SEE_OTHER)
+
+# --- РЕДАКТИРОВАНИЕ (UPDATE) ---
+@web_router.get("/core/spells/{spell_id}/edit", response_class=HTMLResponse, name="core.spells.edit")
+async def spell_edit_form(
+		request: Request,
+		user: User = Depends(get_current_user),
+		spell_id: int = None
+):
+	"""Отображает форму редактирования с заполненными данными."""
+	if user.role.value != 'master' or not spell_id:
+		raise HTTPException(status_code=403)
+
+	db_manager = get_async_db()
+	async with (db_manager as db):
+		spell = await SRDService.get_spell_by_id(db, spell_id)
+		if not spell:
+			raise HTTPException(status_code=404)
+
+		templates = request.app.state.templates
+		return templates.TemplateResponse(
+			request=request,
+			name="core/spells/form.html",
+			context={"title": f"Редактировать: {spell.name}",
+			         "spell": spell,
+			         "error": None,
+			         "user_role": user.role.value}
+		)
+
+@web_router.put("/core/spells/{spell_id}", name="core.spells.update") # Используем PUT/PATCH
+async def spell_update(
+		request: Request,
+		spell_id: int,
+		payload: SpellUpdate,
+		user: User = Depends(get_current_user)
+):
+	"""Обработка сохранения изменений."""
+	if user.role.value != 'master':
+		raise HTTPException(status_code=403)
+
+	db_manager = get_async_db()
+	async with (db_manager as db):
+		# Сначала получаем объект из БД
+		db_obj = await SRDService.get_spell_by_id(db, spell_id)
+		if not db_obj:
+			raise HTTPException(status_code=404)
+
+		success, message, _ = await SRDService.update_spell(db, db_obj, payload)
+
+		if "HX-Request" in request.headers:
+			spells = await SRDService.get_spells_list(db)
+			templates = request.app.state.templates
+
+			if success:
+				return templates.TemplateResponse(
+					request=request,
+					name="core/spells/_list_partial.html",
+					context={"spells": spells,
+					         "user_role": user.role.value},
+					headers={"HX-Trigger": "closeModal"} # Можно закрыть модалку
+				)
+			else:
+				return templates.TemplateResponse(
+					request=request,
+					name="core/spells/form.html",
+					context={"title": "Ошибка",
+					         "error": message,
+					         "spell": db_obj,
+					         "user_role": user.role.value},
+					status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
+				)
+
+		return RedirectResponse(url=f"/core/spells/{spell_id}", status_code=status.HTTP_303_SEE_OTHER)
+
+# --- УДАЛЕНИЕ (DELETE) ---
+@web_router.delete("/core/spells/{spell_id}", name="core.spells.destroy")
+async def spell_delete(
+		request: Request,
+		spell_id: int,
+		user: User = Depends(get_current_user)
+):
+	"""Удаление заклинания (HTMX)."""
+	if user.role.value != 'master':
+		raise HTTPException(status_code=403)
+
+	db_manager = get_async_db()
+	async with (db_manager as db):
+		db_obj = await SRDService.get_spell_by_id(db, spell_id)
+		if db_obj:
+			await SRDService.delete_spell(db, db_obj)
+
+		# После удаления всегда возвращаем обновленный список
+		spells = await SRDService.get_spells_list(db)
+		templates = request.app.state.templates
+		return templates.TemplateResponse(
+			request=request,
+			name="core/spells/list.html",
+			context={"spells": spells,
+			         "user_role": user.role.value}
 		)
 
 @web_router.get("/core/items", response_class=HTMLResponse, name="core.items")
@@ -260,17 +451,14 @@ async def items_list(request: Request,
 	templates = request.app.state.templates
 	q = request.query_params.get("q", "")
 
-	level_param = request.query_params.get("level")
-	level_filter = {"level": int(level_param)} if level_param and level_param.isdigit() else {}
+	type_param = request.query_params.get("type")
 
 	db_manager = get_async_db()
 	async with (db_manager as db):
-		# Вызываем МЕТОД СЕРВИСА, который внутри себя дергает REPO
-		items = await SRDService.get_srd_data(
+		items = await SRDService.get_items_list(
 			db,
-			model=Item,
 			search_query=q,
-			filters=level_filter
+			item_type=str(type_param)
 		)
 
 		return templates.TemplateResponse(
@@ -278,7 +466,33 @@ async def items_list(request: Request,
 			name="core/items/list.html",
 			context={"title": "Предметы",
 			         "items": items,
-			         "user": user}
+			         "user_role": user.role.value}
+		)
+
+@web_router.get("/core/items/{item_id}", response_class=HTMLResponse, name="core.item_detail")
+async def item_detail(request: Request, user: User = Depends(get_current_user), item_id: int = None):
+	"""Детальная страница заклинания."""
+	if not item_id:
+		raise HTTPException(status_code=404)
+
+	templates = request.app.state.templates
+
+	db_manager = get_async_db()
+	async with (db_manager as db):
+		# Используем метод сервиса для поиска по ID
+		item = await SRDRepository.get_item_by_id(db, item_id)
+
+		if not item:
+			raise HTTPException(status_code=404, detail="Предмет не найден")
+
+		return templates.TemplateResponse(
+			request=request,
+			name="core/items/detail.html",
+			context={
+				"title": item.name,
+				"item": item,
+				"user_role": user.role.value
+			}
 		)
 
 @web_router.get("/core/bestiary", response_class=HTMLResponse, name="core.bestiary")
@@ -287,17 +501,16 @@ async def bestiary_list(request: Request,
 	templates = request.app.state.templates
 	q = request.query_params.get("q", "")
 
-	level_param = request.query_params.get("level")
-	level_filter = {"level": int(level_param)} if level_param and level_param.isdigit() else {}
+	cr_param = request.query_params.get("cr")
+	creature_type_param = request.query_params.get("type")
 
 	db_manager = get_async_db()
 	async with (db_manager as db):
-		# Вызываем МЕТОД СЕРВИСА, который внутри себя дергает REPO
-		bestiarys = await SRDService.get_srd_data(
+		bestiarys = await SRDService.get_bestiary_list(
 			db,
-			model=Monster,
 			search_query=q,
-			filters=level_filter
+			cr=str(cr_param),
+			creature_type=str(creature_type_param)
 		)
 
 		return templates.TemplateResponse(
@@ -305,7 +518,33 @@ async def bestiary_list(request: Request,
 			name="core/bestiary/list.html",
 			context={"title": "Монстры",
 			         "items": bestiarys,
-			         "user": user}
+			         "user_role": user.role.value}
+		)
+
+@web_router.get("/core/bestiary/{bestiary_id}", response_class=HTMLResponse, name="core.bestiary_detail")
+async def bestiary_detail(request: Request, user: User = Depends(get_current_user), bestiary_id: int = None):
+	"""Детальная страница заклинания."""
+	if not bestiary_id:
+		raise HTTPException(status_code=404)
+
+	templates = request.app.state.templates
+
+	db_manager = get_async_db()
+	async with (db_manager as db):
+		# Используем метод сервиса для поиска по ID
+		bestiary = await SRDRepository.get_monster_by_id(db, bestiary_id)
+
+		if not bestiary:
+			raise HTTPException(status_code=404, detail="Монстр не найден")
+
+		return templates.TemplateResponse(
+			request=request,
+			name="core/bestiary/detail.html",
+			context={
+				"title": bestiary.name,
+				"bestiary": bestiary,
+				"user_role": user.role.value
+			}
 		)
 
 @web_router.get("/lore", response_class=HTMLResponse, name="lore.index")
@@ -352,4 +591,42 @@ def _render_section_page(request: Request, title: str):
 		context={"title": title}
 	)
 
+# --- ГРУППА АДМИНСКИХ РОУТЕРОВ ---
+@web_router.get("/admin/user-logs", response_class=HTMLResponse, name="admin.user_logs")
+async def admin_user_logs(request: Request, user: User = Depends(get_current_user)):
+	"""Просмотр журнала действий пользователей."""
+	if user.role != 'admin':
+		raise HTTPException(status_code=403, detail="Доступ запрещен")
 
+	templates = request.app.state.templates
+
+	db_manager = get_async_db()
+	async with (db_manager as db):
+		# Получаем последние 500 записей, сортируем по дате убывания
+		result = await db.execute(select(UserLog).order_by(UserLog.timestamp.desc()).limit(500))
+		logs = result.scalars().all()
+
+		return templates.TemplateResponse(
+			request=request,
+			name="admin/user_logs.html",
+			context={"title": "Логи пользователей", "logs": logs}
+		)
+
+@web_router.get("/admin/app-logs", response_class=HTMLResponse, name="admin.app_logs")
+async def admin_app_logs(request: Request, user: User = Depends(get_current_user)):
+	"""Просмотр системного журнала приложения (ошибки БД, стартапы)."""
+	if user.role != 'admin':
+		raise HTTPException(status_code=403, detail="Доступ запрещен")
+
+	templates = request.app.state.templates
+
+	db_manager = get_async_db()
+	async with (db_manager as db):
+		result = await db.execute(select(AppLog).order_by(AppLog.timestamp.desc()).limit(500))
+		logs = result.scalars().all()
+
+		return templates.TemplateResponse(
+			request=request,
+			name="admin/app_logs.html",
+			context={"title": "Системные логи", "logs": logs}
+		)
