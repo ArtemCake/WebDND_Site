@@ -35,8 +35,7 @@ class SRDService:
 			model=Spell,
 			search_query=search_query,
 			filters=filters,
-			sort_by="name",
-			include_options=[selectinload(Spell.classes)]
+			sort_by="name"
 		)
 		return spells
 
@@ -186,7 +185,7 @@ class SRDService:
 	) -> List[Monster]:
 		"""Получение списка монстров."""
 		filters = {}
-		if cr: filters["challenge_rating"] = cr
+		if cr: filters["cr"] = cr
 		if creature_type: filters["creature_type"] = creature_type
 
 		monsters = await SRDRepository.get_list(

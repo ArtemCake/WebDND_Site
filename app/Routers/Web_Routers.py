@@ -11,7 +11,7 @@ from app.repositories.srd_repository import SRDRepository
 from app.schemas.spell_schema import SpellCreate, SpellUpdate
 from app.services.srd_service import SRDService
 from app.services.user_service import UserService
-from app.database._models import User, Item, Spell, Monster
+from app.database._models import User
 
 
 # Создаем "подписыватель" (signer) для данных.
@@ -517,7 +517,7 @@ async def bestiary_list(request: Request,
 			request=request,
 			name="core/bestiary/list.html",
 			context={"title": "Монстры",
-			         "items": bestiarys,
+			         "monsters": bestiarys,
 			         "user_role": user.role.value}
 		)
 

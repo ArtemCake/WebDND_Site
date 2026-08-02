@@ -38,7 +38,7 @@
 		{{ nav_link(request, 'vtt.initiative', 'Инициатива', current_path) }}
 	</ul>
 	
-	{% if user_role == "master" or user_role == "admin" %}
+	{% if user_role == "master" or user_role == 'admin' %}
 	<div class="menu-section-header">Администрирование</div>
 	<ul class="menu-list">
 		<li><a href="{{ url_for('admin.user_logs') }}">Логи пользователей</a></li>
