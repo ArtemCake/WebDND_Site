@@ -148,7 +148,7 @@ async def delete_own_account(request: Request, user: User = Depends(get_current_
 				path="/",
 				httponly=True,
 				secure=True,  # только HTTPS
-				samesite="Strict"
+				samesite="strict"
 			)
 			response.delete_cookie("access_token")
 			response.delete_cookie("temp_user_id")
@@ -208,7 +208,7 @@ async def terms_of_service(request: Request):
 	)
 
 @web_router.get("/login?logout=1") # Использование query param для GET-запроса выхода
-async def logout(request: Request):
+async def logout():
 	"""
 	Обработчик выхода из аккаунта.
 	Удаляет токен из куки и перенаправляет на страницу авторизации.
@@ -222,7 +222,7 @@ async def logout(request: Request):
 		path="/",
 		httponly=True,
 		secure=True,  # только HTTPS
-		samesite="Strict"
+		samesite="strict"
 	)
 	response.delete_cookie("access_token")
 	response.delete_cookie("temp_user_id")
