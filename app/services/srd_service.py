@@ -3,7 +3,7 @@
 from app.repositories.srd_repository import SRDRepository
 from app.services.log_service import LogService
 from app.enums.log_enums import LogAction, LogLevelEnum
-from Config.imports import  List, AsyncSession,  selectinload, Optional
+from Config.imports import  List, AsyncSession, Optional
 from app.database._models import  Spell, Item, Monster
 from app.schemas.spell_schema import SpellCreate, SpellUpdate
 from app.schemas.item_schema import ItemCreate, ItemUpdate
