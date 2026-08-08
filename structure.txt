@@ -46,23 +46,35 @@ WebDND_Site/
 │	│          ├── spell_models.py
 │	│          ├── srd_models.py
 │	│          └── user_models.py
+│   │
 │   ├── core/
 │   │   ├── security.py
 │   │   └── dependencies.py
+│   │
 │   ├── enums/
 │   │   ├── log_enums.py
 │   │   ├── person_enums.py
 │   │   ├── db_enums.py
 │   │   └── user_enums.py
+│	│
 │   ├── repositories/
+│   │   ├── srd_repository.py
 │   │   └── user_repository.py
+│   │
 │   ├── Routers/
 │   │   ├── API_Routers.py
 │   │   └── Web_Routers.py
+│   │
+│   ├── schemas/
+│   │   ├── item_schema.py
+│   │   ├── spell_schema.py
+│   │   └── monster_schema.py
+│   │
 │   └── services/
-│   │   ├── cleanup_on_start.py
-│   │   ├── log_service.py
-│   │   ├── user_service.py
+│       ├── cleanup_on_start.py
+│       ├── log_service.py
+│       ├── user_service.py
+│       ├── srd_service.py
 │       └── auth_service.py
 │
 ├── static/
@@ -78,6 +90,9 @@ WebDND_Site/
 │   │   │    └── _variables.css
 │   │   ├── style.min.css
 │   │   └── style.css
+│   │
+│   ├── image/
+│   │   └── favicon.ico
 │   │
 │   ├── docs/
 │   │   ├── privacy_policy.md
@@ -96,6 +111,11 @@ WebDND_Site/
    ├── document.html
    ├── _menu.html          # Динамическое меню (которое мы уже обсудили)
    ├── index.html          # Главная страница (лендинг)
+   ├── section_stub.html
+   │
+   ├── admin/
+   │   ├── app_logs.html
+   │   └── user_logs.html
    │
    ├── auth/               # Блок авторизации
    │   ├── login.html
@@ -104,15 +124,21 @@ WebDND_Site/
    ├── core/               # Основные справочники SRD
    │   ├── bestiary/       # Бестиарий
    │   │   ├── list.html   # Список монстров с фильтрами
+   │   │   ├── form.html
    │   │   └── detail.html # Карточка одного монстра
    │   │
    │   ├── spells/         # Заклинания
    │   │   ├── list.html
+   │   │   ├── form.html
    │   │   └── detail.html
    │   │
    │   └── items/          # Предметы экипировки
    │       ├── list.html
+   │       ├── form.html
    │       └── detail.html
+   │
+   ├── lore/
+   │   └── view.html
    │
    ├── campaign/           # Работа с кампаниями
    │   ├── dashboard.html  # Плитка всех кампаний игрока/мастера
@@ -129,6 +155,8 @@ WebDND_Site/
    │
    └── macros/             # Переиспользуемые компоненты
        ├── card.html       # Стандартная карточка сущности
+       ├── _menu.html
+       ├── _menu_icon.html
        ├── filter_bar.html # Панель фильтров для списков
        ├── cookieBaner.html # Банер об использовании cookie на сайте
        └── pagination.html # Постраничная навигация
