@@ -1,9 +1,8 @@
 <!-- templates/_macros/_menu.html -->
 
-{% macro render_menu(request, current_path, user_role) %}
+{% macro render_menu(request, current_path, UserRole) %}
 <nav class="sidebar">
 	<div class="logo">WebDND</div>
-	
 	<div class="menu-section-header">Справочники (SRD)</div>
 	<ul class="menu-list">
 		{{ nav_link(request, 'core.spells', 'Заклинания', current_path) }}
@@ -16,7 +15,7 @@
 		{{ nav_link(request, 'lore.index', 'История и локации', current_path) }}
 	</ul>
 	
-	{% if user_role != "master" %}
+	{% if UserRole != "master" %}
 	<div class="menu-section-header">Мой персонаж</div>
 	<ul class="menu-list">
 		{{ nav_link(request, 'profile.characters', 'Коллекция', current_path) }}
@@ -24,7 +23,7 @@
 	</ul>
 	{% endif %}
 	
-	{% if user_role == "master" %}
+	{% if UserRole == "master" %}
 	<div class="menu-section-header">Мастерская</div>
 	<ul class="menu-list">
 		{{ nav_link(request, 'campaign.dashboard', 'Мои кампании', current_path) }}
@@ -37,12 +36,11 @@
 	<ul class="menu-list">
 		{{ nav_link(request, 'vtt.initiative', 'Инициатива', current_path) }}
 	</ul>
-	
-	{% if user_role == "master" or user_role == 'admin' %}
+	{% if UserRole == "master" or UserRole == 'admin' %}
 	<div class="menu-section-header">Администрирование</div>
 	<ul class="menu-list">
-		<li><a href="{{ url_for('admin.user_logs') }}">Логи пользователей</a></li>
-		<li><a href="{{ url_for('admin.app_logs') }}">Системные логи</a></li>
+		<li><a href="{{ request.url_for('admin.user_logs') }}">Логи пользователей</a></li>
+		<li><a href="{{ request.url_for('admin.app_logs') }}">Системные логи</a></li>
 	</ul>
 	{% endif %}
 	

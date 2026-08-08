@@ -30,7 +30,8 @@ async def home_page(request: Request, user: User = Depends(get_current_user)):
 	response = templates.TemplateResponse(
 	request=request,
 	name="index.html",
-	context={"user_role": user.role.value}
+	context={"user_role": user.role.value if user and hasattr(user, 'role') else 'player',
+	         "user": user}
 	)
 	return response
 
@@ -158,7 +159,9 @@ async def delete_own_account(request: Request, user: User = Depends(get_current_
 			return templates.TemplateResponse(
 				request=request,
 				name="profile.html",
-				context={"user_role": user.role.value, "error": message}
+				context={"user_role": user.role.value if user and hasattr(user, 'role') else 'player',
+				         "user": user,
+				         "error": message}
 			)
 
 def get_document_content(request: Request, filename: str) -> str:
@@ -252,7 +255,8 @@ async def spells_list(
 			context={
 				"title": "Заклинания",
 				"spells": spells,
-				"user_role": user.role.value,
+				"user_role": user.role.value if user and hasattr(user, 'role') else 'player',
+				"user": user,
 				"current_search": search_query,
 				"current_level": level
 			}
@@ -281,7 +285,8 @@ async def spell_detail(
 			name="core/spells/detail.html",
 			context={"title": spell.name,
 			         "spell": spell,
-			         "user_role": user.role.value}
+			         "user_role": user.role.value if user and hasattr(user, 'role') else 'player',
+			         "user": user}
 		)
 
 # --- СОЗДАНИЕ (CREATE) ---
@@ -297,7 +302,8 @@ async def spell_create_form(request: Request, user: User = Depends(get_current_u
 		context={"title": "Новое заклинание",
 		         "spell": None,
 		         "error": None,
-		         "user_role": user.role.value}
+		         "user_role": user.role.value if user and hasattr(user, 'role') else 'player',
+		         "user": user}
 	)
 
 @web_router.post("/core/spells/", name="core.spells.store")
@@ -325,7 +331,8 @@ async def spell_store(
 					request=request,
 					name="core/spells/list.html",
 					context={"spells": spells,
-					         "user_role": user.role.value}
+					         "user_role": user.role.value if user and hasattr(user, 'role') else 'player',
+					         "user": user}
 				)
 			else:
 				# При ошибке возвращаем форму с текстом ошибки
@@ -335,7 +342,8 @@ async def spell_store(
 					context={"title": "Ошибка создания",
 					         "error": message,
 					         "spell_data": payload,
-					         "user_role": user.role.value},
+					         "user_role": user.role.value if user and hasattr(user, 'role') else 'player',
+					         "user": user},
 					status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
 				)
 
@@ -370,7 +378,8 @@ async def spell_edit_form(
 			context={"title": f"Редактировать: {spell.name}",
 			         "spell": spell,
 			         "error": None,
-			         "user_role": user.role.value}
+			         "user_role": user.role.value if user and hasattr(user, 'role') else 'player',
+			         "user": user}
 		)
 
 @web_router.put("/core/spells/{spell_id}", name="core.spells.update") # Используем PUT/PATCH
@@ -402,7 +411,8 @@ async def spell_update(
 					request=request,
 					name="core/spells/_list_partial.html",
 					context={"spells": spells,
-					         "user_role": user.role.value},
+					         "user_role": user.role.value if user and hasattr(user, 'role') else 'player',
+					         "user": user},
 					headers={"HX-Trigger": "closeModal"} # Можно закрыть модалку
 				)
 			else:
@@ -412,7 +422,8 @@ async def spell_update(
 					context={"title": "Ошибка",
 					         "error": message,
 					         "spell": db_obj,
-					         "user_role": user.role.value},
+					         "user_role": user.role.value if user and hasattr(user, 'role') else 'player',
+					         "user": user},
 					status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
 				)
 
@@ -442,7 +453,8 @@ async def spell_delete(
 			request=request,
 			name="core/spells/list.html",
 			context={"spells": spells,
-			         "user_role": user.role.value}
+			         "user_role": user.role.value if user and hasattr(user, 'role') else 'player',
+			         "user": user}
 		)
 
 @web_router.get("/core/items", response_class=HTMLResponse, name="core.items")
@@ -466,7 +478,8 @@ async def items_list(request: Request,
 			name="core/items/list.html",
 			context={"title": "Предметы",
 			         "items": items,
-			         "user_role": user.role.value}
+			         "user_role": user.role.value if user and hasattr(user, 'role') else 'player',
+			         "user": user}
 		)
 
 @web_router.get("/core/items/{item_id}", response_class=HTMLResponse, name="core.item_detail")
@@ -491,8 +504,8 @@ async def item_detail(request: Request, user: User = Depends(get_current_user), 
 			context={
 				"title": item.name,
 				"item": item,
-				"user_role": user.role.value
-			}
+				"user_role": user.role.value if user and hasattr(user, 'role') else 'player',
+				"user": user}
 		)
 
 @web_router.get("/core/bestiary", response_class=HTMLResponse, name="core.bestiary")
@@ -518,7 +531,8 @@ async def bestiary_list(request: Request,
 			name="core/bestiary/list.html",
 			context={"title": "Монстры",
 			         "monsters": bestiarys,
-			         "user_role": user.role.value}
+			         "user_role": user.role.value if user and hasattr(user, 'role') else 'player',
+			         "user": user}
 		)
 
 @web_router.get("/core/bestiary/{bestiary_id}", response_class=HTMLResponse, name="core.bestiary_detail")
@@ -543,8 +557,8 @@ async def bestiary_detail(request: Request, user: User = Depends(get_current_use
 			context={
 				"title": bestiary.name,
 				"bestiary": bestiary,
-				"user_role": user.role.value
-			}
+				"user_role": user.role.value if user and hasattr(user, 'role') else 'player',
+				"user": user}
 		)
 
 @web_router.get("/lore", response_class=HTMLResponse, name="lore.index")
@@ -595,7 +609,7 @@ def _render_section_page(request: Request, title: str):
 @web_router.get("/admin/user-logs", response_class=HTMLResponse, name="admin.user_logs")
 async def admin_user_logs(request: Request, user: User = Depends(get_current_user)):
 	"""Просмотр журнала действий пользователей."""
-	if user.role != 'admin':
+	if user.role.value != 'admin':
 		raise HTTPException(status_code=403, detail="Доступ запрещен")
 
 	templates = request.app.state.templates
@@ -609,13 +623,16 @@ async def admin_user_logs(request: Request, user: User = Depends(get_current_use
 		return templates.TemplateResponse(
 			request=request,
 			name="admin/user_logs.html",
-			context={"title": "Логи пользователей", "logs": logs}
+			context={"title": "Логи пользователей",
+			         "logs": logs,
+			         "user_role": user.role.value if user and hasattr(user, 'role') else 'player',
+			         "user": user}
 		)
 
 @web_router.get("/admin/app-logs", response_class=HTMLResponse, name="admin.app_logs")
 async def admin_app_logs(request: Request, user: User = Depends(get_current_user)):
 	"""Просмотр системного журнала приложения (ошибки БД, стартапы)."""
-	if user.role != 'admin':
+	if user.role.value != 'admin':
 		raise HTTPException(status_code=403, detail="Доступ запрещен")
 
 	templates = request.app.state.templates
@@ -628,5 +645,8 @@ async def admin_app_logs(request: Request, user: User = Depends(get_current_user
 		return templates.TemplateResponse(
 			request=request,
 			name="admin/app_logs.html",
-			context={"title": "Системные логи", "logs": logs}
+			context={"title": "Системные логи",
+			         "logs": logs,
+			         "user_role": user.role.value if user and hasattr(user, 'role') else 'player',
+			         "user": user}
 		)
