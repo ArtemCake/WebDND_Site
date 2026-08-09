@@ -409,7 +409,7 @@ async def spell_update(
 			if success:
 				return templates.TemplateResponse(
 					request=request,
-					name="core/spells/_list_partial.html",
+					name="core/spells/list.html",
 					context={"spells": spells,
 					         "user_role": user.role.value if user and hasattr(user, 'role') else 'player',
 					         "user": user},
