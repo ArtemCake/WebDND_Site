@@ -64,11 +64,64 @@ class ClassSpellLink(Base):
 		primary_key=True
 	)
 
-	# На каком уровне класса это заклинание становится доступно (если применимо)
 	available_at_level: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-	base_class: Mapped["Class"] = relationship()
-	spell: Mapped["Spell"] = relationship()
+	base_class: Mapped["Class"] = relationship(
+		"Class",
+		back_populates="class_spells",
+		overlaps="spell"
+	)
+
+	spell: Mapped["Spell"] = relationship(
+		"Spell",
+		back_populates="class_links",  # Исправлено с "spells" на "class_links"
+		overlaps="base_class"
+	)
+
+class Class(Base):
+	"""
+	Справочник классов. Поддерживает создание подклассов (Subclass).
+	"""
+	__tablename__ = "classes"
+
+	id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+	name: Mapped[str] = mapped_column(String(50), nullable=False, unique=True, index=True)
+	hit_die: Mapped[int] = mapped_column(Integer, nullable=False, default=8) # d8, d10 и т.д.
+	description: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+	is_enabled: Mapped[bool] = mapped_column(Boolean(), default=True, server_default="true", index=True)
+	is_homebrew: Mapped[bool] = mapped_column(Boolean(), default=False, index=True)
+	homebrew_rules: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+
+	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+	characters: Mapped[list["CharacterClassLink"]] = relationship(back_populates="base_class")
+	subclasses: Mapped[list["Subclass"]] = relationship("Subclass", back_populates="parent_class", cascade="all, delete-orphan")
+
+	# Связь на связующую таблицу, чтобы иметь доступ к available_at_level
+	class_spells: Mapped[list["ClassSpellLink"]] = relationship(
+		back_populates="base_class",
+		cascade="all, delete-orphan",
+		passive_deletes=True
+	)
+
+	# Прямой список заклинаний (только чтение, без управления через эту связь)
+	spells: Mapped[list["Spell"]] = relationship(
+		secondary="class_spells",
+		uselist=True,
+		back_populates="classes",
+		overlaps="base_class,spell_links"
+	)
+
+	skills: Mapped[list["Skill"]] = relationship(
+		secondary="class_skills",
+		back_populates="classes",
+		lazy="selectin"
+	)
+
+	def __repr__(self) -> str:
+		status = "Homebrew" if self.is_homebrew else "SRD"
+		return f"<Class(id={self.id}, name='{self.name}', HD=d{self.hit_die}, status={status})>"
 
 class Spell(Base):
 	"""
@@ -102,13 +155,14 @@ class Spell(Base):
 
 	classes: Mapped[list["Class"]] = relationship(
 		secondary="class_spells",
-		viewonly=True,
-		back_populates="spells"
+		back_populates="spells",
+		overlaps="spell_links,base_class"
 	)
 
-	damage_types: Mapped[list["DamageType"]] = relationship(
-		secondary="spell_damage_types",
-		back_populates="spells",
+	class_links: Mapped[list["ClassSpellLink"]] = relationship(
+		back_populates="spell",
+		cascade="all, delete-orphan",
+		passive_deletes=True,
 		lazy="selectin"
 	)
 
@@ -116,7 +170,13 @@ class Spell(Base):
 		back_populates="spell",
 		cascade="all, delete-orphan",
 		passive_deletes=True,
-		lazy="selectin"  # опционально: чтобы подгружать сразу
+		lazy="selectin"
+	)
+
+	damage_types: Mapped[list["DamageType"]] = relationship(
+		secondary="spell_damage_types",
+		back_populates="spells",
+		lazy="selectin"
 	)
 
 	def __repr__(self) -> str:
@@ -495,51 +555,6 @@ class Race(Base):
 		status = "Homebrew" if self.is_homebrew else "SRD"
 		return f"<Race(id={self.id}, name='{self.name}', status={status})>"
 
-class Class(Base):
-	"""
-	Справочник классов. Поддерживает создание подклассов (Subclass).
-	"""
-	__tablename__ = "classes"
-
-	id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-	name: Mapped[str] = mapped_column(String(50), nullable=False, unique=True, index=True)
-	hit_die: Mapped[int] = mapped_column(Integer, nullable=False, default=8) # d8, d10 и т.д.
-	description: Mapped[str | None] = mapped_column(Text, nullable=True)
-
-	is_enabled: Mapped[bool] = mapped_column(Boolean(), default=True, server_default="true", index=True)
-	is_homebrew: Mapped[bool] = mapped_column(Boolean(), default=False, index=True)
-	homebrew_rules: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-
-	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-
-	characters: Mapped[list["CharacterClassLink"]] = relationship(back_populates="base_class")
-	subclasses: Mapped[list["Subclass"]] = relationship("Subclass", back_populates="parent_class", cascade="all, delete-orphan")
-
-	# Связь на связующую таблицу, чтобы иметь доступ к available_at_level
-	class_spells: Mapped[list["ClassSpellLink"]] = relationship(
-		back_populates="base_class",
-		cascade="all, delete-orphan",
-		passive_deletes=True
-	)
-
-	# Прямой список заклинаний (только чтение, без управления через эту связь)
-	spells: Mapped[list["Spell"]] = relationship(
-		secondary="class_spells",
-		viewonly=True,
-		uselist=True,
-		back_populates="classes"
-	)
-
-	skills: Mapped[list["Skill"]] = relationship(
-		secondary="class_skills",
-		back_populates="classes",
-		lazy="selectin"
-	)
-
-	def __repr__(self) -> str:
-		status = "Homebrew" if self.is_homebrew else "SRD"
-		return f"<Class(id={self.id}, name='{self.name}', HD=d{self.hit_die}, status={status})>"
-
 class Subclass(Base):
 	"""
 	Подкласс (Архетип). Пример: Школа Эвокации для Волшебника.
@@ -585,4 +600,3 @@ class Background(Base):
 	def __repr__(self) -> str:
 		status = "Homebrew" if self.is_homebrew else "SRD"
 		return f"<Background(id={self.id}, name='{self.name}', status={status})>"
-

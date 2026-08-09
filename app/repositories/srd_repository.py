@@ -3,6 +3,8 @@
 from Config.imports import Optional, selectinload, Type, List, Any, AsyncSession, and_, select, Dict
 from app.database._models import Spell, Item, Monster
 from app.enums.log_enums import LogLevelEnum, LogAction
+from app.schemas.item_schema import ItemCreate
+from app.schemas.spell_schema import SpellCreate
 from app.services.log_service import LogService
 
 
@@ -116,28 +118,40 @@ class SRDRepository:
 	# ==============================================================================
 
 	@staticmethod
-	async def create_spell(db: AsyncSession, obj_in: Spell) -> Spell:
-		"""Создает новое заклинание."""
-		db.add(obj_in)
+	async def create_spell(db: AsyncSession, obj_in: SpellCreate) -> Spell:
+		"""
+		ПРИНИМАЕТ СХЕМУ (SpellCreate), создает МОДЕЛЬ ТАБЛИЦЫ (Spell) и сохраняет её.
+		"""
 		try:
+			# Создаем экземпляр таблицы, распаковывая словарь из схемы Pydantic
+			spell_db_obj = Spell(**obj_in.model_dump())
+
+			db.add(spell_db_obj)
 			await db.commit()
-			await db.refresh(obj_in) # Обновляет объект ID'ми после INSERT
-			return obj_in
+			await db.refresh(spell_db_obj) # Обязательно обновляем объект ID'ми после INSERT
+			return spell_db_obj
+
 		except Exception as error:
 			await db.rollback()
 			raise error # Пробрасываем ошибку выше, чтобы Сервис залогировал её
 
 	@staticmethod
-	async def create_item(db: AsyncSession, obj_in: Item) -> Item:
-		"""Создает новый предмет."""
-		db.add(obj_in)
+	async def create_item(db: AsyncSession, obj_in: ItemCreate) -> Item:
+		"""
+		ПРИНИМАЕТ СХЕМУ (ItemCreate), создает МОДЕЛЬ ТАБЛИЦЫ (Item) и сохраняет её.
+		"""
 		try:
+			# Создаем экземпляр таблицы, распаковывая словарь из схемы Pydantic
+			item_db_obj = Item(**obj_in.model_dump())
+
+			db.add(item_db_obj)
 			await db.commit()
-			await db.refresh(obj_in)
-			return obj_in
+			await db.refresh(item_db_obj) # Обязательно обновляем объект ID'ми после INSERT
+			return item_db_obj
+
 		except Exception as error:
 			await db.rollback()
-			raise error
+			raise error # Пробрасываем ошибку выше, чтобы Сервис залогировал её
 
 	@staticmethod
 	async def create_monster(db: AsyncSession, obj_in: Monster) -> Monster:

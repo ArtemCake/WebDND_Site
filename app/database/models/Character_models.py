@@ -14,7 +14,6 @@ character_conditions = Table(
 	Column('condition_id', Integer, ForeignKey('conditions.id', ondelete="CASCADE"), primary_key=True)
 )
 
-
 class CharacterClassLink(Base):
 	"""
 	Связующая таблица для реализации мультиклассирования.
@@ -270,4 +269,3 @@ class CurrencyPouch(Base):
 
 	def __repr__(self) -> str:
 		return f"<Currency(char={self.character_id}, Total cp={self.total_copper})>"
-

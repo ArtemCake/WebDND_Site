@@ -2,7 +2,7 @@
 
 from Config.imports import (
 	Integer, String, JSONB, DateTime, func, Boolean, ForeignKey,
-	relationship, datetime, Mapped, mapped_column, Text)
+	relationship, datetime, Mapped, mapped_column, Text, text)
 from app.database.database import Base
 
 
@@ -48,7 +48,6 @@ class AssetLibraryEntry(Base):
 
 	used_in_tokens: Mapped[list["Token"]] = relationship(
 		"Token",
-		foreign_keys="Token.custom_asset_id",
 		back_populates="custom_asset"
 	)
 
@@ -72,7 +71,7 @@ class Ruleset(Base):
 		index=True
 	)
 
-	owner_id: Mapped[int | None] = mapped_column(  # <-- ДОБАВИТЬ
+	owner_id: Mapped[int | None] = mapped_column(
 		Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
 	)
 
@@ -136,4 +135,4 @@ class HomebrewEntity(Base):
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
-	owner: Mapped["User | None"] = relationship(back_populates="homebrew_entities")
+	owner: Mapped["User | None"] = relationship(back_populates="homebrew_entities", foreign_keys=[owner_id])

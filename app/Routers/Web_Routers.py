@@ -2,7 +2,7 @@
 
 from Config.Config import settings
 from Config.imports import (os, URLSafeTimedSerializer, APIRouter, Request, select, Markup, markdown,
-                            Depends, HTTPException, RedirectResponse, status, HTMLResponse)
+                            Depends, HTTPException, RedirectResponse, status, HTMLResponse, ValidationError)
 from app.core.dependencies import get_current_user, OverloadedForm
 from app.database.models.user_models import UserLog, AppLog
 from app.database.session import get_async_db
@@ -262,38 +262,11 @@ async def spells_list(
 			}
 		)
 
-# --- ДЕТАЛЬНАЯ СТРАНИЦА (READ) ---
-@web_router.get("/core/spells/{spell_id}", response_class=HTMLResponse, name="core.spells.detail")
-async def spell_detail(
-		request: Request,
-		user: User = Depends(get_current_user),
-		spell_id: int = None
-):
-	"""Страница с подробным описанием одного заклинания."""
-	if not spell_id:
-		raise HTTPException(status_code=404)
-
-	db_manager = get_async_db()
-	async with (db_manager as db):
-		spell = await SRDService.get_spell_by_id(db, spell_id)
-
-		if not spell:
-			raise HTTPException(status_code=404, detail="Заклинание не найдено")
-		templates = request.app.state.templates
-		return templates.TemplateResponse(
-			request=request,
-			name="core/spells/detail.html",
-			context={"title": spell.name,
-			         "spell": spell,
-			         "user_role": user.role.value if user and hasattr(user, 'role') else 'player',
-			         "user": user}
-		)
-
 # --- СОЗДАНИЕ (CREATE) ---
 @web_router.get("/core/spells/create", response_class=HTMLResponse, name="core.spells.create")
 async def spell_create_form(request: Request, user: User = Depends(get_current_user)):
 	"""Отображает пустую форму создания нового заклинания."""
-	if user.role.value != 'master':
+	if user.role.value != 'master' and user.role.value != 'admin':
 		raise HTTPException(status_code=403, detail="Доступ запрещен")
 	templates = request.app.state.templates
 	return templates.TemplateResponse(
@@ -309,51 +282,83 @@ async def spell_create_form(request: Request, user: User = Depends(get_current_u
 @web_router.post("/core/spells/", name="core.spells.store")
 async def spell_store(
 		request: Request,
-		payload: SpellCreate,
 		user: User = Depends(get_current_user)
 ):
-	"""Обрабатывает POST-запрос на создание заклинания."""
-	if user.role.value != 'master':
+	"""Обрабатывает POST-запрос на создание заклинания ИЗ ОБЫЧНОЙ ФОРМЫ."""
+
+	if user.role.value != 'master' and user.role.value != 'admin':
 		raise HTTPException(status_code=403)
+
+	# 1. Получаем сырые данные формы напрямую из объекта Request
+	form_data = await request.form()
+
+	# 2. Извлекаем только нужные поля для создания (исключая csrf_token)
+	payload_dict = {
+		"name": form_data.get("name"),
+		"level": int(form_data.get("level")), # Явное приведение типа к int
+		"school_of_magic": form_data.get("school_of_magic"),
+		"description": form_data.get("description"),
+		"casting_time": form_data.get("casting_time"),
+		"range": form_data.get("range"),
+		"components": form_data.get("components"),
+		"duration": form_data.get("duration"),
+		"classes": None # Если у вас пока нет выбора классов в форме
+	}
 
 	db_manager = get_async_db()
 	async with (db_manager as db):
-		success, message, obj = await SRDService.create_spell(db, payload)
+		try:
+			# 3. Валидируем словарь через вашу схему Pydantic
+			payload = SpellCreate(**payload_dict)
 
-		# Если запрос пришел от HTMX (наш фильтр или форма), возвращаем кусок HTML
-		if "HX-Request" in request.headers:
-			spells = await SRDService.get_spells_list(db)
-			templates = request.app.state.templates
+			success, message, obj = await SRDService.create_spell(db, payload)
 
+			if "HX-Request" in request.headers:
+				spells = await SRDService.get_spells_list(db)
+				templates = request.app.state.templates
+
+				if success:
+					return templates.TemplateResponse(
+						request=request,
+						name="core/spells/list.html",
+						context={"spells": spells, "user_role": user.role.value, "user": user}
+					)
+				else:
+					# При ошибке возвращаем форму, передав туда введенные пользователем данные
+					return templates.TemplateResponse(
+						request=request,
+						name="core/spells/form.html",
+						context={
+							"title": "Ошибка создания",
+							"error": message,
+							"spell_data": payload_dict, # Чтобы поля не очистились
+							"user_role": user.role.value,
+							"user": user
+						},
+						status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
+					)
+
+			# Обычный веб-запрос (если вдруг отключен JS)
 			if success:
-				# При успехе обновляем сетку карточек
-				return templates.TemplateResponse(
-					request=request,
-					name="core/spells/list.html",
-					context={"spells": spells,
-					         "user_role": user.role.value if user and hasattr(user, 'role') else 'player',
-					         "user": user}
-				)
+				return RedirectResponse(url="/core/spells", status_code=status.HTTP_303_SEE_OTHER)
 			else:
-				# При ошибке возвращаем форму с текстом ошибки
-				return templates.TemplateResponse(
-					request=request,
-					name="core/spells/form.html",
-					context={"title": "Ошибка создания",
-					         "error": message,
-					         "spell_data": payload,
-					         "user_role": user.role.value if user and hasattr(user, 'role') else 'player',
-					         "user": user},
-					status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
-				)
+				return RedirectResponse(url="/core/spells/create", status_code=status.HTTP_303_SEE_OTHER)
 
-		# Обычный веб-запрос (не HTMX) - делаем редирект
-		if success:
-			return RedirectResponse(url="/core/spells", status_code=status.HTTP_303_SEE_OTHER)
-		else:
-			# В случае системной ошибки при обычном запросе можно вернуть на форму
-			return RedirectResponse(url="/core/spells/create", status_code=status.HTTP_303_SEE_OTHER)
-
+		except ValidationError as e:
+			# Ловим ошибки самой схемы (например, если level > 9)
+			errors = e.errors()[0]["msg"]
+			return templates.TemplateResponse(
+				request=request,
+				name="core/spells/form.html",
+				context={
+					"title": "Ошибка ввода",
+					"error": errors,
+					"spell_data": payload_dict,
+					"user_role": user.role.value,
+					"user": user
+				},
+				status_code=status.HTTP_422_UNPROCESSABLE_ENTITY
+			)
 # --- РЕДАКТИРОВАНИЕ (UPDATE) ---
 @web_router.get("/core/spells/{spell_id}/edit", response_class=HTMLResponse, name="core.spells.edit")
 async def spell_edit_form(
@@ -362,7 +367,7 @@ async def spell_edit_form(
 		spell_id: int = None
 ):
 	"""Отображает форму редактирования с заполненными данными."""
-	if user.role.value != 'master' or not spell_id:
+	if (user.role.value != 'master' and user.role.value != 'admin') or not spell_id:
 		raise HTTPException(status_code=403)
 
 	db_manager = get_async_db()
@@ -390,7 +395,7 @@ async def spell_update(
 		user: User = Depends(get_current_user)
 ):
 	"""Обработка сохранения изменений."""
-	if user.role.value != 'master':
+	if user.role.value != 'master' and user.role.value != 'admin':
 		raise HTTPException(status_code=403)
 
 	db_manager = get_async_db()
@@ -437,7 +442,7 @@ async def spell_delete(
 		user: User = Depends(get_current_user)
 ):
 	"""Удаление заклинания (HTMX)."""
-	if user.role.value != 'master':
+	if user.role.value != 'master' and user.role.value != 'admin':
 		raise HTTPException(status_code=403)
 
 	db_manager = get_async_db()
@@ -453,6 +458,33 @@ async def spell_delete(
 			request=request,
 			name="core/spells/list.html",
 			context={"spells": spells,
+			         "user_role": user.role.value if user and hasattr(user, 'role') else 'player',
+			         "user": user}
+		)
+
+# --- ДЕТАЛЬНАЯ СТРАНИЦА (READ) ---
+@web_router.get("/core/spells/{spell_id}", response_class=HTMLResponse, name="core.spells.detail")
+async def spell_detail(
+		request: Request,
+		user: User = Depends(get_current_user),
+		spell_id: int = None
+):
+	"""Страница с подробным описанием одного заклинания."""
+	if not spell_id:
+		raise HTTPException(status_code=404)
+
+	db_manager = get_async_db()
+	async with (db_manager as db):
+		spell = await SRDService.get_spell_by_id(db, spell_id)
+
+		if not spell:
+			raise HTTPException(status_code=404, detail="Заклинание не найдено")
+		templates = request.app.state.templates
+		return templates.TemplateResponse(
+			request=request,
+			name="core/spells/detail.html",
+			context={"title": spell.name,
+			         "spell": spell,
 			         "user_role": user.role.value if user and hasattr(user, 'role') else 'player',
 			         "user": user}
 		)

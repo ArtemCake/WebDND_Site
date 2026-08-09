@@ -61,12 +61,6 @@ class Encounter(Base):
 		back_populates="combat_encounters"
 	)
 
-	combat_tracker: Mapped["CombatTracker | None"] = relationship(
-		uselist=False,
-		back_populates="encounter",
-		passive_deletes=True
-	)
-
 	def __repr__(self) -> str:
 		return f"<Encounter(id={self.id}, name='{self.name}', CR_approx={self.difficulty_rating})>"
 
@@ -269,4 +263,3 @@ class InitiativeRoll(Base):
 	def __repr__(self) -> str:
 		entity_name = self.token.character.name if self.token and self.token.character else "NPC"
 		return f"<Initiative(id={self.id}, Entity='{entity_name}', Score={self.initiative_score})>"
-

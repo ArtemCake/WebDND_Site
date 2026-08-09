@@ -45,18 +45,20 @@ class SRDService:
 		return await SRDRepository.get_spell_by_id(db, spell_id)
 
 	@staticmethod
-	async def create_spell(db: AsyncSession, obj_in: SpellCreate):
+	async def create_spell(db: AsyncSession, payload: SpellCreate):
 		"""Создание нового заклинания."""
 		try:
-			obj = await SRDRepository.create_spell(db, obj_in)
+			# Передаем проверенную схему напрямую в репозиторий
+			obj = await SRDRepository.create_spell(db, payload)
 
 			await LogService.create_log(
 				username=None,
-				action=LogAction.SPELL_CREATED,
+				action=LogAction.ITEM_BD_CREATED,
 				description=f"Создано заклинание '{obj.name}' (ID: {obj.id})",
 				log_level=LogLevelEnum.INFO
 			)
 			return True, "Заклинание успешно создано", obj
+
 		except Exception as error:
 			await LogService.create_log(
 				username=None,

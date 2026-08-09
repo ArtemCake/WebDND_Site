@@ -1,3 +1,5 @@
+# app/database/_models.py
+
 """
 Единый интерфейс базы данных проекта WebDND_Site.
 Гарантирует правильный порядок загрузки моделей во избежание Circular Import Errors.

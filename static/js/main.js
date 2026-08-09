@@ -4,6 +4,7 @@
 import { initPasswordToggle } from './modules/passwordToggle.js';
 import CookieBanner from './modules/cookieBanner.js';
 import { initMenuToggle } from './modules/menuToggle.js';
+import { initMenuToggle } from './modules/form_toggle.js';
 
 // --- ОСНОВНАЯ ЛОГИКА: Запускается 1 раз при загрузке страницы ---
 document.addEventListener('DOMContentLoaded', function () {
@@ -17,5 +18,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	new CookieBanner();
 	 initMenuToggle();
+	 initFormToggles();
 
 });

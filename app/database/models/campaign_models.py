@@ -2,7 +2,7 @@
 
 from Config.imports import (
 	Integer, String, Text, Boolean, DateTime, func, ForeignKey,
-	relationship, datetime, Mapped, mapped_column, JSONB,UUID, remote)
+	relationship, datetime, Mapped, mapped_column, JSONB,UUID, Index)
 from app.database.database import Base
 
 
@@ -21,6 +21,11 @@ class CampaignPlayerLink(Base):
 		Integer,
 		ForeignKey("users.id", ondelete="CASCADE"),
 		primary_key=True
+	)
+
+	# Явное указание локальных колонок для ORM (помогает избежать SAWarning)
+	__table_args__ = (
+		Index('ix_cpl_unique', 'campaign_id', 'user_id', unique=True),
 	)
 
 	role: Mapped[str] = mapped_column(String(20), default="PLAYER") # PLAYER, TRUSTED_PLAYER, READ_ONLY
@@ -70,8 +75,11 @@ class Campaign(Base):
 	players: Mapped[list["User"]] = relationship(
 		secondary="campaign_players",
 		back_populates="joined_campaigns",
-		viewonly=True,
-		overlaps="link_user"
+		foreign_keys=[
+			CampaignPlayerLink.campaign_id,
+			CampaignPlayerLink.user_id
+		],
+		overlaps="user,link_user"
 	)
 
 	lore_articles: Mapped[list["LoreArticle"]] = relationship(
@@ -82,7 +90,6 @@ class Campaign(Base):
 
 	monsters: Mapped[list["Monster"]] = relationship(
 		back_populates="campaign",
-		foreign_keys="Monster.campaign_id",
 		cascade="all, delete-orphan",
 		lazy="selectin"
 	)
@@ -148,7 +155,7 @@ class Invitation(Base):
 		ForeignKey("users.id", ondelete="SET NULL"),
 		nullable=True,
 		index=True
-	) # Кто пригласил
+	)
 
 	invite_code: Mapped[str] = mapped_column(String(32), unique=True, nullable=False, index=True)
 
@@ -175,4 +182,3 @@ class Lobby(Base):
 
 	# Обратная связь к пользователю
 	owner: Mapped["User"] = relationship(back_populates="lobbies_owned")
-

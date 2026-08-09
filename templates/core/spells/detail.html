@@ -5,7 +5,32 @@
 {% block title %}{{ spell.name }} | D&D Мастерская{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-6 max-w-5xl">
+<div class="container mx-auto px-4 py-6 max-w-5xl relative">
+	
+	<!-- Админ-панель действий (фикс цели удаления) -->
+	{% if user_role == "master" or user_role == 'admin' %}
+	<div class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+		<!-- Редактирование (работает как прежде) -->
+		<button
+				hx-get="/core/spells/{{ spell.id }}/edit/"
+				hx-target="#modal-container"
+				hx-swap="innerHTML"
+				title="Редактировать"
+				class="p-2 rounded hover:bg-gray-100 text-gray-700">
+			✎
+		</button>
+		
+		<!-- Удаление (обновляем всю страницу списка после удаления) -->
+		<button
+				hx-delete="/core/spells/{{ spell.id }}/"
+				hx-trigger="click"
+				hx-on::after-request="if(event.detail.successful) { window.location.href = '/core/spells'; }"
+				title="Удалить"
+				class="p-2 rounded hover:bg-red-50 text-red-600">
+			🗑️
+		</button>
+	</div>
+	{% endif %}
 	
 	<!-- Хлебные крошки -->
 	<nav class="text-sm text-gray-500 mb-4" aria-label="Breadcrumb">
@@ -18,7 +43,10 @@
 		<p class="text-lg text-gray-600 mt-1">
 			{% set parts = [] %}
 			{% if spell.level is not none %}{% set _ = parts.append("Ур. " ~ spell.level) %}{% endif %}
-			{% if spell.school_of_magic %}{% set _ = parts.append(spell.school_of_magic) %}{% endif %}
+			
+			<!-- ИСПРАВЛЕНО: Используем имя колонки из SQLAlchemy модели -->
+			{% if spell.school %}{% set _ = parts.append(spell.school) %}{% endif %}
+			
 			{{ parts | join(" • ") }}
 		</p>
 	</header>
@@ -29,28 +57,44 @@
 		<!-- Левая колонка: Основные данные -->
 		<div class="lg:col-span-1 space-y-6">
 			
-			<!-- Карточка параметров -->
+			<!-- Карточка параметров времени -->
 			<div class="bg-white rounded-lg shadow p-6">
 				<h3 class="font-semibold text-gray-800 mb-4 flex items-center">
 					<svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-					Время
+					Время и компоненты
 				</h3>
 				<ul class="space-y-2 text-sm">
 					<li><strong>Время накладывания:</strong> {{ spell.casting_time or '—' }}</li>
 					<li><strong>Дистанция:</strong> {{ spell.range or '—' }}</li>
 					<li><strong>Компоненты:</strong> {{ spell.components or '—' }}</li>
 					<li><strong>Длительность:</strong> {{ spell.duration or '—' }}</li>
+					<li><strong>Ритуал:</strong> {% if spell.is_ritual %}Да{% else %}Нет{% endif %}</li>
+					<li><strong>Концентрация:</strong> {% if spell.concentration %}Да{% else %}Нет{% endif %}</li>
 				</ul>
 			</div>
 			
 			<!-- Классы -->
-			{% if spell.classes %}
+			{% if spell.classes and spell.classes|length > 0 %}
 			<div class="bg-white rounded-lg shadow p-6">
-				<h3 class="font-semibold text-gray-800 mb-4">Классы</h3>
+				<h3 class="font-semibold text-gray-800 mb-4">Доступно классам</h3>
 				<div class="flex flex-wrap gap-2">
 					{% for char_class in spell.classes %}
 					<span class="px-3 py-1 bg-indigo-100 text-indigo-800 text-xs font-medium rounded-full">
                             {{ char_class.name }}
+                        </span>
+					{% endfor %}
+				</div>
+			</div>
+			{% endif %}
+			
+			<!-- НОВИНКА: Типы урона -->
+			{% if spell.damage_types and spell.damage_types|length > 0 %}
+			<div class="bg-white rounded-lg shadow p-6">
+				<h3 class="font-semibold text-gray-800 mb-4">Типы урона</h3>
+				<div class="flex flex-wrap gap-2">
+					{% for dmg_type in spell.damage_types %}
+					<span class="px-3 py-1 bg-red-100 text-red-800 text-xs font-medium rounded-full">
+                            {{ dmg_type.name }}
                         </span>
 					{% endfor %}
 				</div>
@@ -63,7 +107,7 @@
 		<div class="lg:col-span-2">
 			<div class="bg-white rounded-lg shadow p-6 prose prose-slate dark:prose-invert max-w-none">
 				
-				{# Блок описания #}
+				{# Блок основного описания #}
 				{% if spell.description %}
 				{{ spell.description | safe }}
 				{% else %}
@@ -73,14 +117,38 @@
 				<hr class="my-6 border-gray-200">
 				
 				{# Блок Высших уровней (At Higher Levels), если есть #}
-				{% if spell.damage_at_higher_levels or spell.description_at_higher_levels %}
+				{# ИСПРАВЛЕНО: Обращаемся к полям ORM-модели Spell #}
+				{% if spell.higher_levels %}
 				<h2 class="text-xl font-bold text-gray-800">На более высоких уровнях</h2>
-				<p>{{ spell.description_at_higher_levels or spell.damage_at_higher_levels }}</p>
+				<p>{{ spell.higher_levels | safe }}</p>
 				{% endif %}
 			
 			</div>
 		</div>
 	
 	</div>
+	
+	<!-- НОВИНКА: Метаданные Homebrew для Мастера -->
+	{% if user_role == "master" or user_role == 'admin' %}
+	<div class="mt-8 pt-6 border-t grid lg:grid-cols-2 gap-6 text-sm">
+		
+		<div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+			<h4 class="font-semibold text-yellow-800 mb-1 flex items-center">
+				<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+				Режим справочника
+			</h4>
+			<p><strong>Статус:</strong> {{ 'Включено' if spell.is_enabled else 'Скрыто' }}</p>
+			<p><strong>Источник:</strong> {{ 'Homebrew' if spell.is_homebrew else 'SRD/Official' }}</p>
+		</div>
+		
+		{% if spell.is_homebrew and spell.homebrew_rules %}
+		<div class="bg-green-50 border border-green-200 rounded-lg p-4">
+			<h4 class="font-semibold text-green-800 mb-1">Правила хоумбрю</h4>
+			<pre class="whitespace-pre-wrap text-xs overflow-auto">{{ spell.homebrew_rules | tojson(indent=2) }}</pre>
+		</div>
+		{% endif %}
+	</div>
+	{% endif %}
+
 </div>
 {% endblock %}

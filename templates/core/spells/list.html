@@ -12,8 +12,11 @@
 	<!-- Заголовок страницы -->
 	<div class="flex justify-between items-center mb-6">
 		<h1 class="text-2xl font-bold text-gray-800">Справочник Заклинаний</h1>
-		{% if user_role == 'master' %}
-		<a href="#" class="btn btn-primary btn-sm">+ Новое заклинание</a>
+		{% if user_role == "master" or user_role == 'admin' %}
+		<a href="{{ request.url_for('core.spells.create') }}"
+		class="btn btn-primary btn-sm">
+		+ Новое заклинание
+		</a>
 		{% endif %}
 	</div>
 	

@@ -95,12 +95,12 @@ async def lifespan(app: FastAPI):
 		await cleanup_old_logs()
 		yield
 		# Корректное закрытие пулов соединений при остановке сервера
-		await (await get_async_session_factory())().close()
+		await (get_async_session_factory())().close()
 	finally:
 		# Важно корректно закрыть даже этот временный движок
 		await engine.dispose()
 		# Закрытие основного пула сессии
-		await (await get_async_session_factory())().close()
+		await (get_async_session_factory())().close()
 
 def use_multipart_form_dep(dep):
 	if hasattr(dep, "func"):

@@ -88,12 +88,17 @@ class Token(Base):
 
 	custom_rules: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
-	custom_asset_id: Mapped[int | None] = mapped_column(ForeignKey("asset_library_entries.id", ondelete="SET NULL"), nullable=True, index=True)
+	custom_asset_id: Mapped[int | None] = mapped_column(
+		Integer,
+		ForeignKey("asset_library_entries.id", ondelete="SET NULL"),
+		nullable=True, index=True
+	)
 
 	# --- СВЯЗИ ---
 	location: Mapped["Location"] = relationship(back_populates="tokens")
 	character: Mapped["Character | None"] = relationship()
-	custom_asset: Mapped["AssetLibraryEntry | None"] = relationship(back_populates="used_in_tokens")
+	custom_asset: Mapped["AssetLibraryEntry | None"] = relationship(back_populates="used_in_tokens",
+	                                                                foreign_keys=[custom_asset_id])
 	active_effects: Mapped[list["ActiveEffect"]] = relationship(
 		back_populates="token",
 		cascade="all, delete-orphan"
@@ -190,5 +195,3 @@ class LightSource(Base):
 	def __repr__(self) -> str:
 		source = self.token.character.name if self.token and self.token.character else "Ambient"
 		return f"<LightSource(id={self.id}, src={source}, r={self.vision_radius})>"
-
-

@@ -22,7 +22,7 @@
 		<!-- Меню (теперь оно обычное, без hidden/md:) -->
 		<nav class="flex space-x-6 text-sm font-medium">
 			{% from "_macros/_menu.html" import render_menu %}
-			{{ render_menu(request=request, current_path=request.url.path, UserRole=user_role if user and user.role else 'guest') }}
+			{{ render_menu(request=request, current_path=request.url.path, user_role=user_role if user and user.role else 'guest') }}
 		</nav>
 	</div>
 </header>
@@ -55,7 +55,7 @@
 	</div>
 </footer>
 
-<script src="{{ static_url('js/main.min.js') }}" defer></script>
+<script src="{{ static_url('js/main.js') }}" defer></script>
 
 </body>
 </html>

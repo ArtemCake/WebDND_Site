@@ -29,12 +29,12 @@ from concurrent.futures import ThreadPoolExecutor
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from sqlalchemy.dialects.postgresql import JSONB, UUID
-from pydantic import Field, BaseModel, conint, confloat
 from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy.dialects.postgresql import ENUM as PG_ENUM
 from typing import List, Optional, Any, Dict, ClassVar, Type
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from pydantic import Field, BaseModel, conint, confloat, ValidationError
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError, ProgrammingError
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker

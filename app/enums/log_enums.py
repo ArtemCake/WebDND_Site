@@ -35,6 +35,8 @@ class LogAction(enum.Enum):
 	LOGS_SAVE_ERROR = "Ошибка сохранения логов"
 	DATABASE_ERROR = "Ошибка миграции"
 
+	ITEM_BD_CREATED = "Создание элемента БД"
+
 	def __str__(self) -> str:
 		"""Позволяет использовать f-строки и print() для получения значения."""
 		return self.value
