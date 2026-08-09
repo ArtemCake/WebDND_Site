@@ -47,16 +47,9 @@ class Campaign(Base):
 	name: Mapped[str] = mapped_column(String(150), nullable=False, unique=True, index=True)
 	description: Mapped[str | None] = mapped_column(Text, nullable=True)
 	system: Mapped[str] = mapped_column(String(50), default="D&D 5e") # D&D 5e, Pathfinder 2e и т.д.
-
 	is_private: Mapped[bool] = mapped_column(Boolean(), default=True, index=True)
 	invite_code: Mapped[str | None] = mapped_column(String(10), unique=True, nullable=True, index=True)
-
 	visibility_mode: Mapped[str] = mapped_column(String(20), default="DEFAULT_FOG")
-	# DEFAULT_FOG: скрыто всё, пока не открыл; REVEALED: открыто всё, Мастер закрывает туман войны вручную
-
-	# Глобальные настройки домашних правил кампании
-	ruleset_id: Mapped[int | None] = mapped_column(ForeignKey("rulesets.id", ondelete="SET NULL"), nullable=True, index=True)
-
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 	# --- СВЯЗИ ---
@@ -99,11 +92,9 @@ class Campaign(Base):
 	)
 
 	ruleset: Mapped["Ruleset | None"] = relationship(
-		"Ruleset",
 		back_populates="campaign",
-		foreign_keys=[ruleset_id],
 		uselist=False,
-		overlaps="characters, dungeon_master"
+		lazy="selectin",
 	)
 
 	def __repr__(self) -> str:

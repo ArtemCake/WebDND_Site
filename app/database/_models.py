@@ -4,13 +4,13 @@
 """
 
 # --- 1. БАЗОВЫЕ СПРАВОЧНИКИ И СИСТЕМНЫЕ СУЩНОСТИ ---
-from app.database.models.srd_models import (
+from app.database.models.core_srd import (
 	DamageType, Resistance, AbilityScore,
 	CharacterAbilityValue, Trait, Skill
 )
 from app.database.models.lore_models import LoreArticle, LoreTag, ArticleTagLink
-from app.database.models.spell_models import Spell, ClassSpellLink
-from app.database.models.bestiary_models import Monster
+from app.database.models.core_srd import Spell, ClassSpellLink
+from app.database.models.core_srd import Monster
 from app.database.models.combat_models import Condition, ActiveEffect
 
 # --- ПЕРЕНОСИМ ЗАВИСИМОСТИ USER СЮДА ---
@@ -27,14 +27,16 @@ from app.database.models.campaign_models import Campaign, CampaignPlayerLink, In
 from app.database.models.combat_models import Encounter, CombatTracker, InitiativeRoll
 
 # --- 3. ГЕЙМПЛЕЙ ---
-from app.database.models.core_game_models import (
-	Race, Class, Subclass, Background, Character,
-	CharacterClassLink, CharacterSpell, Ruleset, HomebrewEntity
-)
+from app.database.models.core_srd import (Race, Class, Subclass, Background)
+
+from app.database.models.Character_models import (Character, CharacterClassLink, CharacterSpell)
+
+from app.database.models.assets_models import (Ruleset, HomebrewEntity)
 
 # --- 4. ВИРТУАЛЬНЫЙ СТОЛ ---
 from app.database.models.map_models import Location, Wall, LightSource # Token уже импортирован выше
-from app.database.models.inventory_models import Item, MagicItemProperty, InventoryItem, CurrencyPouch
+from app.database.models.core_srd import Item, MagicItemProperty
+from app.database.models.Character_models import  InventoryItem, CurrencyPouch
 
 # --- АГРЕГАЦИЯ МЕТАДАННЫХ ДЛЯ ALEMBIC ---
 # Импортируем Base только после того, как ВСЕ классы объявлены выше

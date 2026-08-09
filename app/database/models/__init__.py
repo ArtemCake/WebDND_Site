@@ -4,15 +4,12 @@
 """
 
 from . import assets_models
-from . import bestiary_models
 from . import campaign_models
 from . import combat_models
-from . import core_game_models
-from . import inventory_models
+from . import Character_models
 from . import lore_models
 from . import map_models
-from . import spell_models
-from . import srd_models
+from . import core_srd
 from . import user_models
 
 from app.database.database import metadata
