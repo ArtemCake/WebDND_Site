@@ -295,8 +295,8 @@ async def spell_store(
 	# 2. Извлекаем только нужные поля для создания (исключая csrf_token)
 	payload_dict = {
 		"name": form_data.get("name"),
-		"level": int(form_data.get("level")), # Явное приведение типа к int
-		"school_of_magic": form_data.get("school_of_magic"),
+		"level": int(form_data.get("level")),
+		"school": form_data.get("school"),
 		"description": form_data.get("description"),
 		"casting_time": form_data.get("casting_time"),
 		"range": form_data.get("range"),
@@ -304,18 +304,16 @@ async def spell_store(
 		"duration": form_data.get("duration"),
 		"classes": None # Если у вас пока нет выбора классов в форме
 	}
-
+	templates = request.app.state.templates
 	db_manager = get_async_db()
 	async with (db_manager as db):
 		try:
 			# 3. Валидируем словарь через вашу схему Pydantic
 			payload = SpellCreate(**payload_dict)
-
-			success, message, obj = await SRDService.create_spell(db, payload)
+			success, message, obj = await SRDService.create_spell(db, payload, user)
 
 			if "HX-Request" in request.headers:
 				spells = await SRDService.get_spells_list(db)
-				templates = request.app.state.templates
 
 				if success:
 					return templates.TemplateResponse(
@@ -405,7 +403,7 @@ async def spell_update(
 		if not db_obj:
 			raise HTTPException(status_code=404)
 
-		success, message, _ = await SRDService.update_spell(db, db_obj, payload)
+		success, message, _ = await SRDService.update_spell(db, db_obj, payload, user)
 
 		if "HX-Request" in request.headers:
 			spells = await SRDService.get_spells_list(db)
@@ -449,7 +447,7 @@ async def spell_delete(
 	async with (db_manager as db):
 		db_obj = await SRDService.get_spell_by_id(db, spell_id)
 		if db_obj:
-			await SRDService.delete_spell(db, db_obj)
+			await SRDService.delete_spell(db, db_obj, user)
 
 		# После удаления всегда возвращаем обновленный список
 		spells = await SRDService.get_spells_list(db)

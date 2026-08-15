@@ -40,7 +40,7 @@ class SpellCreate(BaseModel):
 	# --- ОСНОВНЫЕ ИДЕНТИФИКАТОРЫ ---
 	name: str = Field(..., min_length=1, max_length=100, description="Название заклинания")
 	level: int = Field(..., ge=0, le=9, description="Уровень (0 для заговоров)")
-	school_of_magic: str = Field(..., description="Школа магии (Воплощение, Некромантия и т.д.)")
+	school: str = Field(..., description="Школа магии (Воплощение, Некромантия и т.д.)")
 
 	# --- ОПИСАНИЕ И МЕХАНИКА ---
 	description: str = Field(..., description="Полный текст описания эффекта")
@@ -115,9 +115,7 @@ class SpellRead(SpellCreate):
 	class Config:
 		# Разрешает создавать схему напрямую из объекта SQLAlchemy (db_obj)
 		from_attributes = True
-
 		# Позволяет сопоставлять поле 'range' в схеме со столбцом 'range_' в модели
 		populate_by_name = True
-
 		# Исключает приватные атрибуты ORM (_sa_instance_state) из сериализации
 		validate_by_name = True

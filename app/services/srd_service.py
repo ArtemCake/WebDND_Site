@@ -1,10 +1,10 @@
 # app/services/srd_service.py
-
+from app.core.dependencies import get_current_user
 from app.repositories.srd_repository import SRDRepository
 from app.services.log_service import LogService
 from app.enums.log_enums import LogAction, LogLevelEnum
-from Config.imports import  List, AsyncSession, Optional
-from app.database._models import  Spell, Item, Monster
+from Config.imports import  List, AsyncSession, Optional, Depends
+from app.database._models import  Spell, Item, Monster, User
 from app.schemas.spell_schema import SpellCreate, SpellUpdate
 from app.schemas.item_schema import ItemCreate, ItemUpdate
 from app.schemas.monster_schema import MonsterCreate, MonsterUpdate
@@ -45,14 +45,14 @@ class SRDService:
 		return await SRDRepository.get_spell_by_id(db, spell_id)
 
 	@staticmethod
-	async def create_spell(db: AsyncSession, payload: SpellCreate):
+	async def create_spell(db: AsyncSession, payload: SpellCreate, user: User):
 		"""Создание нового заклинания."""
 		try:
 			# Передаем проверенную схему напрямую в репозиторий
 			obj = await SRDRepository.create_spell(db, payload)
 
 			await LogService.create_log(
-				username=None,
+				username=user.username,
 				action=LogAction.ITEM_BD_CREATED,
 				description=f"Создано заклинание '{obj.name}' (ID: {obj.id})",
 				log_level=LogLevelEnum.INFO
@@ -61,7 +61,7 @@ class SRDService:
 
 		except Exception as error:
 			await LogService.create_log(
-				username=None,
+				username=user.username,
 				action=LogAction.DATABASE_ERROR,
 				description=f"Ошибка создания заклинания: {str(error)}",
 				log_level=LogLevelEnum.ERROR
@@ -69,21 +69,21 @@ class SRDService:
 			return False, f"Системная ошибка: {error}", None
 
 	@staticmethod
-	async def update_spell(db: AsyncSession, db_obj: Spell, obj_in: SpellUpdate):
+	async def update_spell(db: AsyncSession, db_obj: Spell, obj_in: SpellUpdate, user: User):
 		"""Обновление существующего заклинания."""
 		try:
 			updated_obj = await SRDRepository.update_spell(db, db_obj, obj_in)
 
 			await LogService.create_log(
-				username=None,
-				action=LogAction.SPELL_UPDATED,
+				username=user.username,
+				action=LogAction.ITEM_BD_UPDATED,
 				description=f"Обновлено заклинание '{updated_obj.name}' (ID: {updated_obj.id})",
 				log_level=LogLevelEnum.INFO
 			)
 			return True, "Изменения сохранены", updated_obj
 		except Exception as error:
 			await LogService.create_log(
-				username=None,
+				username=user.username,
 				action=LogAction.DATABASE_ERROR,
 				description=f"Ошибка обновления заклинания: {str(error)}",
 				log_level=LogLevelEnum.ERROR
@@ -91,22 +91,22 @@ class SRDService:
 			return False, f"Системная ошибка: {error}", None
 
 	@staticmethod
-	async def delete_spell(db: AsyncSession, db_obj: Spell):
+	async def delete_spell(db: AsyncSession, db_obj: Spell, user: User):
 		"""Удаление заклинания."""
 		try:
 			name = db_obj.name
 			await SRDRepository.delete_spell(db, db_obj)
 
 			await LogService.create_log(
-				username=None,
-				action=LogAction.SPELL_DELETED,
+				username=user.username,
+				action=LogAction.ITEM_BD_DELETED,
 				description=f"Удалено заклинание '{name}'",
 				log_level=LogLevelEnum.WARNING
 			)
 			return True, "Объект удален"
 		except Exception as error:
 			await LogService.create_log(
-				username=None,
+				username=user.username,
 				action=LogAction.DATABASE_ERROR,
 				description=f"Ошибка удаления заклинания: {str(error)}",
 				log_level=LogLevelEnum.ERROR
@@ -141,37 +141,37 @@ class SRDService:
 		return await SRDRepository.get_item_by_id(db, item_id)
 
 	@staticmethod
-	async def create_item(db: AsyncSession, obj_in: ItemCreate):
+	async def create_item(db: AsyncSession, obj_in: ItemCreate, user: User):
 		"""Создание предмета."""
 		try:
 			obj = await SRDRepository.create_item(db, obj_in)
-			await LogService.create_log(None, LogAction.ITEM_CREATED, f"Создан предмет '{obj.name}'", LogLevelEnum.INFO)
+			await LogService.create_log(user.username, LogAction.ITEM_BD_CREATED, f"Создан предмет '{obj.name}'", LogLevelEnum.INFO)
 			return True, "Предмет создан", obj
 		except Exception as error:
-			await LogService.create_log(None, LogAction.DATABASE_ERROR, f"Ошибка создания предмета: {error}", LogLevelEnum.ERROR)
+			await LogService.create_log(user.username, LogAction.DATABASE_ERROR, f"Ошибка создания предмета: {error}", LogLevelEnum.ERROR)
 			return False, str(error), None
 
 	@staticmethod
-	async def update_item(db: AsyncSession, db_obj: Item, obj_in: ItemUpdate):
+	async def update_item(db: AsyncSession, db_obj: Item, obj_in: ItemUpdate, user: User):
 		"""Обновление предмета."""
 		try:
 			updated_obj = await SRDRepository.update_item(db, db_obj, obj_in)
-			await LogService.create_log(None, LogAction.ITEM_UPDATED, f"Обновлен предмет '{updated_obj.name}'", LogLevelEnum.INFO)
+			await LogService.create_log(user.username, LogAction.ITEM_BD_UPDATED, f"Обновлен предмет '{updated_obj.name}'", LogLevelEnum.INFO)
 			return True, "Сохранено", updated_obj
 		except Exception as error:
-			await LogService.create_log(None, LogAction.DATABASE_ERROR, f"Ошибка обновления предмета: {error}", LogLevelEnum.ERROR)
+			await LogService.create_log(user.username, LogAction.DATABASE_ERROR, f"Ошибка обновления предмета: {error}", LogLevelEnum.ERROR)
 			return False, str(error), None
 
 	@staticmethod
-	async def delete_item(db: AsyncSession, db_obj: Item):
+	async def delete_item(db: AsyncSession, db_obj: Item, user: User):
 		"""Удаление предмета."""
 		try:
 			name = db_obj.name
 			await SRDRepository.delete_item(db, db_obj)
-			await LogService.create_log(None, LogAction.ITEM_DELETED, f"Удален предмет '{name}'", LogLevelEnum.WARNING)
+			await LogService.create_log(user.username, LogAction.ITEM_BD_DELETED, f"Удален предмет '{name}'", LogLevelEnum.WARNING)
 			return True, "Удалено"
 		except Exception as error:
-			await LogService.create_log(None, LogAction.DATABASE_ERROR, f"Ошибка удаления предмета: {error}", LogLevelEnum.ERROR)
+			await LogService.create_log(user.username, LogAction.DATABASE_ERROR, f"Ошибка удаления предмета: {error}", LogLevelEnum.ERROR)
 			return False, str(error)
 
 	# ==============================================================================
@@ -205,34 +205,34 @@ class SRDService:
 		return await SRDRepository.get_monster_by_id(db, monster_id)
 
 	@staticmethod
-	async def create_monster(db: AsyncSession, obj_in: MonsterCreate):
+	async def create_monster(db: AsyncSession, obj_in: MonsterCreate, user: User):
 		"""Создание монстра."""
 		try:
 			obj = await SRDRepository.create_monster(db, obj_in)
-			await LogService.create_log(None, LogAction.MONSTER_CREATED, f"Создан монстр '{obj.name}' (CR {obj.challenge_rating})", LogLevelEnum.INFO)
+			await LogService.create_log(user.username, LogAction.ITEM_BD_CREATED, f"Создан монстр '{obj.name}' (CR {obj.challenge_rating})", LogLevelEnum.INFO)
 			return True, "Монстр создан", obj
 		except Exception as error:
-			await LogService.create_log(None, LogAction.DATABASE_ERROR, f"Ошибка создания монстра: {error}", LogLevelEnum.ERROR)
+			await LogService.create_log(user.username, LogAction.DATABASE_ERROR, f"Ошибка создания монстра: {error}", LogLevelEnum.ERROR)
 			return False, str(error), None
 
 	@staticmethod
-	async def update_monster(db: AsyncSession, db_obj: Monster, obj_in: MonsterUpdate):
+	async def update_monster(db: AsyncSession, db_obj: Monster, obj_in: MonsterUpdate, user: User):
 		"""Обновление монстра."""
 		try:
 			updated_obj = await SRDRepository.update_monster(db, db_obj, obj_in)
-			await LogService.create_log(None, LogAction.MONSTER_UPDATED, f"Обновлен монстр '{updated_obj.name}'", LogLevelEnum.INFO)
+			await LogService.create_log(user.username, LogAction.ITEM_BD_UPDATED, f"Обновлен монстр '{updated_obj.name}'", LogLevelEnum.INFO)
 			return True, "Сохранено", updated_obj
 		except Exception as error:
-			await LogService.create_log(None, LogAction.DATABASE_ERROR, f"Ошибка обновления монстра: {error}", LogLevelEnum.ERROR)
+			await LogService.create_log(user.username, LogAction.DATABASE_ERROR, f"Ошибка обновления монстра: {error}", LogLevelEnum.ERROR)
 			return False, str(error), None
 
 	@staticmethod
-	async def delete_monster(db: AsyncSession, db_obj: Monster):
+	async def delete_monster(db: AsyncSession, db_obj: Monster, user: User):
 		"""Удаление монстра."""
 		try:
 			name = db_obj.name
 			await SRDRepository.delete_monster(db, db_obj)
-			await LogService.create_log(None, LogAction.MONSTER_DELETED, f"Удален монстр '{name}'", LogLevelEnum.WARNING)
+			await LogService.create_log(user.username, LogAction.ITEM_BD_DELETED, f"Удален монстр '{name}'", LogLevelEnum.WARNING)
 			return True, "Удалено"
 		except Exception as error:
 			await LogService.create_log(None, LogAction.DATABASE_ERROR, f"Ошибка удаления монстра: {error}", LogLevelEnum.ERROR)

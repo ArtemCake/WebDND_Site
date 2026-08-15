@@ -17,11 +17,6 @@ class LogAction(enum.Enum):
 	REGISTER_SUCCESS = "Регистрация успешна"
 	LOGOUT = "Выход"
 
-	# Действия с данными (CRUD)
-	PRESET_CREATED = "Создание пресета"
-	PRESET_UPDATED = "Обновление пресета"
-	PRESET_DELETED = "Удаление пресета"
-
 	# Системные события
 	LOGS_CLEAR = "Очистка логов"
 
@@ -36,6 +31,8 @@ class LogAction(enum.Enum):
 	DATABASE_ERROR = "Ошибка миграции"
 
 	ITEM_BD_CREATED = "Создание элемента БД"
+	ITEM_BD_UPDATED = "Создание элемента БД"
+	ITEM_BD_DELETED = "Создание элемента БД"
 
 	def __str__(self) -> str:
 		"""Позволяет использовать f-строки и print() для получения значения."""

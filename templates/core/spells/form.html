@@ -55,10 +55,9 @@
 					{% endfor %}
 				</select>
 			</div>
-			
 			<div>
-				<label for="school_of_magic" class="block text-sm font-medium text-gray-700 mb-1">Школа магии *</label>
-				<input type="text" id="school_of_magic" name="school_of_magic" required
+				<label for="school" class="block text-sm font-medium text-gray-700 mb-1">Школа магии *</label>
+				<input type="text" id="school" name="school" required
 				       value="{{ spell.school if spell else 'Воплощение' }}" list="schools-list" class="w-full input-field"/>
 				<datalist id="schools-list">
 					<option>Воплощение</option><option>Ограждение</option><option>Прорицание</option>

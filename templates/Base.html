@@ -9,7 +9,8 @@
 	
 	{# --- Подключение стилей --- #}
 	<link rel="stylesheet" href="{{ static_url('css/style.min.css') }}">
-	<link rel="stylesheet" href="{{ static_url('image/favicon.ico') }}">
+	<link rel="icon" type="image/x-icon" href="{{ static_url('image/favicon.ico') }}">
+	<link rel="apple-touch-icon" sizes="180x180" href="{{ static_url('image/favicon.ico') }}">
 	
 	{# HTMX для динамического контента без перезагрузки страницы #}
 	<script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztopefRwxYBIb7tH5j6+9XaPpLlLhJdMlW5k5yIqF5VnTgOoBvCwN5yI" crossorigin="anonymous"></script>
