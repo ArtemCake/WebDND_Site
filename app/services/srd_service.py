@@ -49,15 +49,15 @@ class SRDService:
 		"""Создание нового заклинания."""
 		try:
 			# Передаем проверенную схему напрямую в репозиторий
-			obj = await SRDRepository.create_spell(db, payload)
+			message, obj = await SRDRepository.create_spell(db, payload)
 
 			await LogService.create_log(
 				username=user.username,
 				action=LogAction.ITEM_BD_CREATED,
-				description=f"Создано заклинание '{obj.name}' (ID: {obj.id})",
+				description=f"{message} '{obj.name}' (ID: {obj.id})",
 				log_level=LogLevelEnum.INFO
 			)
-			return True, "Заклинание успешно создано", obj
+			return True, message, obj
 
 		except Exception as error:
 			await LogService.create_log(

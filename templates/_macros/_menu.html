@@ -1,56 +1,117 @@
-<!-- templates/_macros/_menu.html -->
-
 {% macro render_menu(request, current_path, user_role) %}
-<nav class="sidebar">
+
+<div class="block md:hidden p-4 border-b">
+	<button id="mobile-menu-button" type="button"
+	        aria-controls="mobile-menu-sidebar"
+	        aria-expanded="false"
+	        class="p-2 rounded-md text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500">
+		<!-- SVG Иконка бургера -->
+		<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+			<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+		</svg>
+		<span class="sr-only">Открыть меню</span>
+	</button>
+</div>
+
+<nav id="mobile-menu-sidebar" class="sidebar fixed inset-y-0 left-0 z-40 w-64 transform -translate-x-full bg-white shadow-lg md:relative md:translate-x-0 transition-transform duration-200 ease-in-out"
+     aria-label="Основное сайдбар-меню">
+	
 	<div class="logo">WebDND</div>
-	<div class="menu-section-header">Справочники (SRD)</div>
-	<ul class="menu-list">
-		{{ nav_link(request, 'core.spells', 'Заклинания', current_path) }}
-		{{ nav_link(request, 'core.items', 'Предметы', current_path) }}
-		{{ nav_link(request, 'core.bestiary', 'Бестиарий', current_path) }}
-	</ul>
 	
-	<div class="menu-section-header">Мир</div>
-	<ul class="menu-list">
-		{{ nav_link(request, 'lore.index', 'История и локации', current_path) }}
-	</ul>
+	{# === СПРАВОЧНИКИ (SRD) === #}
+	{{ _render_section('Справочники (SRD)', [
+	{'endpoint': 'core.spells', 'label': 'Заклинания'},
+	{'endpoint': 'core.items', 'label': 'Предметы'},
+	{'endpoint': 'core.bestiary', 'label': 'Бестиарий'}
+	], current_path, request) }}
 	
-	{% if user_role != "master" %}
-	<div class="menu-section-header">Мой персонаж</div>
-	<ul class="menu-list">
-		{{ nav_link(request, 'profile.characters', 'Коллекция', current_path) }}
-		{{ nav_link(request, 'profile.inventory', 'Инвентарь', current_path) }}
-	</ul>
+	{# === МИР === }
+	{{ _render_section('Мир', [
+	{'endpoint': 'lore.index', 'label': 'История и локации'}
+	], current_path, request) }}
+	
+	{# === МОЙ ПЕРСОНАЖ (только для игроков) == #}
+	{% if user_role != "master" and user_role != "admin" %}
+	{{ _render_section('Мой персонаж', [
+	{'endpoint': 'profile.characters', 'label': 'Коллекция'},
+	{'endpoint': 'profile.inventory', 'label': 'Инвентарь'}
+	], current_path, request) }}
 	{% endif %}
 	
+	{# === МАСТЕРСКАЯ (только для Мастеров) == #}
 	{% if user_role == "master" %}
-	<div class="menu-section-header">Мастерская</div>
-	<ul class="menu-list">
-		{{ nav_link(request, 'campaign.dashboard', 'Мои кампании', current_path) }}
-		{{ nav_link(request, 'campaign.npcs', 'Журнал НПС', current_path) }}
-		{{ nav_link(request, 'vtt.board', 'Виртуальный стол', current_path) }}
-	</ul>
+	{{ _render_section('Мастерская', [
+	{'endpoint': 'campaign.dashboard', 'label': 'Мои кампании'},
+	{'endpoint': 'campaign.npcs', 'label': 'Журнал НПС'},
+	{'endpoint': 'vtt.board', 'label': 'Виртуальный стол'}
+	], current_path, request) }}
 	{% endif %}
 	
-	<div class="menu-section-header">Стол</div>
-	<ul class="menu-list">
-		{{ nav_link(request, 'vtt.initiative', 'Инициатива', current_path) }}
-	</ul>
-	{% if user_role == "master" or user_role == 'admin' %}
-	<div class="menu-section-header">Администрирование</div>
-	<ul class="menu-list">
-		<li><a href="{{ request.url_for('admin.user_logs') }}">Логи пользователей</a></li>
-		<li><a href="{{ request.url_for('admin.app_logs') }}">Системные логи</a></li>
-	</ul>
-	{% endif %}
+	{# === СТОЛ == #}
+	{{ _render_section('Стол', [
+	{'endpoint': 'vtt.initiative', 'label': 'Инициатива'}
+	], current_path, request) }}
 	
+	{# === АДМИНИСТРИРОВАНИЕ (Master + Admin) == #}
+	{% if user_role in ["master", "admin"] %}
+	{{ _render_section('Администрирование', [
+	{'url': request.url_for('admin.user_logs'), 'label': 'Логи пользователей'},
+	{'url': request.url_for('admin.app_logs'), 'label': 'Системные логи'}
+	], current_path, request) }}
+	{% endif %}
+
 </nav>
 {% endmacro %}
 
+
+{# Вспомогательный макрос для рендеринга секций с правильной проверкой активности #}
+{% macro _render_section(title, items, current_path, request) %}
+<div class="menu-section-header">{{ title }}</div>
+<ul class="menu-list" role="list">
+	{% for item in items %}
+	{# Если передана готовая ссылка (для внешних путей или админских URL) #}
+	{% if item.url is defined %}
+	{{ nav_link_custom(item.url, item.label, current_path) }}
+	{# Иначе генерируем ссылку по имени эндпоинта FastAPI #}
+	{% else %}
+	{{ nav_link(request, item.endpoint, item.label, current_path) }}
+	{% endif %}
+	{% endfor %}
+</ul>
+{% endmacro %}
+
+
+{# Макрос ссылки с улучшенной логикой проверки пути #}
 {% macro nav_link(request, endpoint_name, label, current_path) %}
-<li class="menu-item {% if current_path.startswith('/' + endpoint_name.split('.')[0]) or current_path.endswith(endpoint_name.split('.')[-1]) %}active{% endif %}">
-	<a href="{{ request.url_for(endpoint_name) }}">{{ label }}</a>
+{% set url = request.url_for(endpoint_name) %}
+{% set prefix = '/' + endpoint_name.split('.')[0] %}
+
+<li class="menu-item {% if _is_active(current_path, [prefix, url.path]) %}active{% endif %}">
+	<a href="{{ url }}">{{ label }}</a>
+</li>
+{% endmacro %}
+
+{# Макрос для ссылок с уже готовым объектом URL #}
+{% macro nav_link_custom(url, label, current_path) %}
+{# Используем фильтр | string вместо функции str() #}
+{% set url_str = url|string %}
+
+{# Извлекаем префикс для проверки активности (например, '/admin') #}
+{% set path_part = '/' + url_str.split('/')[1] if url_str.startswith('/') else '' %}
+
+<li class="menu-item {% if _is_active(current_path, [path_part, url_str]) %}active{% endif %}">
+	<a href="{{ url }}">{{ label }}</a>
 </li>
 {% endmacro %}
 
 
+{# Универсальная функция-фильтр для проверки активного пути #}
+{% macro _is_active(path, prefixes) %}
+{% set found = False %}  {# <-- Явная инициализация обязательна #}
+{% for pref in prefixes %}
+{% if path == pref or path.startswith(pref + '/') %}
+{% set found = True %}
+{% endif %}
+{% endfor %}
+{{ found }}
+{% endmacro %}

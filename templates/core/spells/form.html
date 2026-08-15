@@ -122,6 +122,52 @@
 			</label>
 		</div>
 		
+		<!-- === БЛОК 5: Доступные классы (Множественный выбор) === -->
+		<div class="mt-4">
+			<label class="block text-sm font-medium text-gray-700 mb-2">Доступно классам *</label>
+			
+			<!-- Если мы создаем новое заклинание и HTMX еще не подгрузил список классов -->
+			{% if not spell and not all_classes %}
+			<div class="text-xs text-yellow-600 bg-yellow-50 p-3 rounded">Загрузка списка классов...</div>
+			{% endif %}
+			
+			{#
+			Используем name="class_ids[]", чтобы FastAPI/HTMX собрали значения в List[int].
+			Проверка наличия ID происходит через jinja-тест 'in' по списку id-шников.
+			#}
+			<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-48 overflow-y-auto border p-3 rounded">
+				{% for cls in all_classes %}
+				<label class="inline-flex items-center text-sm cursor-pointer group">
+					<input type="checkbox"
+					       name="class_ids[]"
+					       value="{{ cls.id }}"
+					       class="h-4 w-4 text-blue-600 border-gray-300 rounded mr-2 focus:ring-blue-500"
+					       {% if spell and cls.id in [c.id for c in spell.classes] %}checked{% endif %}>
+					<span>{{ cls.name }}</span>
+				</label>
+				{% endfor %}
+			</div>
+			<p class="mt-1 text-xs text-gray-500">Удерживайте Ctrl (Cmd на Mac) для быстрого выбора нескольких.</p>
+		</div>
+		
+		<!-- === БЛОК 6: Типы урона === -->
+		<div class="mt-4">
+			<label class="block text-sm font-medium text-gray-700 mb-2">Типы урона</label>
+			
+			<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-48 overflow-y-auto border p-3 rounded">
+				{% for dmg in all_damage_types %}
+				<label class="inline-flex items-center text-sm cursor-pointer group">
+					<input type="checkbox"
+					       name="damage_type_ids[]"
+					       value="{{ dmg.id }}"
+					       class="h-4 w-4 text-red-600 border-gray-300 rounded mr-2 focus:ring-red-500"
+					       {% if spell and dmg.id in [dt.id for dt in spell.damage_types] %}checked{% endif %}>
+					<span>{{ dmg.name }}</span>
+				</label>
+				{% endfor %}
+			</div>
+		</div>
+		
 		<!-- === БЛОК 5: Правила Homebrew (JSON) === -->
 		<div class="mt-4 {% if not (spell and spell.is_homebrew) %}hidden{% endif %}" id="homebrew_rules_block">
 			<label for="homebrew_rules" class="block text-sm font-medium text-gray-700 mb-1">Правила хоумбрю (JSON)</label>

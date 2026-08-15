@@ -292,18 +292,27 @@ async def spell_store(
 	# 1. Получаем сырые данные формы напрямую из объекта Request
 	form_data = await request.form()
 
-	# 2. Извлекаем только нужные поля для создания (исключая csrf_token)
+	# Извлекаем множественные значения (чекбоксы выбора классов/урона)
+	class_ids_raw = form_data.getlist("class_ids")
+	damage_type_ids_raw = form_data.getlist("damage_type_ids")
+
 	payload_dict = {
 		"name": form_data.get("name"),
-		"level": int(form_data.get("level")),
+		"level": int(form_data.get("level", 0)),
 		"school": form_data.get("school"),
 		"description": form_data.get("description"),
 		"casting_time": form_data.get("casting_time"),
-		"range": form_data.get("range"),
+		"range_": form_data.get("range_"),
 		"components": form_data.get("components"),
 		"duration": form_data.get("duration"),
-		"classes": None # Если у вас пока нет выбора классов в форме
+		"is_ritual": bool(form_data.get("is_ritual")),
+		"concentration": bool(form_data.get("concentration")),
+		"is_homebrew": bool(form_data.get("is_homebrew")),
+		# Преобразуем строки из формы в целые числа
+		"class_ids": [int(x) for x in class_ids_raw if x.isdigit()] if class_ids_raw else [],
+		"damage_type_ids": [int(x) for x in damage_type_ids_raw if x.isdigit()] if damage_type_ids_raw else []
 	}
+
 	templates = request.app.state.templates
 	db_manager = get_async_db()
 	async with (db_manager as db):

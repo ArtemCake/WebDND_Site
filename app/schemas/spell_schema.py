@@ -30,7 +30,6 @@ class DamageTypeMini(BaseModel):
 	class Config:
 		from_attributes = True
 
-
 class SpellCreate(BaseModel):
 	"""
 	Схема данных для создания нового заклинания через HTML-форму или API.
@@ -59,6 +58,8 @@ class SpellCreate(BaseModel):
 
 	# --- СВЯЗИ (Через ID связанных таблиц) ---
 	links: Optional[SpellLinks] = Field(default_factory=SpellLinks)
+	class_ids: Optional[List[int]] = Field(default_factory=list, description="ID классов, имеющих доступ к заклинанию")
+	damage_type_ids: Optional[List[int]] = Field(default_factory=list, description="ID типов урона заклинания")
 
 	class Config:
 		"""Настройки схемы."""
@@ -73,7 +74,7 @@ class SpellUpdate(BaseModel):
 	# Скалярные поля
 	name: Optional[str] = Field(None, min_length=1, max_length=100)
 	level: Optional[int] = Field(None, ge=0, le=9)
-	school_of_magic: Optional[str] = None
+	schoo: Optional[str] = None
 	description: Optional[str] = None
 
 	casting_time: Optional[str] = None

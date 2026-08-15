@@ -1,7 +1,7 @@
 # app/repositories/srd_repository.py
 
 from Config.imports import Optional, selectinload, Type, List, Any, AsyncSession, and_, select, Dict
-from app.database._models import Spell, Item, Monster
+from app.database._models import Spell, Item, Monster, Class, ClassSpellLink, DamageType
 from app.enums.log_enums import LogLevelEnum, LogAction
 from app.schemas.item_schema import ItemCreate
 from app.schemas.spell_schema import SpellCreate
@@ -118,22 +118,65 @@ class SRDRepository:
 	# ==============================================================================
 
 	@staticmethod
-	async def create_spell(db: AsyncSession, obj_in: SpellCreate) -> Spell:
+	async def create_spell(db: AsyncSession, payload: SpellCreate) -> Spell:
 		"""
 		ПРИНИМАЕТ СХЕМУ (SpellCreate), создает МОДЕЛЬ ТАБЛИЦЫ (Spell) и сохраняет её.
 		"""
 		try:
-			# Создаем экземпляр таблицы, распаковывая словарь из схемы Pydantic
-			spell_db_obj = Spell(**obj_in.model_dump())
+			# 1. Подготавливаем данные для базовой модели
+			spell_data = payload.model_dump(
+				exclude={'class_ids', 'damage_type_ids', 'links'},
+				exclude_unset=True
+			)
+			spell_db_obj = Spell(**spell_data)
 
+			# 2. Обрабатываем связь "Классы" через связующую сущность ClassSpellLink
+			if payload.class_ids:
+				# Оптимизация: загружаем классы одним запросом вместо N+1
+				classes_result = await db.execute(
+					select(Class).where(Class.id.in_(payload.class_ids), Class.is_enabled == True)
+				)
+				found_classes_map = {cls.id: cls for cls in classes_result.scalars().unique()}
+
+				# Проверка на несуществующие ID классов
+				invalid_ids = set(payload.class_ids) - found_classes_map.keys()
+				if invalid_ids:
+					raise ValueError(f"Классы не найдены или отключены: {sorted(invalid_ids)}")
+
+				for class_id in payload.class_ids:
+					link = ClassSpellLink(
+						base_class=found_classes_map[class_id],
+						available_at_level=None # Можно добавить логику определения уровня доступа
+					)
+					spell_db_obj.class_links.append(link) # Используем каскадную связь
+
+			# 3. Обрабатываем связь "Типы урона" напрямую через secondary-таблицу
+			if payload.damage_type_ids:
+				dmg_types_result = await db.execute(
+					select(DamageType).where(DamageType.id.in_(payload.damage_type_ids), DamageType.is_enabled == True)
+				)
+				found_dmgs_map = {dt.id: dt for dt in dmg_types_result.scalars().unique()}
+
+				invalid_dmg_ids = set(payload.damage_type_ids) - found_dmgs_map.keys()
+				if invalid_dmg_ids:
+					raise ValueError(f"Типы урона не найдены или отключены: {sorted(invalid_dmg_ids)}")
+
+				# SQLAlchemy сама заполнит ассоциацию, если объекты загружены в сессию
+				spell_db_obj.damage_types.extend(found_dmgs_map.values())
+
+			if payload.links and payload.links.material_component_item_id:
+				spell_db_obj.material_component_item_id = payload.links.material_component_item_id
+
+			# 4. Единый коммит для всего графа объектов
 			db.add(spell_db_obj)
 			await db.commit()
-			await db.refresh(spell_db_obj) # Обязательно обновляем объект ID'ми после INSERT
-			return spell_db_obj
+			await db.refresh(spell_db_obj)
+
+			return "Заклинание успешно создано", spell_db_obj
 
 		except Exception as error:
 			await db.rollback()
-			raise error # Пробрасываем ошибку выше, чтобы Сервис залогировал её
+			return f"Системная ошибка: {error}", None
 
 	@staticmethod
 	async def create_item(db: AsyncSession, obj_in: ItemCreate) -> Item:
