@@ -1,7 +1,7 @@
 # app/database/models/core_srd.py
 
 from Config.imports import (
-	Integer, String, Text, Boolean, JSONB, ForeignKey,  DateTime, func,
+	Integer, String, Text, Boolean, JSONB, ForeignKey,  DateTime, func, text,
 	relationship, Mapped, mapped_column, datetime, Table, Column, Float, Index)
 from app.database.database import Base
 
@@ -110,7 +110,7 @@ class Class(Base):
 		secondary="class_spells",
 		uselist=True,
 		back_populates="classes",
-		overlaps="base_class,spell_links"
+		overlaps="base_class,spell_links, class_spells"
 	)
 
 	skills: Mapped[list["Skill"]] = relationship(
@@ -156,14 +156,15 @@ class Spell(Base):
 	classes: Mapped[list["Class"]] = relationship(
 		secondary="class_spells",
 		back_populates="spells",
-		overlaps="spell_links,base_class"
+		overlaps="spell_links,base_class,class_spells,spell"
 	)
 
 	class_links: Mapped[list["ClassSpellLink"]] = relationship(
 		back_populates="spell",
 		cascade="all, delete-orphan",
 		passive_deletes=True,
-		lazy="selectin"
+		lazy="selectin",
+		overlaps="classes,spell"
 	)
 
 	character_spells: Mapped[list["CharacterSpell"]] = relationship(
@@ -177,6 +178,10 @@ class Spell(Base):
 		secondary="spell_damage_types",
 		back_populates="spells",
 		lazy="selectin"
+	)
+
+	__table_args__ = (
+		Index('ix_spells_name_lower', text("lower(name)")),
 	)
 
 	def __repr__(self) -> str:

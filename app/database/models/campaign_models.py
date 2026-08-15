@@ -1,7 +1,7 @@
 # app/database/models/campaign_models.py
 
 from Config.imports import (
-	Integer, String, Text, Boolean, DateTime, func, ForeignKey,
+	Integer, String, Text, Boolean, DateTime, func, ForeignKey, UniqueConstraint,
 	relationship, datetime, Mapped, mapped_column, JSONB,UUID, Index)
 from app.database.database import Base
 
@@ -79,7 +79,7 @@ class Campaign(Base):
 			CampaignPlayerLink.campaign_id,
 			CampaignPlayerLink.user_id
 		],
-		overlaps="user,link_user"
+		overlaps="user,link_user,campaign"
 	)
 
 	lore_articles: Mapped[list["LoreArticle"]] = relationship(
@@ -102,6 +102,10 @@ class Campaign(Base):
 		back_populates="campaign",
 		uselist=False,
 		lazy="selectin",
+	)
+
+	__table_args__ = (
+		UniqueConstraint('owner_id', 'name', name='uq_campaign_owner_name'),
 	)
 
 	def __repr__(self) -> str:

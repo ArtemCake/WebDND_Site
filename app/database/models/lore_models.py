@@ -84,7 +84,7 @@ class LoreArticle(Base):
 	)
 
 	def __repr__(self) -> str:
-			return f"<LoreArticle(id={self.id}, title='{self.title}', type={self.article_type})>"
+		return f"<LoreArticle(id={self.id}, title='{self.title}', type={self.article_type})>"
 
 class LoreTag(Base):
 	"""

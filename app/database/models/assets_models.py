@@ -118,7 +118,7 @@ class HomebrewEntity(Base):
 
 	owner_id: Mapped[int | None] = mapped_column(
 		Integer,
-		ForeignKey("users.id", ondelete="SET NULL"),
+		ForeignKey("users.id", ondelete="CASCADE"),
 		nullable=True,
 		index=True
 	)

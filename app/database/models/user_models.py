@@ -1,7 +1,7 @@
 # app/database/models/user_models.py
 
 from Config.imports import (
-	DateTime, func, SQLEnum, Enum, Index,
+	DateTime, func, SQLEnum, Enum, Index, text,
 	Integer, String, Text, Boolean, ForeignKey,
 	relationship, datetime, Mapped, mapped_column)
 from app.database.database import Base
@@ -145,7 +145,7 @@ class User(Base):
 		secondary="campaign_players",
 		back_populates="players",
 		passive_deletes=True,
-		overlaps="campaigns_owned,link_user"
+		overlaps="user,campaign,campaigns_owned,link_user"
 	)
 
 	link_user: Mapped[list["CampaignPlayerLink"]] = relationship(
@@ -192,8 +192,8 @@ class User(Base):
 		passive_deletes=True
 	)
 
-	# Индекс для быстрого поиска активных пользователей по нику
 	__table_args__ = (
+		Index('ix_users_username_lower', text("lower(username)")),
 		Index('ix_users_username_active', 'username', postgresql_where=(is_active == True)),
 	)
 

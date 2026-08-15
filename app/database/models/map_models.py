@@ -2,7 +2,7 @@
 
 from Config.imports import (
 	Integer, String, DateTime, func, Float, Boolean, JSONB, ForeignKey,
-	relationship, datetime, Mapped, mapped_column)
+	relationship, datetime, Mapped, mapped_column, CheckConstraint)
 from app.database.database import Base
 
 
@@ -109,6 +109,18 @@ class Token(Base):
 		back_populates="tokens",
 		foreign_keys=[monster_id],
 		lazy="selectin"
+	)
+
+	__table_args__ = (
+		# Ограничиваем карту областью +/- 1 000 000 юнитов (огромный запас)
+		CheckConstraint(
+			'x_coord > -1000000 AND x_coord < 1000000',
+			name='ck_token_x_range'
+		),
+		CheckConstraint(
+			'y_coord > -1000000 AND y_coord < 1000000',
+			name='ck_token_y_range'
+		),
 	)
 
 	def __repr__(self) -> str:
