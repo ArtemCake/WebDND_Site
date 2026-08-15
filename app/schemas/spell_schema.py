@@ -120,4 +120,4 @@ class SpellRead(SpellCreate):
 		populate_by_name = True
 
 		# Исключает приватные атрибуты ORM (_sa_instance_state) из сериализации
-		allow_population_by_field_name = True
+		validate_by_name = True

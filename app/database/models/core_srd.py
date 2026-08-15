@@ -53,30 +53,13 @@ background_skills = Table(
 class ClassSpellLink(Base):
 	__tablename__ = "class_spells"
 
-	class_id: Mapped[int] = mapped_column(
-		Integer,
-		ForeignKey("classes.id", ondelete="CASCADE"),
-		primary_key=True
-	)
-	spell_id: Mapped[int] = mapped_column(
-		Integer,
-		ForeignKey("spells.id", ondelete="CASCADE"),
-		primary_key=True
-	)
-
+	class_id: Mapped[int] = mapped_column(Integer, ForeignKey("classes.id", ondelete="CASCADE"), primary_key=True)
+	spell_id: Mapped[int] = mapped_column(Integer, ForeignKey("spells.id", ondelete="CASCADE"), primary_key=True)
 	available_at_level: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-	base_class: Mapped["Class"] = relationship(
-		"Class",
-		back_populates="class_spells",
-		overlaps="spell"
-	)
-
-	spell: Mapped["Spell"] = relationship(
-		"Spell",
-		back_populates="class_links",  # Исправлено с "spells" на "class_links"
-		overlaps="base_class"
-	)
+	# Явные ссылки на родителей
+	base_class: Mapped["Class"] = relationship("Class", back_populates="class_spells")
+	spell: Mapped["Spell"] = relationship("Spell", back_populates="class_links")
 
 class Class(Base):
 	"""
@@ -105,12 +88,11 @@ class Class(Base):
 		passive_deletes=True
 	)
 
-	# Прямой список заклинаний (только чтение, без управления через эту связь)
+	# Виртуальная связь many-to-many
 	spells: Mapped[list["Spell"]] = relationship(
 		secondary="class_spells",
-		uselist=True,
-		back_populates="classes",
-		overlaps="base_class,spell_links, class_spells"
+		viewonly=True,
+		overlaps="class_spells, spell"
 	)
 
 	skills: Mapped[list["Skill"]] = relationship(
@@ -155,16 +137,15 @@ class Spell(Base):
 
 	classes: Mapped[list["Class"]] = relationship(
 		secondary="class_spells",
-		back_populates="spells",
-		overlaps="spell_links,base_class,class_spells,spell"
+		viewonly=True,
+		overlaps="class_links"
 	)
 
 	class_links: Mapped[list["ClassSpellLink"]] = relationship(
 		back_populates="spell",
 		cascade="all, delete-orphan",
 		passive_deletes=True,
-		lazy="selectin",
-		overlaps="classes,spell"
+		lazy="selectin"
 	)
 
 	character_spells: Mapped[list["CharacterSpell"]] = relationship(
@@ -567,12 +548,14 @@ class Subclass(Base):
 	__tablename__ = "subclasses"
 
 	id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+
 	parent_class_id: Mapped[int] = mapped_column(
 		Integer,
 		ForeignKey("classes.id", ondelete="CASCADE"),
 		nullable=False,
 		index=True
 	)
+
 	name: Mapped[str] = mapped_column(String(100), nullable=False)
 	description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
@@ -605,3 +588,5 @@ class Background(Base):
 	def __repr__(self) -> str:
 		status = "Homebrew" if self.is_homebrew else "SRD"
 		return f"<Background(id={self.id}, name='{self.name}', status={status})>"
+
+
