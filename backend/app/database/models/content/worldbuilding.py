@@ -1,4 +1,4 @@
-# backend/app/models/content/equipment.py
+# backend/app/models/content/worldbuilding.py
 
 """Модели лора, языков и бестиария."""
 

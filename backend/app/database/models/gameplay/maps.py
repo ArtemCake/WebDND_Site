@@ -215,7 +215,7 @@ class Token(Base):
 	# {"prone": true, "poisoned": {"dc": 13}, "invisible": true}
 
 	is_visible_to_players: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-	controlled_by_ids: Mapped[list[PG_UUID]] = mapped_column(ARRAY(PG_UUID(as_uuid=True)), nullable=True, server_default="[]")
+	controlled_by_ids: Mapped[list[PG_UUID] | None] = mapped_column( ARRAY(PG_UUID(as_uuid=True)), nullable=True)
 
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))

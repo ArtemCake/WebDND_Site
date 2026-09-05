@@ -10,7 +10,7 @@ ASYNC_SQLALCHEMY_DATABASE_URL = settings.DATABASE_URL
 # Создаем движок
 engine = create_async_engine(
 	ASYNC_SQLALCHEMY_DATABASE_URL,
-	echo=True, # Показывает SQL запросы в консоли (удобно для отладки)
+	echo=False, # Показывает SQL запросы в консоли (удобно для отладки)
 	pool_size=10,
 	max_overflow=20
 )

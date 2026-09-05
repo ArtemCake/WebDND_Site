@@ -8,6 +8,38 @@ from Config.imports import (Mapped, mapped_column, relationship, JSONB, ARRAY, t
 from backend.app.database.database import Base
 
 
+class Character(Base):
+	"""
+	Базовый шаблон персонажа игрока.
+	Хранится у пользователя "в инвентаре" вне зависимости от конкретных игр.
+	"""
+	__tablename__ = "characters"
+
+	id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
+
+	# Владелец шаблона
+	user_id: Mapped[PG_UUID] = mapped_column(
+		PG_UUID(as_uuid=True),
+		ForeignKey("users.id", ondelete="CASCADE"),
+		nullable=False, index=True
+	)
+
+	name: Mapped[str] = mapped_column(String(100), nullable=False)
+	level: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+
+	# Ссылка на базовую версию из справочников билдинга
+	race_id: Mapped[PG_UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("races.id"))
+	background_id: Mapped[PG_UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("backgrounds.id"))
+
+	# ХП и основные статы
+	hp_max: Mapped[int] = mapped_column(Integer, nullable=False)
+	experience: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
+	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
+
+	owner: Mapped["User"] = relationship("User", back_populates="characters")
+
 # --- ЛИСТЫ ПЕРСОНАЖЕЙ ---
 class CharacterSheet(Base):
 	"""

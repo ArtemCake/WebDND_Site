@@ -38,7 +38,7 @@ class Spell(Base):
 
 	casting_time: Mapped[str] = mapped_column(String(100), nullable=False) # e.g. "1 action"
 	range: Mapped[str] = mapped_column(String(100), nullable=False)
-	components: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default="{'v': false, 's': false, 'm': false}")
+	components: Mapped[dict | None] = mapped_column( JSONB, nullable=False, server_default=text("'{\"v\": false, \"s\": false}'::jsonb") )
 	duration: Mapped[str] = mapped_column(String(100), nullable=False)
 
 	is_ritual: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

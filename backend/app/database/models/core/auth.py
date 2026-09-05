@@ -3,7 +3,7 @@
 """Модели ролей пользователей и прав доступа."""
 
 from Config.imports import (String, Integer, ForeignKey, PG_UUID,
-	Mapped, mapped_column, relationship, uuid4)
+	Mapped, mapped_column, relationship, datetime, DateTime, text)
 from backend.app.database.database import Base
 
 
@@ -38,7 +38,7 @@ class UserRole(Base):
 	role_id: Mapped[int] = mapped_column(
 		Integer, ForeignKey("roles.id", ondelete="CASCADE"), primary_key=True
 	)
-	assigned_at: Mapped[None] = mapped_column(server_default="now()")
+	assigned_at: Mapped[datetime | None] = mapped_column( DateTime(timezone=True), nullable=True, server_default=text("now()") )
 
 	user: Mapped["User"] = relationship("User", back_populates="roles")
 	role: Mapped["Role"] = relationship("Role", back_populates="users")

@@ -34,7 +34,7 @@ class Equipment(Base):
 	rarity_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("rarities.id"), nullable=True, index=True)
 
 	weight: Mapped[float | None] = mapped_column(Float, nullable=True) # в фунтах
-	cost: Mapped[dict | None] = mapped_column(JSONB, nullable=True, server_default="{'gp': 0}")
+	cost: Mapped[dict | None] = mapped_column( JSONB, nullable=True, server_default=text("'{\"gp\": 0}'::jsonb") )
 	# Структура: {"cp": 5, "sp": 0, "ep": 0, "gp": 10, "pp": 0}
 
 	properties_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True, server_default="{}")
