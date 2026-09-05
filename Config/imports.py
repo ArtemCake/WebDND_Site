@@ -1,45 +1,68 @@
 # Config/imports.py
 
+"""
+Централизованный импорт зависимостей для предотвращения циклических импортов 
+и обеспечения строгой типизации во всем проекте WebDND_Site.
+"""
+
+# --- Стандартная библиотека ---
 import os
-import sys
-import enum
+import re
+import time
 import base64
+import argon2
 import pathlib
 import asyncio
-import uvicorn
 import logging
-import markdown
-from markupsafe import Markup
-from jose import JWTError, jwt
-from enum import Enum as PyEnum
-from argon2 import PasswordHasher
-from fastapi import FastAPI, Request
-from fastapi.routing import APIRoute
-from sqlalchemy.types import SchemaType
-from fastapi import Form as DefaultForm
-from passlib.context import CryptContext
+import secrets
+import uvicorn
+from enum import Enum
 from datetime import datetime, timedelta
+from functools import lru_cache
+from typing import Any, Dict, List, Optional, Sequence, Type, Union
+from uuid import UUID, uuid4
 from contextlib import asynccontextmanager
+
+# --- База данных (SQLAlchemy) ---
+from sqlalchemy.ext.asyncio import (AsyncSession, async_sessionmaker, create_async_engine)
+from sqlalchemy.orm import Mapped, mapped_column, relationship, declarative_base, backref
+from sqlalchemy import (JSON, Boolean, DateTime, ForeignKey, Index, Float,	Integer,
+	String,	Text, UniqueConstraint,	text, func, CheckConstraint, SmallInteger)
+from sqlalchemy.dialects.postgresql import INET, JSONB, ARRAY, UUID as PG_UUID, ENUM as PG_ENUM
+from sqlalchemy.types import TIMESTAMP
+from geoalchemy2 import Geometry, Geography
+
+# --- Веб-сервер (FastAPI & Starlette) ---
+from fastapi import (APIRouter,	Depends, FastAPI, File, Form, HTTPException,
+	Request, Response, status, UploadFile)
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import Enum as SQLEnum, desc
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import RedirectResponse
-from itsdangerous import URLSafeTimedSerializer
-from concurrent.futures import ThreadPoolExecutor
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.exceptions import RequestValidationError
-from sqlalchemy.dialects.postgresql import JSONB, UUID
-from fastapi.responses import HTMLResponse, JSONResponse
-from sqlalchemy.dialects.postgresql import ENUM as PG_ENUM
-from typing import List, Optional, Any, Dict, ClassVar, Type
+from starlette.middleware.cors import CORSMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+
+# --- Конфигурация окружения ---
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from pydantic import Field, BaseModel, conint, confloat, ValidationError
-from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError, ProgrammingError
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy import (func, select, Column, Integer, cast, String, Boolean, Text, Enum, Table,
-                        Float, JSON, SmallInteger, CheckConstraint, LargeBinary, DateTime, ForeignKey,
-                        UniqueConstraint, delete, text, update, Index, and_, or_)
-from fastapi import FastAPI, Request, status, UploadFile, APIRouter, Depends, HTTPException, Form, File
-from sqlalchemy.orm import selectinload, declarative_base, relationship, Mapped, mapped_column, backref, foreign, remote
+
+# --- Безопасность и аутентификация ---
+from argon2 import PasswordHasher
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+
+# --- Утилиты файлов и путей ---
+from itsdangerous import URLSafeTimedSerializer
+
+# --- Утилиты путей и конфигурации ---
+from pathlib import Path
+
+# --- Валидация API (Pydantic) ---
+from pydantic import ValidationError  # FastAPI переименовал это из RequestValidationError внутри себя
+from fastapi.exceptions import RequestValidationError
+
+# --- Роутинг ---
+from fastapi.routing import APIRoute
+
+# --- Alembic миграции ---
+from alembic import command
+from alembic.config import Config
