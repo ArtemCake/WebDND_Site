@@ -13,6 +13,19 @@ class WebAppSettings(BaseSettings):
 	Значения по умолчанию можно переопределить через переменные окружения или .env файл.
 	"""
 
+	# --- НАСТРОЙКИ ПОЧТОВОГО СЕРВЕРА ---
+	SMTP_HOST: str          # ОБЯЗАТЕЛЬНО указать в .env файле
+	SMTP_PORT: int          # 465 для SSL, 587 для STARTTLS
+	SMTP_USE_TLS: bool      # false для порта 465 (SSL), true для порта 587
+	SMTP_USE_SSL: bool      # true для порта 465, false для порта 587
+
+	SMTP_USER: str          # Логин почтового ящика
+	SMTP_PASSWORD: str      # Пароль приложения (ВАЖНО: не основной пароль от почты)
+
+	MAIL_SENDER_NAME: str
+	MAIL_SENDER_EMAIL: str
+	MAIL_SUPPORT_EMAIL: str
+
 	# --- Основные настройки API ---
 	API_V1_STR: str = "/api/v1"
 	PROJECT_NAME: str = "WebDND_Site API"
