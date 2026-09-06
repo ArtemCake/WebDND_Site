@@ -77,4 +77,3 @@ class Message(Base):
 
 	def __repr__(self) -> str:
 		return f"<Message(id='{self.id}', chat_id='{self.chat_id}', sender_id='{self.sender_id}')>"
-

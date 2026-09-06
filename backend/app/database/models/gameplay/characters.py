@@ -137,4 +137,3 @@ class CharacterInventory(Base):
 
 	def __repr__(self) -> str:
 		return f"<CharacterInventory(sheet='{self.sheet_id}', item='{self.item.name if self.item else 'Unknown'}')>"
-

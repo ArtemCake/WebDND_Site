@@ -383,4 +383,3 @@ class LoreEntry(Base):
 
 	def __repr__(self) -> str:
 		return f"<LoreEntry(id='{self.id}', title='{self.title}')>"
-

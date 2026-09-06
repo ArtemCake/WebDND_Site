@@ -21,5 +21,3 @@ async def get_main_page():
         </body>
     </html>
     """
-
-

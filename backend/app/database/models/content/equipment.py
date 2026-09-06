@@ -483,4 +483,3 @@ class ArtifactProperty(Base):
 
 	def __repr__(self) -> str:
 		return f"<ArtifactProperty(id='{self.id}', type='{self.property_type}')>"
-

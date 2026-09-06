@@ -312,4 +312,3 @@ class SpellDamageType(Base):
 	damage_type_id: Mapped[PG_UUID] = mapped_column(
 		PG_UUID(as_uuid=True), ForeignKey("damage_types.id", ondelete="CASCADE"), primary_key=True
 	)
-
