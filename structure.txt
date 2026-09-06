@@ -35,7 +35,7 @@
 │   │   │
 │   │   ├──enums/
 │   │   │   ├── 
-│   │   │   └── user_enums.py
+│   │   │   └── enums_BD.py
 │   │   │
 │   │   └── Routers/
 │   │       ├── api.py

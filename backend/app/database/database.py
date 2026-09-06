@@ -1,7 +1,7 @@
 # backend/app/database/database.py
 
 from Config.imports import (
-	create_async_engine, async_sessionmaker, AsyncSession, declarative_base
+	create_async_engine, async_sessionmaker, AsyncSession, declarative_base, asynccontextmanager
 )
 from Config.Config import settings # Берем URL из настроек
 
@@ -40,3 +40,7 @@ AsyncSessionLogsLocal = async_sessionmaker(
 # Базовый класс для моделей
 Base = declarative_base()
 metadata = Base.metadata
+
+async def get_async_session():
+	async with AsyncSessionLocal() as session:
+		yield session

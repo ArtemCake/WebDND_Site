@@ -78,11 +78,14 @@ class User(Base):
 	uploaded_assets: Mapped[list["UploadedAsset"]] = relationship("UploadedAsset", back_populates="uploader", cascade="all, delete-orphan")
 	audit_logs: Mapped[list["AuditLog"]] = relationship("AuditLog", back_populates="user", cascade="all, delete-orphan")
 	content_reports: Mapped[list["ContentReport"]] = relationship("ContentReport", back_populates="reporter", cascade="all, delete-orphan")
+	deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 	# Связь с пользовательским контентом (Homebrew)
 	created_homebrew_rules: Mapped[list["HomebrewRule"]] = relationship(
 		"HomebrewRule", back_populates="owner", cascade="all, delete-orphan"
 	)
+	created_spells: Mapped[list["Spell"]] = relationship("Spell", back_populates="owner")
+	created_races: Mapped[list["Race"]] = relationship("Race", back_populates="owner")
 
 	def __repr__(self) -> str:
 		return f"<User(id='{self.id}', nickname='{self.nickname}', email='{self.email}')>"

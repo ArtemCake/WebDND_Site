@@ -8,6 +8,7 @@
 # --- Стандартная библиотека ---
 import os
 import re
+import ssl
 import time
 import base64
 import argon2
@@ -16,6 +17,7 @@ import asyncio
 import logging
 import secrets
 import uvicorn
+from sqlalchemy.future import select
 from enum import Enum, StrEnum
 from datetime import datetime, timedelta
 from functools import lru_cache
@@ -27,7 +29,7 @@ from contextlib import asynccontextmanager
 from sqlalchemy.ext.asyncio import (AsyncSession, async_sessionmaker, create_async_engine)
 from sqlalchemy.orm import Mapped, mapped_column, relationship, declarative_base, backref
 from sqlalchemy import (JSON, Boolean, DateTime, ForeignKey, Index, Float,	Integer,
-	String,	Text, UniqueConstraint,	text, func, CheckConstraint, SmallInteger)
+	String,	Text, UniqueConstraint,	text, func, CheckConstraint, SmallInteger, update)
 from sqlalchemy.dialects.postgresql import INET, JSONB, ARRAY, UUID as PG_UUID, ENUM as PG_ENUM
 from sqlalchemy.types import TIMESTAMP
 from geoalchemy2 import Geometry, Geography
@@ -36,11 +38,15 @@ from geoalchemy2 import Geometry, Geography
 from fastapi import (APIRouter,	Depends, FastAPI, File, Form, HTTPException,
 	Request, Response, status, UploadFile)
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import (OAuth2PasswordBearer, OAuth2PasswordRequestForm, SecurityScopes)
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
+from jinja2 import Environment, FileSystemLoader, select_autoescape
+from aiosmtplib import SMTP
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 # --- Конфигурация окружения ---
 from pydantic_settings import BaseSettings, SettingsConfigDict
