@@ -1,3 +1,5 @@
+# backend/app/database/_models.py
+
 from backend.app.database.database import Base
 
 # Блок 0: Ядро
