@@ -39,7 +39,7 @@ class User(Base):
 	last_login: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 	# Отношения
-	roles: Mapped[list["UserRole"]] = relationship("UserRole", back_populates="user", cascade="all, delete-orphan")
+	roles: Mapped[list["UserRole"]] = relationship( "UserRole", back_populates="user", cascade="all, delete-orphan", lazy="selectin" )
 	friends_from: Mapped[list["Friendship"]] = relationship(
 		"Friendship", back_populates="user", foreign_keys="[Friendship.user_id]", cascade="all, delete-orphan"
 	)
@@ -54,6 +54,7 @@ class User(Base):
 	uploaded_assets: Mapped[list["UploadedAsset"]] = relationship("UploadedAsset", back_populates="uploader", cascade="all, delete-orphan")
 	audit_logs: Mapped[list["AuditLog"]] = relationship("AuditLog", back_populates="user", cascade="all, delete-orphan")
 	content_reports: Mapped[list["ContentReport"]] = relationship("ContentReport", back_populates="reporter", cascade="all, delete-orphan")
+	created_homebrew_rules: Mapped[list["HomebrewRule"]] = relationship("HomebrewRule", back_populates="owner", cascade="all, delete-orphan")
 
 	def __repr__(self) -> str:
 		return f"<User(id='{self.id}', nickname='{self.nickname}', email='{self.email}')>"

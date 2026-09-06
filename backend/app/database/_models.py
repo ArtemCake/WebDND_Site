@@ -4,7 +4,7 @@ from backend.app.database.database import Base
 
 # Блок 0: Ядро
 from backend.app.database.models.core.user import User, MFADevice, Friendship, OAuthProvider
-from backend.app.database.models.core.auth import Role, UserRole
+from backend.app.database.models.core.auth import UserRole
 # Блок 1: Лор
 from backend.app.database.models.content.game_systems import GameSystem, HomebrewRule
 from backend.app.database.models.content.worldbuilding import Language, LoreEntry
@@ -40,7 +40,7 @@ from backend.app.database.models.systems.system import AuditLog, ContentReport, 
 
 __all__ = [
 	# Блок 0
-	'User', 'MFADevice', 'Friendship', 'OAuthProvider', 'Role', 'UserRole',
+	'User', 'MFADevice', 'Friendship', 'OAuthProvider', 'UserRole',
 	# Блок 1
 	'GameSystem', 'HomebrewRule', 'Language', 'LoreEntry',
 	# Блок 2

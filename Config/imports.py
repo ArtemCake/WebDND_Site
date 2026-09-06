@@ -16,7 +16,7 @@ import asyncio
 import logging
 import secrets
 import uvicorn
-from enum import Enum
+from enum import Enum, StrEnum
 from datetime import datetime, timedelta
 from functools import lru_cache
 from typing import Any, Dict, List, Optional, Sequence, Type, Union
