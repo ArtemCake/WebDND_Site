@@ -1,0 +1,19 @@
+/* --- frontend/static/css/style.scss --- */
+
+/* --- ГЛАВНЫЙ CSS-ФАЙЛ ---
+Этот файл ничего не стилизует сам,
+он лишь подключает все смысловые модули.
+*/
+
+/* Порядок импорта важен! */
+
+@use "modules/_variables";
+@use "modules/base/_reset";
+@use "modules/base/_typography";
+@use "modules/layout/_container";
+@use "modules/forms/_inputs";
+@use "modules/buttons/_buttons";
+@use "modules/auth/_auth";
+@use "modules/dashboard/_dashboard";
+@use "modules/game-table/_map";
+@use "modules/toast/_toast";

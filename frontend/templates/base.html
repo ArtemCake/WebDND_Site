@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+	<meta charset="UTF-8">
+	<title>{% block title %}WebDND{% endblock %}</title>
+	<script src="https://unpkg.com/htmx.org@2.0.4"></script>
+	<link rel="stylesheet" href="{{ url_for('static', path='css/style.min.css') }}">
+</head>
+<body class="auth-body">
+<div class="auth-container">
+	{% block content %}{% endblock %}
+</div>
+<script type="module" src="{{ url_for('static', path='js/main.min.js') }}"></script>
+</body>
+</html>

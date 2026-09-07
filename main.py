@@ -140,11 +140,8 @@ def get_templates():
 	return templates
 
 # --- ПОДКЛЮЧЕНИЕ МОДУЛЕЙ ---
-app.include_router(api_module.router, prefix=settings.API_V1_STR)
-app.include_router(
-	web_module.web_router,
-	dependencies=[Depends(get_templates)] # Передаем саму функцию, а не ее вызов
-)
+app.include_router(api_module.router)
+app.include_router(web_module.router)
 
 # Применяем эту функцию ко всем роутерам приложения
 for route in app.router.routes:

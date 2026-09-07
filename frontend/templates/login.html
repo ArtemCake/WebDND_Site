@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Вход{% endblock %}
+{% block content %}
+<h2>Вход в аккаунт</h2>
+<form hx-post="/auth/login"
+      hx-target="#message-box"
+      hx-swap="innerHTML"
+      hx-trigger="submit"
+      hx-validate="true"
+      method="post"
+      preventdefault>
+	<input type="email" name="username" placeholder="Email" required autocomplete="username">
+	<input type="password" name="password" placeholder="Пароль" required autocomplete="current-password">
+	<button type="submit">Войти</button>
+</form>
+<div id="message-box"></div>
+<p><a href="/register" hx-get="/register" hx-target="body" hx-push-url="true">Нет аккаунта? Регистрация</a></p>
+{% endblock %}

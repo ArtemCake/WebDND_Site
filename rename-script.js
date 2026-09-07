@@ -1,49 +1,58 @@
 // rename-script.js
 
-const fs = require('fs-extra');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 // --- НАСТРОЙКА ПУТЕЙ ---
-// Путь к папке с JS-файлами
-const jsDistPath = path.resolve(__dirname, 'dist/js');
-// Путь к папке с CSS-файлами
-const cssDistPath = path.resolve(__dirname, 'dist/css');
+// Используем fileURLToPath для корректной работы импорта в ESM
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// --- ФУНКЦИЯ ДЛЯ ПЕРЕИМЕНОВАНИЯ ФАЙЛОВ ---
+const jsDistPath = path.resolve(__dirname, 'dist', 'js');
+const cssDistPath = path.resolve(__dirname, 'dist', 'css');
+
+console.log('[RENAME-SCRIPT] Запущен поиск файлов...');
+
 function renameFile(folderPath, prefix, newName) {
-  // Читаем содержимое указанной папки
-  fs.readdir(folderPath, (err, files) => {
-    // Если папка не найдена или пуста, просто выходим
-    if (err) {
-      // console.log(`Папка ${folderPath} не найдена. Пропускаем.`);
+  try {
+    // Проверяем наличие папки
+    if (!fs.existsSync(folderPath)) {
+      console.warn(`Папка ${folderPath} не найдена. Пропускаем.`);
       return;
     }
 
-    // Ищем файл, который начинается с указанного префикса (например, 'main-' или 'style-')
+    const files = fs.readdirSync(folderPath);
+
+    // Ищем файл, который начинается с указанного префикса
+    // (учитываем хеши вида main-DXie3Vxg.js)
     const targetFile = files.find(file => file.startsWith(prefix));
 
     if (targetFile) {
       const oldPath = path.join(folderPath, targetFile);
       const newPath = path.join(folderPath, newName);
 
-      // Переименовываем файл
-      fs.rename(oldPath, newPath, (renameErr) => {
-        if (renameErr) {
-          console.error(`❌ Ошибка при переименовании ${prefix} файла:`, renameErr);
-          return;
-        }
-        console.log(`✅ Файл '${targetFile}' успешно переименован в '${newName}'`);
-      });
+      // Переименовываем файл синхронно
+      fs.renameSync(oldPath, newPath);
+      console.log(`✅ Файл '${targetFile}' успешно переименован в '${newName}'`);
     } else {
-      // console.log(`Файл с префиксом '${prefix}' в папке ${folderPath} не найден.`);
+      console.log(`Файл с префиксом '${prefix}' в папке ${folderPath} не найден.`);
     }
-  });
+  } catch (err) {
+    console.error(`Ошибка при обработке ${folderPath}:`, err.message);
+  }
 }
 
 // --- ВЫПОЛНЕНИЕ СКРИПТА ---
+try {
+  // 1. Переименовываем JS-файл
+  renameFile(jsDistPath, 'main-', 'main.min.js');
 
-// 1. Переименовываем JS-файл в папке dist/js
-renameFile(jsDistPath, 'main-', 'main.min.js');
+  // 2. Переименовываем CSS-файл
+  renameFile(cssDistPath, 'app-', 'style.min.css');
 
-// 2. Переименовываем CSS-файл в папке dist/css
-renameFile(cssDistPath, 'app-', 'style.min.css'); // Обратите внимание на расширение .css
+  console.log('[RENAME-SCRIPT] Работа завершена.');
+} catch (e) {
+  console.error('[RENAME-SCRIPT] Фатальная ошибка:', e);
+  process.exit(1); // Останавливаем CI/CD пайплайн, если нейминг упал
+}

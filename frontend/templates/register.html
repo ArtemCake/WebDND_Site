@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Регистрация{% endblock %}
+{% block content %}
+<h2>Создание аккаунта</h2>
+<form
+		hx-post="/auth/register"
+		hx-target="#message-box"
+		hx-swap="innerHTML"
+		hx-trigger="submit"
+		hx-validate="true"
+		method="post"
+		preventdefault> <!-- <<< ЭТОТ АТРИБУТ -->
+	
+	<input type="text" name="nickname" placeholder="Никнейм" required>
+	<input type="email" name="email" placeholder="Email" required>
+	<input type="password" name="password" placeholder="Пароль" required>
+	<button type="submit">Зарегистрироваться</button>
+</form>
+<div id="message-box"></div>
+<p><a href="/login" hx-get="/login" hx-target="body" hx-push-url="true">Уже есть аккаунт? Вход</a></p>
+{% endblock %}

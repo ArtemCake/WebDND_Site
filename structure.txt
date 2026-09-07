@@ -53,18 +53,43 @@
 │   │
 │   └── static/
 │       ├── css/
-│       │   ├── style.css       # На данный момент файлы пустые
-│       │   ├── style.min.css   # На данный момент файлы пустые
-│       │   └── modules/
+│       │   ├── style.scss # Главный файл-агрегатор
+│       │   ├── style.min.css
+│       │   ├── _variables.scss # Дизайн-токены проекта
+│       │   └── modules/ # Папка смысловых блоков
+│       │       ├── base/
+│       │       │   ├── _reset.scss # Сброс стилей браузера
+│       │       │   └── _typography.scss # Шрифты, параграфы, заголовки
+│       │       ├── layout/
+│       │       │   └── _container.scss # Центральные контейнеры (.auth-container)
+│       │       ├── forms/
+│       │       │   └── _inputs.scss # Поля ввода, текстовые области
+│       │       ├── buttons/
+│       │       │   └── _buttons.scss # Классы .btn-primary, .btn-danger
+│       │       ├── auth/
+│       │       │   └── _auth.scss # Страницы входа/регистрации (#message-box)
+│       │       ├── dashboard/
+│       │       │   └── _dashboard.scss # Карточки игр на главной мастера
+│       │       ├── game-table/
+│       │       │   └── _map.scss # Canvas карты, токены игроков/мобов
+│       │       └── toast/
+│		│           └── _toast.scss # Всплывающие уведомления об ошибках/успехе
 │       │
 │       ├── docs/
+│       │   ├── privacy_policy.md
+│       │   └── terms_of_service.md
 │       │
 │       ├── images/
+│       │   └── favicon.ico
 │       │
 │       └── js/
 │           ├── main.js       # На данный момент файлы пустые
 │           ├── main.min.js   # На данный момент файлы пустые
 │           └── modules/
+│                ├── dice.js # Модуль бросков кубиков
+│                ├── map.js # Модуль генерации карты, PixiJS и тумана войны
+│                ├── auth.js # Обработчики форм авторизации HTMX
+│                └── ui.js # Глобальные UI утилиты (прокрутка, настройки htmx)
 │
 ├── Config/
 │   ├── Config.py        # Конфигурация проекта

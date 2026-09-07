@@ -1,0 +1,39 @@
+/* --- frontend/static/css/modules/forms/_inputs.scss --- */
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+input {
+  width: 100%;
+  padding: 12px 16px;
+  background: #12121a;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 16px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--accent-magic);
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.1);
+}
+
+#message-box {
+  margin-top: 1rem;
+  min-height: 24px;
+  text-align: center;
+  font-size: 14px;
+}
+
+#message-box .error {
+  color: var(--accent-dmg);
+}
+
+#message-box .success {
+  color: #22c55e;
+}
