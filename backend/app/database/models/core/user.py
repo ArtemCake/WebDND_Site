@@ -2,7 +2,7 @@
 
 """Модели ядра системы: пользователи, аутентификация и социальные связи."""
 
-from Config.imports import (Mapped, mapped_column, relationship, PG_UUID, datetime, uuid4,
+from Config.imports import (Mapped, mapped_column, relationship, PG_UUID, datetime, uuid4, List,
                             JSONB, func, CheckConstraint, String, Boolean, DateTime, Text, ForeignKey, UniqueConstraint)
 from backend.app.database.database import Base
 
@@ -86,6 +86,12 @@ class User(Base):
 	)
 	created_spells: Mapped[list["Spell"]] = relationship("Spell", back_populates="owner")
 	created_races: Mapped[list["Race"]] = relationship("Race", back_populates="owner")
+	created_languages: Mapped[List["Language"]] = relationship( "Language", back_populates="owner" )
+	created_creatures: Mapped[List["Creature"]] = relationship( "Creature", back_populates="owner", cascade="all, delete-orphan")
+	created_creature_sizes: Mapped[List["CreatureSize"]] = relationship( "CreatureSize", back_populates="owner", cascade="all, delete-orphan", lazy="selectin")
+	created_creature_types: Mapped[List["CreatureType"]] = relationship( "CreatureType", back_populates="owner", cascade="all, delete-orphan", lazy="selectin")
+	created_npcs: Mapped[List["NPC"]] = relationship( "NPC", back_populates="owner", cascade="all, delete-orphan")
+	created_npc_types: Mapped[List["NPCTag"]] = relationship( "NPCTag", back_populates="owner", cascade="all, delete-orphan", lazy="selectin")
 
 	def __repr__(self) -> str:
 		return f"<User(id='{self.id}', nickname='{self.nickname}', email='{self.email}')>"

@@ -131,6 +131,8 @@ class CharacterInventory(Base):
 
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
+	npc_id: Mapped[PG_UUID | None] = mapped_column( PG_UUID(as_uuid=True), ForeignKey("npcs.id", ondelete="CASCADE"), nullable=True, index=True)
+	owner_npc: Mapped["NPC"] = relationship("NPC", back_populates="inventory")
 
 	sheet: Mapped["CharacterSheet"] = relationship("CharacterSheet", back_populates="inventory")
 	item: Mapped["Equipment"] = relationship("Equipment") # Базовый справочник снаряжения

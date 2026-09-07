@@ -2,10 +2,14 @@
 
 """Модели билдинга персонажа: расы, классы, предыстории."""
 
-from Config.imports import (DateTime, String, Text, Integer, Boolean, ForeignKey,
-	Mapped, mapped_column, relationship, JSONB, text, PG_UUID, ARRAY, datetime, uuid4)
+from Config.imports import (DateTime, String, Text, Integer, Boolean, ForeignKey, Table, List,
+	Mapped, mapped_column, relationship, JSONB, text, PG_UUID, ARRAY, datetime, uuid4, Column)
 from backend.app.database.database import Base
 
+
+race_languages = Table( "race_languages", Base.metadata,
+                        Column("race_id", ForeignKey("races.id"), primary_key=True),
+                        Column("language_id", ForeignKey("languages.id"), primary_key=True) )
 
 # --- РАСЫ ---
 class Race(Base):
@@ -35,7 +39,7 @@ class Race(Base):
 
 	ability_bonuses: Mapped[dict | None] = mapped_column(JSONB, nullable=True, server_default="{}")
 	proficiencies: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True) # Владение навыками/инструментами
-	languages: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
+	languages: Mapped[List["Language"]] = relationship( back_populates="races", secondary="race_languages" )
 
 	is_homebrew: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 	visibility_scope: Mapped[str] = mapped_column(String(50), nullable=False, server_default="private")
@@ -48,6 +52,7 @@ class Race(Base):
 	system: Mapped["GameSystem"] = relationship("GameSystem", back_populates="races")
 	owner: Mapped["User"] = relationship("User", back_populates="created_races")
 	size: Mapped["CreatureSize"] = relationship("CreatureSize")
+	creature_types: Mapped[List["CreatureType"]] = relationship( "CreatureType", secondary="creature_type_race_link", back_populates="races" )
 
 	def __repr__(self) -> str:
 		return f"<Race(id='{self.id}', name='{self.name}')>"
@@ -291,7 +296,6 @@ class Origin(Base):
 	# Механика происхождения
 	ability_bonuses: Mapped[dict | None] = mapped_column(JSONB, nullable=True, server_default="{}")
 	proficiencies: Mapped[dict | None] = mapped_column(JSONB, nullable=True, server_default="{}")
-	languages: Mapped[list[PG_UUID] | None] = mapped_column(ARRAY(PG_UUID(as_uuid=True)), nullable=True)
 
 	starting_equipment: Mapped[dict | None] = mapped_column(JSONB, nullable=True, server_default="{}")
 
@@ -310,6 +314,7 @@ class Origin(Base):
 	lang_objects: Mapped[list["Language"]] = relationship(
 		"Language", secondary="origin_languages", back_populates="origins"
 	)
+	languages: Mapped[List["Language"]] = relationship( back_populates="origins", secondary="origin_languages" )
 
 	def __repr__(self) -> str:
 		return f"<Origin(id='{self.id}', name='{self.name}')>"

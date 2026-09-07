@@ -19,41 +19,50 @@ router = APIRouter(
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
+# --- POST: Обработка нажатия кнопки "Зарегистрироваться" ---
 @router.post("/register", response_model=dict, status_code=status.HTTP_201_CREATED)
-async def register_user(
-		nickname: str,
-		email: str,
-		password: str,
+async def register_user_action(
+		nickname: str = Form(...),
+		email: str = Form(...),
+		password: str = Form(...),
 		session: AsyncSession = Depends(get_async_session)
 ):
-	existing_user = await user_service.get_user_by_email(session, email)
-	if existing_user:
-		raise HTTPException(status_code=409, detail="Пользователь с таким email уже существует")
+	try:
+		existing_user = await user_service.get_user_by_email(session, email)
+		if existing_user:
+			raise HTTPException(status_code=409, detail="Пользователь с таким email уже существует")
 
-	new_user = await user_service.create_user(
-		session=session,
-		nickname=nickname,
-		email=email,
-		password=password
-	)
+		new_user = await user_service.create_user(
+			session=session,
+			nickname=nickname,
+			email=email,
+			password=password
+		)
 
-	verification_token = security_service.create_verification_token(new_user.id)
+		verification_token = security_service.create_verification_token(new_user.id)
 
-	# Отправляем реальное письмо вместо вывода в консоль
-	success = await mail_service.send_verification_email(
-		user_email=new_user.email,
-		verification_token=verification_token
-	)
+		success = await mail_service.send_verification_email(
+			user_email=new_user.email,
+			verification_token=verification_token
+		)
 
-	if not success:
-		# Если почтовый сервер недоступен, аккаунт все равно создается,
-		# но пользователю выводится предупреждение.
+		if not success:
+			return {
+				"message": "Регистрация успешна, но ошибка отправки письма.",
+				"resend_url": f"{settings.API_V1_STR}/auth/resend-verification/{new_user.id}"
+			}
+
+		# Возвращаем сообщение для вставки в #message-box
 		return {
-			"message": "Регистрация успешна, но произошла ошибка при отправке письма. Проверьте спам или запросите подтверждение повторно.",
-			"resend_url": f"{settings.API_V1_STR}/auth/resend-verification/{new_user.id}"
+			"message": "Регистрация успешна! Письмо отправлено."
 		}
 
-	return {"message": "Регистрация успешна. Письмо со ссылкой для подтверждения отправлено на вашу почту."}
+	except HTTPException as e:
+		# Прокидываем ошибки FastAPI как текст для верстки
+		return {"error": e.detail}
+	except Exception as e:
+		print(f"[REGISTRATION ERROR]: {e}")
+		return {"error": "Непредвиденная ошибка сервера."}
 
 @router.post("/login", response_model=dict)
 async def login_for_access_token(

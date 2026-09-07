@@ -4,9 +4,33 @@
 
 from Config.imports import (Mapped, mapped_column, relationship, ARRAY, PG_UUID, uuid4,
 						DateTime, datetime, String, Text, Boolean, ForeignKey, text,
-						JSONB, Integer, Float, backref)
+						JSONB, Integer, Float, backref, List, Column, Table, Index)
 from backend.app.database.database import Base
 
+
+# ЭТА ТАБЛИЦА ДОЛЖНА БЫТЬ ГЛОБАЛЬНОЙ (вне классов)
+creature_type_race_link = Table(
+	'creature_type_races', Base.metadata,
+	Column('creature_type_id', PG_UUID(as_uuid=True), ForeignKey('creature_types.id', ondelete='CASCADE'), primary_key=True),
+	Column('race_id', PG_UUID(as_uuid=True), ForeignKey('races.id', ondelete='CASCADE'), primary_key=True),
+
+	# Это критически важно для индексов производительности при поиске монстров
+	Index('ix_creature_type_race_type', 'creature_type_id'),
+	Index('ix_creature_type_race_race', 'race_id')
+)
+
+# Где-то в models/... создание Table
+npc_npctag_link = Table(
+	'npc_npctag_links', Base.metadata,
+	Column('npc_id', PG_UUID(as_uuid=True), ForeignKey('npcs.id', ondelete='CASCADE'), primary_key=True),
+	Column('npctag_id', PG_UUID(as_uuid=True), ForeignKey('npc_types.id', ondelete='CASCADE'), primary_key=True)
+)
+
+creature_type_link = Table(
+	'creature_type_link', Base.metadata,
+	Column('creature_id', PG_UUID(as_uuid=True), ForeignKey('bestiary.id', ondelete='CASCADE'), primary_key=True),
+	Column('type_id', PG_UUID(as_uuid=True), ForeignKey('creature_types.id', ondelete='CASCADE'), primary_key=True)
+)
 
 # --- ЯЗЫКИ ---
 class Language(Base):
@@ -71,16 +95,11 @@ class Creature(Base):
 		PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True
 	)
 
-	# Для Homebrew
-	owner_id: Mapped[PG_UUID | None] = mapped_column(
-		PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
-	)
-
 	name: Mapped[str] = mapped_column(String(100), nullable=False)
 	slug: Mapped[str] = mapped_column(String(100), nullable=False)
 
 	size_id: Mapped[int] = mapped_column(Integer, ForeignKey("creature_sizes.id"), nullable=False, index=True)
-	type_id: Mapped[int] = mapped_column(Integer, ForeignKey("creature_types.id"), nullable=False, index=True)
+	type_id: Mapped[PG_UUID] = mapped_column(PG_UUID, ForeignKey("creature_types.id"), nullable=False, index=True)
 
 	alignment: Mapped[str | None] = mapped_column(String(50), nullable=True) # e.g. 'Lawful Evil'
 
@@ -122,10 +141,26 @@ class Creature(Base):
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
 
 	system: Mapped["GameSystem"] = relationship("GameSystem", back_populates="bestiary") # (нужно добавить в GameSystem)
-	owner: Mapped["User"] = relationship("User", back_populates="created_creatures")
 	size: Mapped["CreatureSize"] = relationship("CreatureSize")
 	creature_type: Mapped["CreatureType"] = relationship("CreatureType")
 	armor: Mapped["ArmorType"] = relationship("ArmorType")
+	owner_id: Mapped[PG_UUID | None] = mapped_column(
+		PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+	)
+
+	owner: Mapped["User"] = relationship("User", back_populates="created_creatures")
+	types: Mapped[List["CreatureType"]] = relationship(
+		"CreatureType",
+		secondary=creature_type_link,
+		back_populates="creatures",
+		lazy="selectin"
+	)
+	tags: Mapped[List["NPCTag"]] = relationship(
+		"NPCTag",
+		secondary=npc_npctag_link,
+		back_populates="npcs",
+		lazy="selectin"
+	)
 
 	def __repr__(self) -> str:
 		return f"<Creature(id='{self.id}', name='{self.name}', CR={self.challenge_rating})>"
@@ -184,7 +219,7 @@ class CreatureType(Base):
 	"""
 	__tablename__ = "creature_types"
 
-	id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+	id: Mapped[PG_UUID] = mapped_column( PG_UUID(as_uuid=True), primary_key=True, default=uuid4 )
 	system_id: Mapped[PG_UUID] = mapped_column(
 		PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True
 	)
@@ -209,8 +244,9 @@ class CreatureType(Base):
 
 	system: Mapped["GameSystem"] = relationship("GameSystem", back_populates="creature_types") # (нужно добавить в GameSystem)
 	owner: Mapped["User"] = relationship("User", back_populates="created_creature_types")
-	creatures: Mapped[list["Creature"]] = relationship("Creature", back_populates="creature_type", cascade="all, delete-orphan")
-	races: Mapped[list["Race"]] = relationship("Race", back_populates="type", cascade="all, delete-orphan")
+	races: Mapped[List["Race"]] = relationship( "Race", secondary=creature_type_race_link, back_populates="creature_types" )
+	creatures: Mapped[list["Creature"]] = relationship( "Creature", secondary=creature_type_link,
+	                                    single_parent=True, back_populates="types", cascade="all, delete-orphan" )
 
 	def __repr__(self) -> str:
 		return f"<CreatureType(id={self.id}, name='{self.name}')>"
@@ -270,10 +306,8 @@ class NPC(Base):
 	owner: Mapped["User"] = relationship("User", back_populates="created_npcs")
 	template: Mapped["Creature"] = relationship("Creature", foreign_keys=[creature_template_id])
 	lore: Mapped["LoreEntry"] = relationship("LoreEntry")
-	inventory: Mapped[list["CharacterInventory"]] = relationship(
-		"CharacterInventory", back_populates="npc", cascade="all, delete-orphan"
-	)
 	tokens: Mapped[list["Token"]] = relationship("Token", back_populates="npc", cascade="all, delete-orphan")
+	inventory: Mapped[List["CharacterInventory"]] = relationship( "CharacterInventory", back_populates="owner_npc", cascade="all, delete-orphan")
 
 	def __repr__(self) -> str:
 		return f"<NPC(id='{self.id}', name='{self.name}')>"
@@ -287,7 +321,8 @@ class NPCTag(Base):
 	"""
 	__tablename__ = "npc_types"
 
-	id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+	id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4) # <-- Должно быть так
+	name: Mapped[str] = mapped_column(String(50), nullable=False)
 	system_id: Mapped[PG_UUID] = mapped_column(
 		PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True
 	)
@@ -315,8 +350,14 @@ class NPCTag(Base):
 
 	system: Mapped["GameSystem"] = relationship("GameSystem", back_populates="npc_types") # (нужно добавить в GameSystem)
 	owner: Mapped["User"] = relationship("User", back_populates="created_npc_types")
-	npcs: Mapped[list["NPC"]] = relationship(
-		"NPC", secondary="npc_type_links", back_populates="types", cascade="all, delete"
+
+	npcs: Mapped[List["Creature"]] = relationship(
+		"Creature",
+		secondary=npc_npctag_link,
+		back_populates="tags",
+		lazy="selectin",
+		cascade="all, delete-orphan",
+		single_parent=True
 	)
 
 	def __repr__(self) -> str:
@@ -329,8 +370,12 @@ class NpcTypeLink(Base):
 	npc_id: Mapped[PG_UUID] = mapped_column(
 		PG_UUID(as_uuid=True), ForeignKey("npcs.id", ondelete="CASCADE"), primary_key=True
 	)
-	type_id: Mapped[int] = mapped_column(
-		Integer, ForeignKey("npc_types.id", ondelete="CASCADE"), primary_key=True
+
+	# ИСПРАВЛЕНО: было Integer, стало PG_UUID
+	type_id: Mapped[PG_UUID] = mapped_column(
+		PG_UUID(as_uuid=True),
+		ForeignKey("npc_types.id", ondelete="CASCADE"),
+		primary_key=True
 	)
 
 # --- ЛОР ---
