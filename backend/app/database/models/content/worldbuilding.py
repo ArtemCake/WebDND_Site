@@ -4,13 +4,13 @@
 
 from Config.imports import (Mapped, mapped_column, relationship, ARRAY, PG_UUID, uuid4,
 						DateTime, datetime, String, Text, Boolean, ForeignKey, text,
-						JSONB, Integer, Float, backref, List, Column, Table, Index)
+						JSONB, Integer, Float, backref, Column, Table, Index)
 from backend.app.database.database import Base
 
 
 # ЭТА ТАБЛИЦА ДОЛЖНА БЫТЬ ГЛОБАЛЬНОЙ (вне классов)
 creature_type_race_link = Table(
-	'creature_type_races', Base.metadata,
+	'creature_type_race_link', Base.metadata,
 	Column('creature_type_id', PG_UUID(as_uuid=True), ForeignKey('creature_types.id', ondelete='CASCADE'), primary_key=True),
 	Column('race_id', PG_UUID(as_uuid=True), ForeignKey('races.id', ondelete='CASCADE'), primary_key=True),
 
@@ -19,17 +19,24 @@ creature_type_race_link = Table(
 	Index('ix_creature_type_race_race', 'race_id')
 )
 
-# Где-то в models/... создание Table
-npc_npctag_link = Table(
-	'npc_npctag_links', Base.metadata,
-	Column('npc_id', PG_UUID(as_uuid=True), ForeignKey('npcs.id', ondelete='CASCADE'), primary_key=True),
+creature_npctag_link = Table(
+	'creature_npctag_link', Base.metadata,
+	Column('creature_id', PG_UUID(as_uuid=True), ForeignKey('bestiary.id', ondelete='CASCADE'), primary_key=True),
 	Column('npctag_id', PG_UUID(as_uuid=True), ForeignKey('npc_types.id', ondelete='CASCADE'), primary_key=True)
 )
 
 creature_type_link = Table(
 	'creature_type_link', Base.metadata,
 	Column('creature_id', PG_UUID(as_uuid=True), ForeignKey('bestiary.id', ondelete='CASCADE'), primary_key=True),
-	Column('type_id', PG_UUID(as_uuid=True), ForeignKey('creature_types.id', ondelete='CASCADE'), primary_key=True)
+	Column('type_id', PG_UUID(as_uuid=True), ForeignKey('creature_types.id', ondelete='CASCADE'), primary_key=True),
+	Index('ix_creature_type_creature', 'creature_id'),
+	Index('ix_creature_type_type', 'type_id')
+)
+
+npc_npctag_link = Table(
+	"npc_npctag_link", Base.metadata,
+	Column('npc_id', PG_UUID(as_uuid=True), ForeignKey('npcs.id', ondelete='CASCADE'), primary_key=True),
+	Column('npctag_id', PG_UUID(as_uuid=True), ForeignKey('npc_types.id', ondelete='CASCADE'), primary_key=True)
 )
 
 # --- ЯЗЫКИ ---
@@ -149,16 +156,16 @@ class Creature(Base):
 	)
 
 	owner: Mapped["User"] = relationship("User", back_populates="created_creatures")
-	types: Mapped[List["CreatureType"]] = relationship(
+	types: Mapped[list["CreatureType"]] = relationship(
 		"CreatureType",
-		secondary=creature_type_link,
+		secondary="creature_type_link",
 		back_populates="creatures",
 		lazy="selectin"
 	)
-	tags: Mapped[List["NPCTag"]] = relationship(
+	tags: Mapped[list["NPCTag"]] = relationship(
 		"NPCTag",
-		secondary=npc_npctag_link,
-		back_populates="npcs",
+		secondary="creature_npctag_link",
+		back_populates="creatures",
 		lazy="selectin"
 	)
 
@@ -244,8 +251,8 @@ class CreatureType(Base):
 
 	system: Mapped["GameSystem"] = relationship("GameSystem", back_populates="creature_types") # (нужно добавить в GameSystem)
 	owner: Mapped["User"] = relationship("User", back_populates="created_creature_types")
-	races: Mapped[List["Race"]] = relationship( "Race", secondary=creature_type_race_link, back_populates="creature_types" )
-	creatures: Mapped[list["Creature"]] = relationship( "Creature", secondary=creature_type_link,
+	races: Mapped[list["Race"]] = relationship( "Race", secondary="creature_type_race_link", back_populates="creature_types" )
+	creatures: Mapped[list["Creature"]] = relationship( "Creature", secondary="creature_type_link",
 	                                    single_parent=True, back_populates="types", cascade="all, delete-orphan" )
 
 	def __repr__(self) -> str:
@@ -307,7 +314,13 @@ class NPC(Base):
 	template: Mapped["Creature"] = relationship("Creature", foreign_keys=[creature_template_id])
 	lore: Mapped["LoreEntry"] = relationship("LoreEntry")
 	tokens: Mapped[list["Token"]] = relationship("Token", back_populates="npc", cascade="all, delete-orphan")
-	inventory: Mapped[List["CharacterInventory"]] = relationship( "CharacterInventory", back_populates="owner_npc", cascade="all, delete-orphan")
+	inventory: Mapped[list["CharacterInventory"]] = relationship( "CharacterInventory", back_populates="owner_npc", cascade="all, delete-orphan")
+
+	tags: Mapped[list["NPCTag"]] = relationship(
+		secondary="npc_npctag_link",
+		back_populates="npcs",
+		lazy="selectin"
+	)
 
 	def __repr__(self) -> str:
 		return f"<NPC(id='{self.id}', name='{self.name}')>"
@@ -332,7 +345,6 @@ class NPCTag(Base):
 		PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
 	)
 
-	name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False) # e.g. 'Bandit', 'Noble', 'Deity'
 	slug: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
 
 	description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -351,9 +363,18 @@ class NPCTag(Base):
 	system: Mapped["GameSystem"] = relationship("GameSystem", back_populates="npc_types") # (нужно добавить в GameSystem)
 	owner: Mapped["User"] = relationship("User", back_populates="created_npc_types")
 
-	npcs: Mapped[List["Creature"]] = relationship(
+	npcs: Mapped[list["NPC"]] = relationship(
+		"NPC",
+		secondary="npc_npctag_link",
+		back_populates="tags",
+		lazy="selectin",
+		cascade="all, delete-orphan",
+		single_parent=True
+	)
+
+	creatures: Mapped[list["Creature"]] = relationship(
 		"Creature",
-		secondary=npc_npctag_link,
+		secondary="creature_npctag_link",
 		back_populates="tags",
 		lazy="selectin",
 		cascade="all, delete-orphan",

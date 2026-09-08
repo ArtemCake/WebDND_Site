@@ -50,6 +50,8 @@ class GameSystem(Base):
 	lore: Mapped[list["LoreEntry"]] = relationship("LoreEntry", back_populates="system", cascade="all, delete-orphan")
 	npc_types: Mapped[list["NPCTag"]] = relationship("NPCTag", back_populates="system", cascade="all, delete-orphan")
 	bestiary: Mapped[list["Creature"]] = relationship("Creature", back_populates="system", cascade="all, delete-orphan")
+	feats: Mapped[list["Feat"]] = relationship( "Feat", back_populates="system", cascade="all, delete-orphan", lazy="selectin" )
+	origins: Mapped[list["Origin"]] = relationship( "Origin", back_populates="system", cascade="all, delete-orphan", lazy="selectin" )
 
 	def __repr__(self) -> str:
 		return f"<GameSystem(id='{self.id}', name='{self.name}')>"
