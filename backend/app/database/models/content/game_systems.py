@@ -17,16 +17,12 @@ class GameSystem(Base):
 	id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
 	name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)  # Отображаемое имя
 	slug: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)   # Для URL (dnd-5e)
-
 	# Версия движка расчетов (для инвалидации кеша характеристик при обновлении системы)
 	rules_engine_version: Mapped[str] = mapped_column(String(20), nullable=False, server_default="1.0")
-
 	description: Mapped[str | None] = mapped_column(Text, nullable=True)
 	is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
-
 	# Связи с контентом
 	races: Mapped[list["Race"]] = relationship("Race", back_populates="system", cascade="all, delete-orphan")
 	classes: Mapped[list["CharacterClass"]] = relationship("CharacterClass", back_populates="system", cascade="all, delete-orphan")
@@ -65,24 +61,15 @@ class HomebrewRule(Base):
 	__tablename__ = "homebrew_rules"
 
 	id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
-	system_id: Mapped[PG_UUID] = mapped_column(
-		PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True
-	)
-	owner_id: Mapped[PG_UUID] = mapped_column(
-		PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
-	)
-
+	system_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True)
+	owner_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
 	title: Mapped[str] = mapped_column(String(255), nullable=False)
 	json_body: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default="{}") # Содержимое правила
-
 	# Видимость согласно ТЗ: 'global', 'friends_only', 'private'
 	visibility_scope: Mapped[str] = mapped_column(String(50), nullable=False, server_default="private")
-
 	is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
-
 	system: Mapped["GameSystem"] = relationship("GameSystem", back_populates="homebrew_rules")
 	owner: Mapped["User"] = relationship("User", back_populates="created_homebrew_rules") # (нужно будет добавить связь в User)
 

@@ -18,12 +18,8 @@ from backend.app.database.models.content.skills import Skill, Characteristic, Sk
 from backend.app.database.models.content.magic import Spell, MagicSchool, Ability, Effect, DamageType, SpellSlot
 
 # Блок 4: Предметы
-from backend.app.database.models.content.equipment import (
-	Equipment, ItemType, Rarity,
-	Weapon, WeaponType, WeaponClass,
-	Armor, ArmorType,
-	MagicalItem, Artifact, ArtifactProperty
-)
+from backend.app.database.models.content.equipment import (Equipment, ItemType, Rarity,	Weapon, WeaponType, WeaponClass,
+	Armor, ArmorType, MagicalItem, Artifact, ArtifactProperty)
 
 # Блок 5: Бестиарий
 from backend.app.database.models.content.worldbuilding import Creature, CreatureSize, CreatureType, NPC, NPCTag

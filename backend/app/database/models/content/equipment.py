@@ -16,38 +16,24 @@ class Equipment(Base):
 	__tablename__ = "equipment"
 
 	id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
-	system_id: Mapped[PG_UUID] = mapped_column(
-		PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True
-	)
-
+	system_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True)
 	# Для Homebrew
-	owner_id: Mapped[PG_UUID | None] = mapped_column(
-		PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
-	)
-
+	owner_id: Mapped[PG_UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
 	name: Mapped[str] = mapped_column(String(100), nullable=False)
 	slug: Mapped[str] = mapped_column(String(100), nullable=False)
-
 	description: Mapped[str | None] = mapped_column(Text, nullable=True)
-
 	item_type_id: Mapped[int] = mapped_column(Integer, ForeignKey("item_types.id"), nullable=False, index=True)
 	rarity_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("rarities.id"), nullable=True, index=True)
-
 	weight: Mapped[float | None] = mapped_column(Float, nullable=True) # в фунтах
 	cost: Mapped[dict | None] = mapped_column( JSONB, nullable=True, server_default=text("'{\"gp\": 0}'::jsonb") )
 	# Структура: {"cp": 5, "sp": 0, "ep": 0, "gp": 10, "pp": 0}
-
 	properties_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True, server_default="{}")
 	# e.g. {"finesse": true, "thrown": true, "range": {"normal": 20, "long": 60}}
-
 	is_homebrew: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 	visibility_scope: Mapped[str] = mapped_column(String(50), nullable=False, server_default="private")
-
 	is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
-
 	system: Mapped["GameSystem"] = relationship("GameSystem", back_populates="equipment") # (нужно добавить в GameSystem)
 	owner: Mapped["User"] = relationship("User", back_populates="created_equipment")
 	type_obj: Mapped["ItemType"] = relationship("ItemType")
@@ -69,40 +55,24 @@ class ItemType(Base):
 	__tablename__ = "item_types"
 
 	id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-	system_id: Mapped[PG_UUID] = mapped_column(
-		PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True
-	)
-
+	system_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True)
 	# Для Homebrew
-	owner_id: Mapped[PG_UUID | None] = mapped_column(
-		PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
-	)
-
+	owner_id: Mapped[PG_UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
 	name: Mapped[str] = mapped_column(String(100), nullable=False)
 	slug: Mapped[str] = mapped_column(String(100), nullable=False)
-
 	parent_type_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("item_types.id", ondelete="SET NULL"), nullable=True, index=True)
-
 	description: Mapped[str | None] = mapped_column(Text, nullable=True)
-
 	is_gear_slot: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 	# True если это слот экипировки (Head, Body, Ring). False - просто категория в инвентаре.
-
 	slot_name: Mapped[str | None] = mapped_column(String(50), nullable=True) # 'head', 'armor', 'weapon'
-
 	is_homebrew: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 	visibility_scope: Mapped[str] = mapped_column(String(50), nullable=False, server_default="private")
-
 	is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
-
 	system: Mapped["GameSystem"] = relationship("GameSystem", back_populates="item_types") # (нужно добавить в GameSystem)
 	owner: Mapped["User"] = relationship("User", back_populates="created_item_types")
-	children: Mapped[list["ItemType"]] = relationship("ItemType",
-	                                                  backref=backref("parent", remote_side=[id]),
-	                                                  cascade="all, delete-orphan")
+	children: Mapped[list["ItemType"]] = relationship("ItemType", backref=backref("parent", remote_side=[id]), cascade="all, delete-orphan")
 	equipment: Mapped[list["Equipment"]] = relationship("Equipment", back_populates="type_obj")
 
 	def __repr__(self) -> str:
@@ -117,32 +87,19 @@ class Rarity(Base):
 	__tablename__ = "rarities"
 
 	id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-	system_id: Mapped[PG_UUID] = mapped_column(
-		PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True
-	)
-
+	system_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True)
 	# Для Homebrew
-	owner_id: Mapped[PG_UUID | None] = mapped_column(
-		PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
-	)
-
+	owner_id: Mapped[PG_UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
 	name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False) # e.g. 'Common', 'Very Rare'
 	slug: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
-
 	description: Mapped[str | None] = mapped_column(Text, nullable=True)
-
 	sort_order: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0") # Для сортировки в фильтрах UI
-
 	color_theme: Mapped[str | None] = mapped_column(String(7), nullable=True) # HEX цвет (#1A8BFF для Uncommon)
-
 	is_homebrew: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 	visibility_scope: Mapped[str] = mapped_column(String(50), nullable=False, server_default="private")
-
 	is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
-
 	system: Mapped["GameSystem"] = relationship("GameSystem", back_populates="rarities") # (нужно добавить в GameSystem)
 	owner: Mapped["User"] = relationship("User", back_populates="created_rarities")
 	equipment: Mapped[list["Equipment"]] = relationship("Equipment", back_populates="rarity")
@@ -161,34 +118,21 @@ class Weapon(Base):
 	__tablename__ = "weapons"
 
 	id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
-
-	base_item_id: Mapped[PG_UUID] = mapped_column(
-		PG_UUID(as_uuid=True), ForeignKey("equipment.id", ondelete="CASCADE"), nullable=False, unique=True, index=True
-	)
-
+	base_item_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("equipment.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
 	weapon_type_id: Mapped[int] = mapped_column(Integer, ForeignKey("weapon_types.id"), nullable=False, index=True)
 	weapon_class_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("weapon_classes.id"), nullable=True, index=True)
-
 	# Боевая механика
 	damage_dice: Mapped[str] = mapped_column(String(20), nullable=False) # e.g. '1d8', '2d6'
-	damage_type_id: Mapped[PG_UUID] = mapped_column(
-		PG_UUID(as_uuid=True), ForeignKey("damage_types.id", ondelete="SET NULL"), nullable=True, index=True
-	)
-
+	damage_type_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("damage_types.id", ondelete="SET NULL"), nullable=True, index=True)
 	properties_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True, server_default="{}")
 	# {"finesse": true, "thrown": 20, "heavy": true, "special": "Versatile (1d10)"}
-
 	range_normal: Mapped[int | None] = mapped_column(Integer, nullable=True) # Для метательного/дистанционного
 	range_long: Mapped[int | None] = mapped_column(Integer, nullable=True)
-
 	is_homebrew: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 	visibility_scope: Mapped[str] = mapped_column(String(50), nullable=False, server_default="private")
-
 	is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
-
 	base_item: Mapped["Equipment"] = relationship("Equipment", back_populates="weapons")
 	type_obj: Mapped["WeaponType"] = relationship("WeaponType")
 	weapon_class: Mapped["WeaponClass"] = relationship("WeaponClass")
@@ -206,28 +150,17 @@ class WeaponType(Base):
 	__tablename__ = "weapon_types"
 
 	id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-	system_id: Mapped[PG_UUID] = mapped_column(
-		PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True
-	)
-
+	system_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True)
 	# Для Homebrew
-	owner_id: Mapped[PG_UUID | None] = mapped_column(
-		PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
-	)
-
+	owner_id: Mapped[PG_UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
 	name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False) # e.g. 'Martial', 'Simple'
 	slug: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
-
 	description: Mapped[str | None] = mapped_column(Text, nullable=True)
-
 	is_homebrew: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 	visibility_scope: Mapped[str] = mapped_column(String(50), nullable=False, server_default="private")
-
 	is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
-
 	system: Mapped["GameSystem"] = relationship("GameSystem", back_populates="weapon_types") # (нужно добавить в GameSystem)
 	owner: Mapped["User"] = relationship("User", back_populates="created_weapon_types")
 	weapons: Mapped[list["Weapon"]] = relationship("Weapon", back_populates="type_obj", cascade="all, delete-orphan")
@@ -244,25 +177,16 @@ class WeaponClass(Base):
 	__tablename__ = "weapon_classes"
 
 	id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-	system_id: Mapped[PG_UUID] = mapped_column(
-		PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True
-	)
-
+	system_id: Mapped[PG_UUID] = mapped_column(	PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True)
 	type_id: Mapped[int] = mapped_column(Integer, ForeignKey("weapon_types.id", ondelete="CASCADE"), nullable=False, index=True)
-
 	name: Mapped[str] = mapped_column(String(50), nullable=False) # e.g. 'Sword', 'Bow'
 	slug: Mapped[str] = mapped_column(String(50), nullable=False)
-
 	description: Mapped[str | None] = mapped_column(Text, nullable=True)
-
 	is_homebrew: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 	visibility_scope: Mapped[str] = mapped_column(String(50), nullable=False, server_default="private")
-
 	is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
-
 	system: Mapped["GameSystem"] = relationship("GameSystem")
 	weapon_type: Mapped["WeaponType"] = relationship("WeaponType", backref="classes")
 	weapons: Mapped[list["Weapon"]] = relationship("Weapon", back_populates="weapon_class", cascade="all, delete-orphan")
@@ -280,29 +204,19 @@ class Armor(Base):
 
 	id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
 
-	base_item_id: Mapped[PG_UUID] = mapped_column(
-		PG_UUID(as_uuid=True), ForeignKey("equipment.id", ondelete="CASCADE"), nullable=False, unique=True, index=True
-	)
-
+	base_item_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("equipment.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
 	armor_type_id: Mapped[int] = mapped_column(Integer, ForeignKey("armor_types.id"), nullable=False, index=True)
-
 	# Механика защиты
 	base_armor_class: Mapped[int] = mapped_column(Integer, nullable=False) # Базовый КЗ без модификаторов
 	requires_stealth_disadvantage: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-
 	strength_requirement: Mapped[int | None] = mapped_column(Integer, nullable=True) # Минимальная Сила
 	is_heavy: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-
 	max_dex_bonus: Mapped[int | None] = mapped_column(Integer, nullable=True) # Лимит бонуса Ловкости к КЗ
-
 	is_homebrew: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 	visibility_scope: Mapped[str] = mapped_column(String(50), nullable=False, server_default="private")
-
 	is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
-
 	base_item: Mapped["Equipment"] = relationship("Equipment", back_populates="armor")
 	type_obj: Mapped["ArmorType"] = relationship("ArmorType")
 
@@ -318,30 +232,18 @@ class ArmorType(Base):
 	__tablename__ = "armor_types"
 
 	id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-	system_id: Mapped[PG_UUID] = mapped_column(
-		PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True
-	)
-
+	system_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True)
 	# Для Homebrew
-	owner_id: Mapped[PG_UUID | None] = mapped_column(
-		PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
-	)
-
+	owner_id: Mapped[PG_UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
 	name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False) # e.g. 'Heavy', 'Shield'
 	slug: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
-
 	description: Mapped[str | None] = mapped_column(Text, nullable=True)
-
 	is_shield: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-
 	is_homebrew: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 	visibility_scope: Mapped[str] = mapped_column(String(50), nullable=False, server_default="private")
-
 	is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
-
 	system: Mapped["GameSystem"] = relationship("GameSystem", back_populates="armor_types") # (нужно добавить в GameSystem)
 	owner: Mapped["User"] = relationship("User", back_populates="created_armor_types")
 	armor: Mapped[list["Armor"]] = relationship("Armor", back_populates="type_obj", cascade="all, delete-orphan")
@@ -359,37 +261,25 @@ class MagicalItem(Base):
 
 	id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
 
-	base_item_id: Mapped[PG_UUID] = mapped_column(
-		PG_UUID(as_uuid=True), ForeignKey("equipment.id", ondelete="CASCADE"), nullable=False, unique=True, index=True
-	)
-
+	base_item_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("equipment.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
 	rarity_id: Mapped[int] = mapped_column(Integer, ForeignKey("rarities.id"), nullable=False, index=True)
-
 	# Механика активации согласно ТЗ
 	requires_attunement: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 	attunement_restriction: Mapped[str | None] = mapped_column(String(255), nullable=True)
 	# e.g. 'Dwarf', 'Spellcaster', 'Chaotic Good'
-
 	charges_max: Mapped[int | None] = mapped_column(Integer, nullable=True)
 	charges_current: Mapped[int | None] = mapped_column(Integer, nullable=True)
 	recharge_condition: Mapped[str | None] = mapped_column(String(100), nullable=True) # e.g. 'dawn'
-
 	description: Mapped[str | None] = mapped_column(Text, nullable=True)
 	lore_description: Mapped[str | None] = mapped_column(Text, nullable=True) # История предмета
-
 	is_homebrew: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 	visibility_scope: Mapped[str] = mapped_column(String(50), nullable=False, server_default="private")
-
 	is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
-
 	base_item: Mapped["Equipment"] = relationship("Equipment", back_populates="magical_items")
 	rarity: Mapped["Rarity"] = relationship("Rarity", back_populates="magical_items")
-	effects: Mapped[list["Effect"]] = relationship(
-		"Effect", secondary="item_effects", back_populates="magical_items", cascade="all, delete"
-	)
+	effects: Mapped[list["Effect"]] = relationship("Effect", secondary="item_effects", back_populates="magical_items", cascade="all, delete")
 
 	def __repr__(self) -> str:
 		return f"<MagicalItem(id='{self.id}', name='{self.base_item.name}', rarity={self.rarity.name})>"
@@ -398,12 +288,8 @@ class MagicalItem(Base):
 class ItemEffect(Base):
 	__tablename__ = "item_effects"
 
-	item_id: Mapped[PG_UUID] = mapped_column(
-		PG_UUID(as_uuid=True), ForeignKey("magical_items.id", ondelete="CASCADE"), primary_key=True
-	)
-	effect_id: Mapped[PG_UUID] = mapped_column(
-		PG_UUID(as_uuid=True), ForeignKey("effects.id", ondelete="CASCADE"), primary_key=True
-	)
+	item_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("magical_items.id", ondelete="CASCADE"), primary_key=True)
+	effect_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("effects.id", ondelete="CASCADE"), primary_key=True)
 
 # --- АРТЕФАКТЫ ---
 class Artifact(Base):
@@ -415,41 +301,26 @@ class Artifact(Base):
 	__tablename__ = "artifacts"
 
 	id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
-
-	base_item_id: Mapped[PG_UUID] = mapped_column(
-		PG_UUID(as_uuid=True), ForeignKey("equipment.id", ondelete="CASCADE"), nullable=False, unique=True, index=True
-	)
-
+	base_item_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("equipment.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
 	rarity_id: Mapped[int] = mapped_column(Integer, ForeignKey("rarities.id"), nullable=False, index=True)
-
 	# Механика разрушения/уничтожения согласно лору
 	destruction_requirements: Mapped[str | None] = mapped_column(Text, nullable=True)
 	# e.g. 'Бросить в жерло Роковой горы', 'Уничтожить только Молотом Дварфов'
-
 	is_sentient: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 	sentience_profile: Mapped[dict | None] = mapped_column(JSONB, nullable=True, server_default="{}")
 	# {"int": 16, "wis": 15, "cha": 18, "communication": "telepathy", "languages": ["common", "draconic"]}
-
 	curses_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True, server_default="{}")
-
 	requires_attunement: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-
 	description: Mapped[str | None] = mapped_column(Text, nullable=True)
 	lore_description: Mapped[str | None] = mapped_column(Text, nullable=True)
-
 	is_homebrew: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 	visibility_scope: Mapped[str] = mapped_column(String(50), nullable=False, server_default="private")
-
 	is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
-
 	base_item: Mapped["Equipment"] = relationship("Equipment", back_populates="artifacts")
 	rarity: Mapped["Rarity"] = relationship("Rarity", back_populates="artifacts")
-	properties: Mapped[list["ArtifactProperty"]] = relationship(
-		"ArtifactProperty", back_populates="artifact", cascade="all, delete-orphan"
-	)
+	properties: Mapped[list["ArtifactProperty"]] = relationship("ArtifactProperty", back_populates="artifact", cascade="all, delete-orphan")
 
 	def __repr__(self) -> str:
 		return f"<Artifact(id='{self.id}', name='{self.base_item.name}')>"
@@ -463,22 +334,14 @@ class ArtifactProperty(Base):
 	__tablename__ = "artifact_properties"
 
 	id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
-
-	artifact_id: Mapped[PG_UUID] = mapped_column(
-		PG_UUID(as_uuid=True), ForeignKey("artifacts.id", ondelete="CASCADE"), nullable=False, index=True
-	)
-
+	artifact_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("artifacts.id", ondelete="CASCADE"), nullable=False, index=True)
 	property_type: Mapped[str] = mapped_column(String(50), nullable=False) # e.g. 'random_major', 'fixed_ability'
 	payload_json: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default="{}") # Данные свойства
-
 	is_homebrew: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 	visibility_scope: Mapped[str] = mapped_column(String(50), nullable=False, server_default="private")
-
 	is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
-
 	artifact: Mapped["Artifact"] = relationship("Artifact", back_populates="properties")
 
 	def __repr__(self) -> str:

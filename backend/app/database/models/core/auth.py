@@ -16,14 +16,10 @@ class UserRole(Base):
 	"""
 	__tablename__ = "user_roles"
 
-	user_id: Mapped[PG_UUID] = mapped_column(
-		PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
-	)
-
+	user_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
 	assigned_at: Mapped[datetime | None] = mapped_column( DateTime(timezone=True), nullable=True, server_default=text("now()") )
-
 	user: Mapped["User"] = relationship("User", back_populates="roles")
-	role: Mapped[str] = mapped_column( SystemRole.pg_enum_type(), primary_key=True, nullable=False )
+	role: Mapped[str] = mapped_column( SystemRole.pg_enum_type(), primary_key=True, nullable=False)
 
 	def __repr__(self) -> str:
 		return f"<UserRole(user_id='{self.user_id}', role_id={self.role_id})>"
