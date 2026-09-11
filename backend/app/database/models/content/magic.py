@@ -178,6 +178,7 @@ class Effect(Base):
 	system: Mapped["GameSystem"] = relationship("GameSystem", back_populates="effects") # (нужно добавить в GameSystem)
 	owner: Mapped["User"] = relationship("User", back_populates="created_effects")
 	damage_type: Mapped["DamageType"] = relationship("DamageType")
+	magical_items: Mapped[list["MagicalItem"]] = relationship( "MagicalItem", secondary="item_effects", back_populates="effects", lazy="selectin" )
 
 	def __repr__(self) -> str:
 		return f"<Effect(id='{self.id}', name='{self.name}', type='{self.effect_type}')>"

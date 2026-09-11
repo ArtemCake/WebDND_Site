@@ -35,6 +35,7 @@ class Game(Base):
 	invites: Mapped[list["Invite"]] = relationship("Invite", back_populates="game", cascade="all, delete-orphan")
 	sessions: Mapped[list["Session"]] = relationship("Session", back_populates="game", cascade="all, delete-orphan")
 	campaign_maps: Mapped[list["CampaignMap"]] = relationship("CampaignMap", back_populates="game", cascade="all, delete-orphan")
+	character_sheets: Mapped[list["CharacterSheet"]] = relationship( "CharacterSheet", back_populates="game", cascade="all, delete-orphan", lazy="selectin" )
 
 	def __repr__(self) -> str:
 		return f"<Game(id='{self.id}', title='{self.title}', status='{self.status}')>"
@@ -47,8 +48,9 @@ class Party(Base):
 	"""
 	__tablename__ = "party"
 
-	game_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("games.id", ondelete="CASCADE"), primary_key=True)
-	user_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+	id: Mapped[PG_UUID] = mapped_column( PG_UUID(as_uuid=True), primary_key=True, default=uuid4, index=True)
+	game_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("games.id", ondelete="CASCADE"), nullable=False, index=True)
+	user_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
 	joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
 	# Роль в конкретной игре (может отличаться от глобальной роли пользователя)
 	role_in_game: Mapped[str] = mapped_column(String(20), nullable=False, server_default="player")
@@ -59,8 +61,8 @@ class Party(Base):
 	# {"mentions": true, "session_start": true}
 	game: Mapped["Game"] = relationship("Game", back_populates="party")
 	user: Mapped["User"] = relationship("User")
-	character_sheets: Mapped[list["CharacterSheet"]] = relationship("CharacterSheet", back_populates="game_link", cascade="all, delete-orphan")
-	dice_rolls: Mapped[list["DiceRoll"]] = relationship("DiceRoll", back_populates="roller_session", cascade="all, delete-orphan")
+	character_sheets: Mapped[list["CharacterSheet"]] = relationship( "CharacterSheet", back_populates="party", cascade="all, delete-orphan", lazy="selectin" )
+	dice_rolls: Mapped[list["DiceRoll"]] = relationship( "DiceRoll", back_populates="party", cascade="all, delete-orphan", lazy="selectin")
 
 	def __repr__(self) -> str:
 		return f"<Party(game_id='{self.game_id}', user_id='{self.user_id}', role='{self.role_in_game}')>"
@@ -164,6 +166,7 @@ class DiceRoll(Base):
 	session_id: Mapped[PG_UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="SET NULL"), nullable=True, index=True)
 	roller_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
 	npc_id: Mapped[PG_UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("npcs.id", ondelete="SET NULL"), nullable=True, index=True)
+	party_id: Mapped[PG_UUID | None] = mapped_column( PG_UUID(as_uuid=True), ForeignKey("party.id", ondelete="SET NULL"), nullable=True, index=True )
 	# Формула в человекочитаемом виде
 	formula: Mapped[str] = mapped_column(String(100), nullable=False) # e.g. '1d20+5', '8d6 fire'
 	result_total: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -176,6 +179,7 @@ class DiceRoll(Base):
 	session: Mapped["Session"] = relationship("Session", back_populates="dice_rolls")
 	roller: Mapped["User"] = relationship("User", back_populates="dice_rolls")
 	npc: Mapped["NPC"] = relationship("NPC", back_populates="dice_rolls")
+	party: Mapped["Party | None"] = relationship("Party", back_populates="dice_rolls") # <-- Теперь совпадет
 
 	def __repr__(self) -> str:
 		return f"<DiceRoll(id='{self.id}', formula='{self.formula}', total={self.result_total})>"

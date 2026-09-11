@@ -39,7 +39,7 @@ class User(Base):
 	chat_messages: Mapped[list["Message"]] = relationship("Message", back_populates="sender", cascade="all, delete-orphan")
 	uploaded_assets: Mapped[list["UploadedAsset"]] = relationship("UploadedAsset", back_populates="uploader", cascade="all, delete-orphan")
 	audit_logs: Mapped[list["AuditLog"]] = relationship("AuditLog", back_populates="user", cascade="all, delete-orphan")
-	content_reports: Mapped[list["ContentReport"]] = relationship("ContentReport", back_populates="reporter", cascade="all, delete-orphan")
+	content_reports: Mapped[list["ContentReport"]] = relationship("ContentReport", back_populates="reporter", foreign_keys="ContentReport.reporter_id", cascade="all, delete-orphan")
 	deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 	# Связь с пользовательским контентом (Homebrew)
 	created_homebrew_rules: Mapped[list["HomebrewRule"]] = relationship("HomebrewRule", back_populates="owner", cascade="all, delete-orphan")
@@ -67,6 +67,12 @@ class User(Base):
 	created_damage_types: Mapped[list["DamageType"]] = relationship( "DamageType", back_populates="owner", cascade="all, delete-orphan", lazy="selectin" )
 	created_equipment: Mapped[list["Equipment"]] = relationship( "Equipment", back_populates="owner", cascade="all, delete-orphan", lazy="selectin" )
 	created_item_types: Mapped[list["ItemType"]] = relationship( "ItemType", back_populates="owner", cascade="all, delete-orphan", lazy="selectin" )
+	created_rarities: Mapped[list["Rarity"]] = relationship( "Rarity", back_populates="owner", cascade="all, delete-orphan", lazy="selectin" )
+	created_weapon_types: Mapped[list["WeaponType"]] = relationship( "WeaponType", back_populates="owner", cascade="all, delete-orphan", lazy="selectin" )
+	created_armor_types: Mapped[list["ArmorType"]] = relationship( "ArmorType", back_populates="owner", cascade="all, delete-orphan", lazy="selectin" )
+	created_characters: Mapped[list["Character"]] = relationship( "Character", back_populates="owner", cascade="all, delete-orphan", lazy="selectin" )
+	created_map_objects: Mapped[list["MapObject"]] = relationship( "MapObject", back_populates="owner", cascade="all, delete-orphan", lazy="selectin" )
+	created_ai_jobs: Mapped[list["AIGenerationJob"]] = relationship("AIGenerationJob", back_populates="owner", cascade="all, delete-orphan", lazy="selectin" )
 
 	def __repr__(self) -> str:
 		return f"<User(id='{self.id}', nickname='{self.nickname}', email='{self.email}')>"

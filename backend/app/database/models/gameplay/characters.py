@@ -28,7 +28,7 @@ class Character(Base):
 	experience: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
-	owner: Mapped["User"] = relationship("User", back_populates="characters")
+	owner: Mapped["User"] = relationship("User", back_populates="created_characters")
 
 # --- ЛИСТЫ ПЕРСОНАЖЕЙ ---
 class CharacterSheet(Base):
@@ -43,6 +43,7 @@ class CharacterSheet(Base):
 	game_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("games.id", ondelete="CASCADE"), nullable=False, index=True)
 	base_character_id: Mapped[PG_UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("characters.id", ondelete="SET NULL"), nullable=True, index=True) # Ссылка на оригинал из глобального списка игрока
 	npc_id: Mapped[PG_UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("npcs.id", ondelete="SET NULL"), nullable=True, index=True) # Если лист создан Мастером как заготовка
+	party_id: Mapped[PG_UUID | None] = mapped_column( PG_UUID(as_uuid=True), ForeignKey("party.id", ondelete="SET NULL"), nullable=True, index=True )
 	version_note: Mapped[str | None] = mapped_column(Text, nullable=True) # 'Уровень 5, после боя с драконом'
 	stats_json: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default="{}")
 	# {"str": 16, "dex_mod": 2, "proficiency_bonus": 3}
@@ -57,12 +58,13 @@ class CharacterSheet(Base):
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
 	player: Mapped["User"] = relationship("User")
-	game: Mapped["Game"] = relationship("Game", back_populates="party") # Косвенная связь через Party
 	base_character: Mapped["Character"] = relationship("Character") # Глобальный персонаж пользователя
 	npc: Mapped["NPC"] = relationship("NPC")
 	inventory: Mapped[list["CharacterInventory"]] = relationship("CharacterInventory", back_populates="sheet", cascade="all, delete-orphan")
 	tokens: Mapped[list["Token"]] = relationship("Token", back_populates="character_sheet", cascade="all, delete-orphan")
 	ability_scores: Mapped[list["CharacterSheetAbilityScore"]] = relationship( "CharacterSheetAbilityScore", back_populates="sheet", cascade="all, delete-orphan" )
+	party: Mapped["Party | None"] = relationship("Party", back_populates="character_sheets")
+	game: Mapped["Game"] = relationship("Game", back_populates="character_sheets")
 
 	def __repr__(self) -> str:
 		return f"<CharacterSheet(id='{self.id}', player_id='{self.player_id}')>"

@@ -211,6 +211,7 @@ class NPC(Base):
 	tokens: Mapped[list["Token"]] = relationship("Token", back_populates="npc", cascade="all, delete-orphan")
 	inventory: Mapped[list["CharacterInventory"]] = relationship( "CharacterInventory", back_populates="owner_npc", cascade="all, delete-orphan")
 	tags: Mapped[list["NPCTag"]] = relationship(secondary="npc_npctag_link", back_populates="npcs", lazy="selectin")
+	dice_rolls: Mapped[list["DiceRoll"]] = relationship( "DiceRoll", back_populates="npc", cascade="all, delete-orphan", lazy="selectin" )
 
 	def __repr__(self) -> str:
 		return f"<NPC(id='{self.id}', name='{self.name}')>"

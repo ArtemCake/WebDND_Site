@@ -41,6 +41,8 @@ class Equipment(Base):
 	weapons: Mapped[list["Weapon"]] = relationship("Weapon", back_populates="base_item", cascade="all, delete-orphan")
 	armor: Mapped[list["Armor"]] = relationship("Armor", back_populates="base_item", cascade="all, delete-orphan")
 	magical_items: Mapped[list["MagicalItem"]] = relationship("MagicalItem", back_populates="base_item", cascade="all, delete-orphan")
+	artifacts: Mapped[list["Artifact"]] = relationship( "Artifact", back_populates="base_item", cascade="all, delete-orphan", uselist=True)
+	assets: Mapped[list["UploadedAsset"]] = relationship( "UploadedAsset", back_populates="equipment", cascade="all, delete-orphan", lazy="selectin" )
 
 	def __repr__(self) -> str:
 		return f"<Equipment(id='{self.id}', name='{self.name}')>"
@@ -279,7 +281,7 @@ class MagicalItem(Base):
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
 	base_item: Mapped["Equipment"] = relationship("Equipment", back_populates="magical_items")
 	rarity: Mapped["Rarity"] = relationship("Rarity", back_populates="magical_items")
-	effects: Mapped[list["Effect"]] = relationship("Effect", secondary="item_effects", back_populates="magical_items", cascade="all, delete")
+	effects: Mapped[list["Effect"]] = relationship( "Effect", secondary="item_effects", back_populates="magical_items", cascade="all, delete-orphan", single_parent=True)
 
 	def __repr__(self) -> str:
 		return f"<MagicalItem(id='{self.id}', name='{self.base_item.name}', rarity={self.rarity.name})>"
@@ -318,9 +320,9 @@ class Artifact(Base):
 	is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
-	base_item: Mapped["Equipment"] = relationship("Equipment", back_populates="artifacts")
 	rarity: Mapped["Rarity"] = relationship("Rarity", back_populates="artifacts")
 	properties: Mapped[list["ArtifactProperty"]] = relationship("ArtifactProperty", back_populates="artifact", cascade="all, delete-orphan")
+	base_item: Mapped["Equipment"] = relationship( "Equipment", back_populates="artifacts", cascade="all, delete-orphan", single_parent=True)
 
 	def __repr__(self) -> str:
 		return f"<Artifact(id='{self.id}', name='{self.base_item.name}')>"

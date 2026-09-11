@@ -87,27 +87,22 @@ class ActiveSessionCache(Base):
 
 # --- ЖАЛОБЫ НА КОНТЕНТ ---
 class ContentReport(Base):
-	"""
-	Жалоба пользователя на Homebrew-контент.
-	Реализует требование ТЗ о модерации пользовательского контента (№61) и безопасности сообщества.
-	"""
 	__tablename__ = "content_reports"
 
 	id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
-	reporter_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
-	target_table: Mapped[str] = mapped_column(String(50), nullable=False) # 'spells', 'feats', 'races'
+	reporter_id: Mapped[PG_UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+	target_table: Mapped[str] = mapped_column(String(50), nullable=False)
 	target_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), nullable=False, index=True)
+	target_owner_id: Mapped[PG_UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
 	reason: Mapped[str] = mapped_column(String(100), nullable=False)
-	# enum: ['copyright_violation', 'nsfw_content', 'broken_mechanic', 'harassment']
 	description: Mapped[str | None] = mapped_column(Text, nullable=True)
 	moderator_note: Mapped[str | None] = mapped_column(Text, nullable=True)
 	status: Mapped[str] = mapped_column(String(20), nullable=False, server_default="new")
-	# enum: ['new', 'under_review', 'approved', 'rejected', 'actioned']
-	severity_score: Mapped[int] = mapped_column(Integer, default=1, nullable=False) # 1-10, рассчитывается ИИ-модератором
+	severity_score: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
-	reporter: Mapped["User"] = relationship("User", back_populates="content_reports")
-	target_owner: Mapped["User"] = relationship("User", foreign_keys=[target_id]) # Владелец контента
+	reporter: Mapped["User | None"] = relationship("User", back_populates="content_reports", foreign_keys="ContentReport.reporter_id")
+	target_owner: Mapped["User | None"] = relationship("User", foreign_keys="ContentReport.target_owner_id")
 
 	def __repr__(self) -> str:
 		return f"<ContentReport(id='{self.id}', table='{self.target_table}', status='{self.status}')>"
