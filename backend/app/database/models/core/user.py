@@ -12,7 +12,7 @@ class User(Base):
 	Основная таблица пользователей. Хранит учетные данные, настройки профиля и метаданные.
 	"""
 	__tablename__ = "users"
-	__table_args__ = (CheckConstraint("nickname !~ '^\\s+$'", name="ck_user_nickname_not_blank"))
+	__table_args__ = (CheckConstraint("nickname !~ '^\\s+$'", name="ck_user_nickname_not_blank"),)
 	id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4, nullable=False)
 	email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
 	# Расширено до Text для безопасного хранения длинных хешей Argon2id без риска обрезки
@@ -74,7 +74,9 @@ class User(Base):
 class Friendship(Base):
 	"""Таблица связей дружбы (Many-to-Many)."""
 	__tablename__ = "friends"
-	__table_args__ = (CheckConstraint("user_id != friend_user_id", name="ck_friendship_no_self"))
+	__table_args__ = (
+		CheckConstraint("user_id != friend_user_id", name="ck_friendship_no_self"),
+	)
 	user_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
 	friend_user_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
 	status: Mapped[str] = mapped_column(String(20), nullable=False, server_default="pending") # pending, accepted, blocked
