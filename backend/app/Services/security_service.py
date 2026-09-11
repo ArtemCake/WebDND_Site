@@ -12,7 +12,8 @@ def create_verification_token(user_id: str, expires_delta: timedelta = None) -> 
 	if expires_delta is None:
 		expires_delta = timedelta(hours=24)
 	expire = datetime.utcnow() + expires_delta
-	encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM, exp=expire)
+	to_encode["exp"] = expire  # <-- добавляем exp в payload, а не в encode()
+	encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 	return encoded_jwt
 
 def verify_token(token: str, purpose: str = "email_verification"):
