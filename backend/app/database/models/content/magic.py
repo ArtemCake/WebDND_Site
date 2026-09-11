@@ -2,7 +2,7 @@
 
 """Модели магии: заклинания, школы, уровни."""
 
-from Config.imports import (Mapped, mapped_column, relationship, JSONB, ARRAY, text, uuid4,
+from Config.imports import (Mapped, mapped_column, relationship, JSONB, ARRAY, text, uuid4, Table, Column,
                             DateTime, String, Text, Integer, Boolean, ForeignKey, PG_UUID, datetime)
 from backend.app.database.database import Base
 
@@ -47,7 +47,7 @@ class Spell(Base):
 	classes: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True) # ['wizard', 'sorcerer']
 	subclasses: Mapped[list[PG_UUID] | None] = mapped_column(ARRAY(PG_UUID(as_uuid=True)), nullable=True)
 
-	damage_types: Mapped[list[str] | None] = mapped_column(ARRAY(String), nullable=True)
+	damage_types: Mapped[list["DamageType"]] = relationship( "DamageType", secondary="spell_damage_types", back_populates="spells", lazy="selectin" )
 	effect_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True, server_default="{}")
 
 	is_homebrew: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -296,7 +296,7 @@ class DamageType(Base):
 	system: Mapped["GameSystem"] = relationship("GameSystem", back_populates="damage_types") # (нужно добавить в GameSystem)
 	owner: Mapped["User"] = relationship("User", back_populates="created_damage_types")
 	effects: Mapped[list["Effect"]] = relationship("Effect", back_populates="damage_type", cascade="all, delete-orphan")
-	spells: Mapped[list["Spell"]] = relationship("Spell", back_populates="damage_types", secondary="spell_damage_types")
+	spells: Mapped[list["Spell"]] = relationship( "Spell", secondary="spell_damage_types", back_populates="damage_types", lazy="selectin" )
 
 	def __repr__(self) -> str:
 		return f"<DamageType(id='{self.id}', name='{self.name}')>"

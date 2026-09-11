@@ -30,7 +30,7 @@ from backend.app.database.models.content.worldbuilding import Creature, Creature
 
 # Блок 6: Геймплей
 from backend.app.database.models.gameplay.lobby import Game, Party, Invite, Session, InitiativeTracker, DiceRoll
-from backend.app.database.models.gameplay.characters import Character, CharacterSheet, CharacterInventory
+from backend.app.database.models.gameplay.characters import Character, CharacterSheet, CharacterInventory, CharacterSheetAbilityScore
 from backend.app.database.models.gameplay.communication import Chat, Message
 from backend.app.database.models.gameplay.maps import CampaignMap, MapLayer, MapHex, MapObject, SpatialAudioZone, Token
 
@@ -40,12 +40,12 @@ from backend.app.database.models.systems.system import AuditLog, ContentReport, 
 
 __all__ = [
 	# Блок 0
-	'User', 'MFADevice', 'Friendship', 'OAuthProvider', 'UserRole',
+	'User', 'UserRole', 'MFADevice', 'Friendship', 'OAuthProvider',
 	# Блок 1
 	'GameSystem', 'HomebrewRule', 'Language', 'LoreEntry',
 	# Блок 2
 	'Race', 'Origin', 'Background', 'Feat', 'CharacterClass', 'Subclass',
-	'Skill', 'Characteristic', 'SkillCharacteristicMap',
+	'Skill', 'Characteristic', 'SkillCharacteristicMap', 'CharacterSheetAbilityScore',
 	# Блок 3
 	'Spell', 'MagicSchool', 'Ability', 'Effect', 'DamageType', 'SpellSlot',
 	# Блок 4

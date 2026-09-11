@@ -97,7 +97,17 @@ class User(Base):
 	created_subclasses: Mapped[list["Subclass"]] = relationship( "Subclass", back_populates="owner", cascade="all, delete-orphan", lazy="selectin")
 	created_backgrounds: Mapped[list["Background"]] = relationship("Background", back_populates="owner", cascade="all, delete-orphan", lazy="selectin")
 	created_feats: Mapped[list["Feat"]] = relationship( "Feat", back_populates="owner", cascade="all, delete-orphan", lazy="selectin" )
-
+	created_origins: Mapped[list["Origin"]] = relationship( "Origin", back_populates="owner", cascade="all, delete-orphan", lazy="selectin" )
+	created_skills: Mapped[list["Skill"]] = relationship( "Skill", back_populates="owner", cascade="all, delete-orphan", lazy="selectin" )
+	feats: Mapped[list["Feat"]] = relationship( "Feat", back_populates="owner", cascade="all, delete-orphan", lazy="selectin", overlaps="created_feats")
+	skill_char_maps: Mapped[list["SkillCharacteristicMap"]] = relationship( "SkillCharacteristicMap", back_populates="owner", cascade="all, delete-orphan", lazy="selectin" )
+	created_spell_levels: Mapped[list["SpellSlot"]] = relationship( "SpellSlot", back_populates="owner", cascade="all, delete-orphan", lazy="selectin" )
+	created_magic_schools: Mapped[list["MagicSchool"]] = relationship( "MagicSchool", back_populates="owner", cascade="all, delete-orphan", lazy="selectin" )
+	created_abilities: Mapped[list["Ability"]] = relationship( "Ability", back_populates="owner", cascade="all, delete-orphan", lazy="selectin" )
+	created_effects: Mapped[list["Effect"]] = relationship( "Effect", back_populates="owner", cascade="all, delete-orphan", lazy="selectin" )
+	created_damage_types: Mapped[list["DamageType"]] = relationship( "DamageType", back_populates="owner", cascade="all, delete-orphan", lazy="selectin" )
+	created_equipment: Mapped[list["Equipment"]] = relationship( "Equipment", back_populates="owner", cascade="all, delete-orphan", lazy="selectin" )
+	created_item_types: Mapped[list["ItemType"]] = relationship( "ItemType", back_populates="owner", cascade="all, delete-orphan", lazy="selectin" )
 
 	def __repr__(self) -> str:
 		return f"<User(id='{self.id}', nickname='{self.nickname}', email='{self.email}')>"

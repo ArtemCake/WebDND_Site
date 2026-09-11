@@ -314,7 +314,7 @@ class Origin(Base):
 	lang_objects: Mapped[list["Language"]] = relationship(
 		"Language", secondary="origin_languages", back_populates="origins"
 	)
-	languages: Mapped[List["Language"]] = relationship( back_populates="origins", secondary="origin_languages" )
+	languages: Mapped[List["Language"]] = relationship( back_populates="origins", secondary="origin_languages", overlaps="lang_objects")
 
 	def __repr__(self) -> str:
 		return f"<Origin(id='{self.id}', name='{self.name}')>"

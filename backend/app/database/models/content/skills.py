@@ -70,7 +70,7 @@ class Characteristic(Base):
 
 	system: Mapped["GameSystem"] = relationship("GameSystem", back_populates="characteristics") # (нужно добавить в GameSystem)
 	skills: Mapped[list["Skill"]] = relationship("Skill", back_populates="characteristic", cascade="all, delete-orphan")
-	sheets: Mapped[list["CharacterSheetAbilityScore"]] = relationship("CharacterSheetAbilityScore", back_populates="characteristic")
+	sheets: Mapped[list["CharacterSheetAbilityScore"]] = relationship( "CharacterSheetAbilityScore", back_populates="characteristic", cascade="all, delete-orphan", lazy="selectin" )
 
 	def __repr__(self) -> str:
 		return f"<Characteristic(id='{self.id}', abbr='{self.abbreviation}')>"
@@ -110,7 +110,7 @@ class SkillCharacteristicMap(Base):
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
 
 	system: Mapped["GameSystem"] = relationship("GameSystem")
-	owner: Mapped["User"] = relationship("User", back_populates="created_skill_char_maps")
+	owner: Mapped["User"] = relationship("User", back_populates="skill_char_maps")
 	skill: Mapped["Skill"] = relationship("Skill", back_populates="custom_characteristic_link")
 	characteristic: Mapped["Characteristic"] = relationship("Characteristic", back_populates="custom_skill_links")
 

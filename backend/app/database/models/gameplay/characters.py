@@ -95,6 +95,7 @@ class CharacterSheet(Base):
 		"CharacterInventory", back_populates="sheet", cascade="all, delete-orphan"
 	)
 	tokens: Mapped[list["Token"]] = relationship("Token", back_populates="character_sheet", cascade="all, delete-orphan")
+	ability_scores: Mapped[list["CharacterSheetAbilityScore"]] = relationship( "CharacterSheetAbilityScore", back_populates="sheet", cascade="all, delete-orphan" )
 
 	def __repr__(self) -> str:
 		return f"<CharacterSheet(id='{self.id}', player_id='{self.player_id}')>"
@@ -139,3 +140,35 @@ class CharacterInventory(Base):
 
 	def __repr__(self) -> str:
 		return f"<CharacterInventory(sheet='{self.sheet_id}', item='{self.item.name if self.item else 'Unknown'}')>"
+
+class CharacterSheetAbilityScore(Base):
+	"""
+	Конкретное значение характеристики для конкретного листа персонажа.
+	Например: Сила=18, Ловкость=14 для данного билда.
+	"""
+	__tablename__ = "character_ability_scores"
+
+	id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
+
+	character_sheet_id: Mapped[PG_UUID] = mapped_column(
+		PG_UUID(as_uuid=True),
+		ForeignKey("character_sheets.id", ondelete="CASCADE"),
+		nullable=False, index=True
+	)
+
+	characteristic_id: Mapped[PG_UUID] = mapped_column(
+		PG_UUID(as_uuid=True),
+		ForeignKey("characteristics.id", ondelete="RESTRICT"),
+		nullable=False, index=True
+	)
+
+	value: Mapped[int] = mapped_column(Integer, nullable=False) # Итоговое значение с учетом бонусов от расы/предметов
+
+	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
+	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
+
+	sheet: Mapped["CharacterSheet"] = relationship("CharacterSheet", back_populates="ability_scores")
+	characteristic: Mapped["Characteristic"] = relationship("Characteristic", back_populates="sheets")
+
+	def __repr__(self) -> str:
+		return f"<CharAbility(sheet='{self.character_sheet_id}', char='{self.characteristic_id}', val={self.value})>"
