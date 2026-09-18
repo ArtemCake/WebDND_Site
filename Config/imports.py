@@ -44,6 +44,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+from jinja2.exceptions import TemplateNotFound
 from aiosmtplib import SMTP
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -63,7 +64,7 @@ from itsdangerous import URLSafeTimedSerializer
 from pathlib import Path
 
 # --- Валидация API (Pydantic) ---
-from pydantic import ValidationError  # FastAPI переименовал это из RequestValidationError внутри себя
+from pydantic import ValidationError, EmailStr, BaseModel, Field
 from fastapi.exceptions import RequestValidationError
 
 # --- Роутинг ---

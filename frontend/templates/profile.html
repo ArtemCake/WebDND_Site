@@ -1,0 +1,107 @@
+<!--  frontend/templates/profile.html -->
+
+{% extends "base.html" %}
+{% block title %}Профиль{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-6 bg-bg-card rounded-xl shadow-lg border border-border-subtle">
+	<h2 class="text-2xl font-semibold mb-8 text-text-primary">Настройки профиля</h2>
+	
+	<!-- Блок персональных данных -->
+	<div id="profile-form-section" hx-target="this" hx-swap="outerHTML">
+		<form
+				hx-put="/profile/update"
+				hx-target="#message-box-profile"
+				hx-swap="innerHTML"
+				hx-trigger="submit"
+				enctype="multipart/form-data"
+				class="space-y-6">
+			
+			<div class="flex items-center space-x-6">
+				<!-- Аватар -->
+				<label class="relative">
+					<img src="{{ user.avatar_url or '/static/images/default-avatar.png' }}"
+					     alt="Аватар"
+					     class="w-24 h-24 rounded-full object-cover ring-4 ring-accent-magic transition-transform hover:scale-105">
+					<input type="file" name="avatar" accept="image/*" class="hidden" onchange="previewAvatar(event)">
+					<button type="button" class="absolute bottom-0 right-0 bg-bg-main text-text-primary p-2 rounded-full hover:bg-border-subtle">
+						Изменить
+					</button>
+				</label>
+				
+				<!-- Текстовые поля -->
+				<div class="flex-1 grid gap-4">
+					<div>
+						<label for="nickname" class="block text-sm font-medium text-text-secondary">Никнейм</label>
+						<input type="text" id="nickname" name="nickname" value="{{ user.nickname }}" required
+						       class="mt-1 w-full bg-bg-main border border-border-subtle rounded-md px-3 py-2 focus:ring-accent-magic focus:border-accent-magic">
+					</div>
+					<div>
+						<label for="email" class="block text-sm font-medium text-text-secondary">Email</label>
+						<input type="email" id="email" name="email" value="{{ user.email }}" required
+						       class="mt-1 w-full bg-bg-main border border-border-subtle rounded-md px-3 py-2 focus:ring-accent-magic focus:border-accent-magic">
+					</div>
+				</div>
+			</div>
+			
+			<div id="message-box-profile" class="min-h-6"></div>
+			
+			<div class="pt-4 border-t border-border-subtle flex justify-end">
+				<button type="submit"
+				        class="px-6 py-2 bg-linear-to-r from-accent-magic to-purple-700 text-white rounded-md font-semibold hover:opacity-90 transition">
+					Сохранить изменения
+				</button>
+			</div>
+		</form>
+	</div>
+	
+	<!-- Блок смены пароля -->
+	<div class="mt-12 pt-8 border-t border-border-subtle">
+		<h3 class="text-xl font-semibold mb-4 text-text-primary">Безопасность</h3>
+		
+		<div id="password-form-section" hx-target="this" hx-swap="outerHTML">
+			<form
+					hx-post="/profile/change-password"
+					hx-target="#message-box-password"
+					hx-swap="innerHTML"
+					hx-trigger="submit"
+					class="space-y-4 max-w-md">
+				
+				<div>
+					<label for="current_pass" class="block text-sm font-medium text-text-secondary">Текущий пароль</label>
+					<input type="password" id="current_pass" name="current_password" required
+					       class="mt-1 w-full bg-bg-main border border-border-subtle rounded-md px-3 py-2 focus:ring-accent-magic focus:border-accent-magic">
+				</div>
+				<div>
+					<label for="new_pass" class="block text-sm font-medium text-text-secondary">Новый пароль</label>
+					<input type="password" id="new_pass" name="new_password" required minlength="8"
+					       class="mt-1 w-full bg-bg-main border border-border-subtle rounded-md px-3 py-2 focus:ring-accent-magic focus:border-accent-magic">
+				</div>
+				
+				<div id="message-box-password" class="min-h-6"></div>
+				
+				<button type="submit"
+				        class="px-6 py-2 bg-accent-dmg text-white rounded-md font-semibold hover:opacity-90 transition">
+					Изменить пароль
+				</button>
+			</form>
+		</div>
+	</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+	function previewAvatar(event) {
+		const input = event.target;
+		if (input.files && input.files[0]) {
+			const reader = new FileReader();
+			reader.onload = function(e) {
+				// Находим предыдущее изображение и меняем его src
+				document.querySelector('#profile-form-section img').src = e.target.result;
+			}
+			reader.readAsDataURL(input.files[0]);
+		}
+	}
+</script>
+{% endblock %}

@@ -1,12 +1,14 @@
-# main.py
+
 
 from Config.Config import settings
 from backend.app.database.database import engine, Base
-import backend.app.Routers.api as api_module  # Предполагаемый путь к вашим роутерам
-import backend.app.Routers.web as web_module   # Роутеры веб-страниц
-from Config.imports import (FastAPI, asynccontextmanager, CORSMiddleware, Path,StaticFiles, Jinja2Templates,
-                         base64, RequestValidationError, Request, asyncio, Depends, JSONResponse, HTMLResponse, uvicorn,
-						 APIRoute, os, command, Config)
+import backend.app.Routers.api as api_module
+import backend.app.Routers.web as web_module
+import backend.app.Routers.profile as profile_module
+from Config.imports import (FastAPI, asynccontextmanager, CORSMiddleware, Path, StaticFiles, Jinja2Templates,
+	base64, RequestValidationError, Request, asyncio, JSONResponse, HTMLResponse, uvicorn,
+	APIRoute, os, command, Config)
+from starlette.middleware.sessions import SessionMiddleware
 import backend.app.database._models
 
 
@@ -28,7 +30,7 @@ async def apply_migrations():
 			cfg = Config(ALEMBIC_CONFIG_PATH)
 			cfg.set_main_option("script_location", SCRIPT_LOCATION)
 
-			# Подставляем URL без драйвера asyncpg, так как Alembic работает синхронно
+			# Подставляем URL без драйвера asyncpg для совместимости с Alembic
 			sync_url = settings.DATABASE_URL.replace("postgresql+asyncpg", "postgresql")
 			cfg.set_main_option("sqlalchemy.url", sync_url)
 
@@ -43,15 +45,17 @@ async def apply_migrations():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-
 	await apply_migrations()
 
 	async with engine.begin() as conn:
 		print("[STARTUP] Запущено создание таблиц БД")
 		await conn.run_sync(Base.metadata.create_all)
+
 	app.state.settings = settings
 	print("[STARTUP] ✅ Таблицы БД успешно созданы")
+
 	yield
+
 	await engine.dispose()
 	print("[SHUTDOWN] Соединения с БД закрыты.")
 
@@ -62,7 +66,9 @@ app = FastAPI(
 	lifespan=lifespan,
 )
 
-# --- MIDDLEWARE ---
+# --- MIDDLEWARE (ВАЖЕН ПОРЯДОК) ---
+
+# 1. Proxy Header (для правильного определения HTTPS за прокси)
 class ProxyHeaderMiddleware:
 	def __init__(self, app):
 		self.app = app
@@ -82,8 +88,18 @@ class ProxyHeaderMiddleware:
 
 app.add_middleware(ProxyHeaderMiddleware)
 
+# 2. Sessions (ДОЛЖЕН быть ДО CORS и роутов!)
+# Решает ошибку 'SessionMiddleware must be installed to access request.session'
 app.add_middleware(
-	# CORS должен быть строго до регистрации роутов
+	SessionMiddleware,
+	secret_key=settings.SECRET_KEY,
+	session_cookie="webdnd_session",
+	max_age=604800, # 7 дней в секундах
+	same_site="lax"
+)
+
+# 3. CORS (должен быть строго до регистрации роутеров)
+app.add_middleware(
 	CORSMiddleware,
 	allow_origins=settings.BACKEND_CORS_ORIGINS,
 	allow_credentials=True,
@@ -91,23 +107,18 @@ app.add_middleware(
 	allow_headers=["*"]
 )
 
-# --- СТАТИЧЕСКИЕ ФАЙЛЫ ---
+# --- СТАТИЧЕСКИЕ ФАЙЛЫ И ШАБЛОНЫ ---
 app.mount("/frontend/static", StaticFiles(directory=str(BASE_DIR / "frontend" / "static")), name="static")
-
-# --- ШАБЛОНЫ JINJA2 ---
 templates = Jinja2Templates(directory=str(BASE_DIR / "frontend" / "templates"))
 env = templates.env
 
 def static_url(filename: str) -> str:
 	return f"/frontend/static/{filename.lstrip('/')}"
 
-# Определяем функцию фильтра
 def b64encode_filter(value):
 	return base64.b64encode(value).decode('utf-8')
 
 env.globals["static_url"] = static_url
-
-# Регистрируем фильтр в окружении
 env.filters['b64encode'] = b64encode_filter
 
 # --- ГЛОБАЛЬНЫЕ ОБРАБОТЧИКИ ОШИБОК ---
@@ -119,31 +130,25 @@ async def validation_exception_handler(request: Request, exc):
 async def not_found_exception_handler(request: Request, exc):
 	return HTMLResponse(content="<h1>404 - Страница не найдена</h1>", status_code=404)
 
+# --- ЗАВИСИМОСТЬ ДЛЯ MULTIPART FORM DATA (Fix HTMX + Pydantic) ---
 def use_multipart_form_dep(dep):
 	if hasattr(dep, "func"):
 		for index, param in enumerate(dep.func.__annotations__.get("dependant", {}).get("params", [])):
-			# Если параметр — это стандартная зависимость Form,
-			# заменяем её на нашу OverloadedForm
 			if param["type"] == "form" and param.get("default") is False:
-				# Меняем тип зависимости
 				param["__class__"] = "multipart_form"
 	return dep
 
+# --- ГЛОБАЛЬНЫЕ НАСТРОЙКИ ---
 os.environ['PROJECT_ROOT'] = str(BASE_DIR)
 app.state.templates = templates
 app.state.project_root = BASE_DIR
-# Получаем окружение Jinja2 из глобального объекта templates
-env = templates.env
 
-# Создаем зависимость, которая возвращает наш глобальный объект 'templates'
-def get_templates():
-	return templates
-
-# --- ПОДКЛЮЧЕНИЕ МОДУЛЕЙ ---
+# --- ПОДКЛЮЧЕНИЕ РОУТЕРОВ ---
 app.include_router(api_module.router)
 app.include_router(web_module.router)
+#app.include_router(profile_module.router)
 
-# Применяем эту функцию ко всем роутерам приложения
+# Применяем фиксы форм ко всем API-роутам
 for route in app.router.routes:
 	if isinstance(route, APIRoute):
 		route.dependant = use_multipart_form_dep(route.dependant)
