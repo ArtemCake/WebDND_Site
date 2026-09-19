@@ -12,8 +12,8 @@ secret_key = os.environ.get("SECRET_KEY", settings.SECRET_KEY)
 serializer = URLSafeTimedSerializer(secret_key)
 
 # Корректное определение пути относительно корня проекта
-templates_dir = Path(__file__).resolve().parent.parent.parent / "frontend" / "templates"
-templates = Jinja2Templates(directory="frontend/templates")
+templates_dir = Path(settings.BASE_DIR+"/frontend"+"/templates")
+templates = Jinja2Templates(directory=templates_dir)
 env_lock = asyncio.Lock()
 
 @router.get("/", response_class=HTMLResponse, name="main_page_get")
@@ -52,8 +52,8 @@ async def get_login_page(request: Request):
 	}
 
 	try:
-		return templates.TemplateResponse( request=request,name="login.html", context=context)
-	except TemplateNotFound:
+		return templates.TemplateResponse( request=request, name="login.html", context=context)
+	except TemplateNotFound as e:
 		raise HTTPException(status_code=404, detail="Страница login.html не найдена")
 
 @router.get("/register", response_class=HTMLResponse, name="register_page_get")

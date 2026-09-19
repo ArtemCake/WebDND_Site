@@ -1,0 +1,57 @@
+<!-- frontend/templates/menu.html -->
+
+<nav class="site-nav" aria-label="Основное меню">
+	<div class="nav-container">
+		<a href="/" class="nav-brand">WebDND</a>
+		
+		<ul class="nav-list">
+			<!-- Блок "Игровой процесс" -->
+			<li class="nav-item dropdown">
+				<button type="button" class="dropdown-toggle">Игры</button>
+				<ul class="dropdown-menu">
+					<li><a href="/games/search" hx-get="/games/search" hx-target="body" hx-push-url="true">Поиск игр</a></li>
+					<li><a href="/lobby/create" hx-get="/lobby/create" hx-target="body" hx-push-url="true">Создать игру</a></li>
+					{% if user %} <!-- Проверка наличия пользователя -->
+					<li><a href="/profile/games" hx-get="/profile/games" hx-target="body" hx-push-url="true">Мои игры</a></li>
+					{% endif %}
+				</ul>
+			</li>
+			
+			<!-- Справочники доступны всем -->
+			<li class="nav-item"><a href="/bestiary" hx-get="/bestiary" hx-target="body" hx-push-url="true">Бестиарий</a></li>
+			<li class="nav-item"><a href="/spells" hx-get="/spells" hx-target="body" hx-push-url="true">Заклинания</a></li>
+			<li class="nav-item"><a href="/equipment" hx-get="/equipment" hx-target="body" hx-push-url="true">Снаряжение</a></li>
+			
+			<!-- Блок "Карты" -->
+			<li class="nav-item dropdown">
+				<button type="button" class="dropdown-toggle">Карты</button>
+				<ul class="dropdown-menu">
+					<li><a href="/maps/generator" hx-get="/maps/generator" hx-target="body" hx-push-url="true">Генератор карт</a></li>
+					<li><a href="/maps/library" hx-get="/maps/library" hx-target="body" hx-push-url="true">Библиотека карт</a></li>
+				</ul>
+			</li>
+			
+			<!-- Инструменты Мастера -->
+			{% if user and user.role in ['master', 'admin', 'editor'] %}
+			<li class="nav-item"><a href="/tools/dice" hx-get="/tools/dice" hx-target="body" hx-push-url="true">Кубики</a></li>
+			{% endif %}
+		</ul>
+		
+		<!-- Правый блок (Профиль) -->
+		<div class="nav-user">
+			{% if user %}
+			<span>{{ user.nickname }}</span>
+			<a href="/profile" hx-get="/profile" hx-target="body" hx-push-url="true" class="avatar-sm">
+				<img src="{{ user.avatar_url or '/static/image/default-avatar.jpg' }}" alt="Аватар">
+			</a>
+			<form action="/auth/logout" method="post" hx-post="/auth/logout" hx-target="body" hx-push-url="true">
+				<button type="submit" class="btn btn-danger btn-sm">Выйти</button>
+			</form>
+			{% else %}
+			<!-- Кнопки для неавторизованных пользователей -->
+			<a href="/login" hx-get="/login" hx-target="body" hx-push-url="true" class="btn btn-outline-primary btn-sm me-2">Войти</a>
+			<a href="/register" hx-get="/register" hx-target="body" hx-push-url="true" class="btn btn-success btn-sm">Регистрация</a>
+			{% endif %}
+		</div>
+	</div>
+</nav>

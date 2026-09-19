@@ -1,6 +1,6 @@
 # Config/Config.py
 
-from Config.imports import (BaseSettings, SettingsConfigDict, os)
+from Config.imports import (BaseSettings, SettingsConfigDict, os, Path)
 
 
 # --- НАСТРОЙКИ ТАЙМЕРА ---
@@ -31,6 +31,12 @@ class WebAppSettings(BaseSettings):
 	PROJECT_NAME: str = "WebDND_Site API"
 	DESCRIPTION: str = "Веб-API для управления сайтом по ДНД"
 	VERSION: str = "1.0.0"
+
+	_base_dir: Path = Path(__file__).resolve().parent.parent
+
+	@property
+	def BASE_DIR(self) -> str:
+		return self._base_dir.as_posix()
 
 	# НОВЫЕ НАСТРОЙКИ ДЛЯ POSTGRESQL
 	POSTGRES_USER: str  # Логин
@@ -72,3 +78,4 @@ class WebAppSettings(BaseSettings):
 
 # Создаем глобальный объект настроек, который можно импортировать в других файлах
 settings = WebAppSettings()
+

@@ -1,10 +1,11 @@
-
+# main.py
 
 from Config.Config import settings
 from backend.app.database.database import engine, Base
 import backend.app.Routers.api as api_module
 import backend.app.Routers.web as web_module
 import backend.app.Routers.profile as profile_module
+from Config.logger import setup_logging
 from Config.imports import (FastAPI, asynccontextmanager, CORSMiddleware, Path, StaticFiles, Jinja2Templates,
 	base64, RequestValidationError, Request, asyncio, JSONResponse, HTMLResponse, uvicorn,
 	APIRoute, os, command, Config)
@@ -13,9 +14,16 @@ import backend.app.database._models
 
 
 # --- ПУТЬ К КОНФИГУРАЦИИ ALEMBIC ---
-BASE_DIR = Path(__file__).resolve().parent
-ALEMBIC_CONFIG_PATH = str(BASE_DIR / "alembic.ini")
-SCRIPT_LOCATION = str(BASE_DIR / "backend" / "db_migrations")
+BASE_DIR = settings.BASE_DIR
+ALEMBIC_CONFIG_PATH = str(BASE_DIR+"/alembic.ini")
+SCRIPT_LOCATION = str(BASE_DIR+"/backend"+"/db_migrations")
+
+# Инициализируем глобальный логгер ДО создания объекта app
+log = setup_logging(app_name="WebDND_Site")
+
+log.info("=====================================")
+log.info("===   ЗАПУСК ПРИЛОЖЕНИЯ WEB-DND   ===")
+log.info("=====================================")
 
 async def apply_migrations():
 	"""
@@ -25,7 +33,7 @@ async def apply_migrations():
 	"""
 	def _run_sync_migrations():
 		try:
-			print("[STARTUP] Применение миграций...")
+			log.info("[STARTUP] Запущена миграция таблиц БД...")
 
 			cfg = Config(ALEMBIC_CONFIG_PATH)
 			cfg.set_main_option("script_location", SCRIPT_LOCATION)
@@ -35,9 +43,9 @@ async def apply_migrations():
 			cfg.set_main_option("sqlalchemy.url", sync_url)
 
 			command.upgrade(cfg, "head")
-			print("[STARTUP] ✅ Миграции БД успешно применены")
+			log.info("[STARTUP] ✅ Миграции БД успешно применены")
 		except Exception as e:
-			print(f"[STARTUP][ERROR] Ошибка применения миграций: {e}")
+			log.critical(f"[STARTUP][ERROR] Ошибка применения миграций: {e}", exc_info=True)
 			raise RuntimeError("База данных недоступна или миграции некорректны.") from e
 
 	loop = asyncio.get_running_loop()
@@ -45,19 +53,23 @@ async def apply_migrations():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-	await apply_migrations()
+	try:
+		await apply_migrations()
 
-	async with engine.begin() as conn:
-		print("[STARTUP] Запущено создание таблиц БД")
-		await conn.run_sync(Base.metadata.create_all)
+		async with engine.begin() as conn:
+			log.info("[STARTUP] Запущено создание таблиц БД...")
+			await conn.run_sync(Base.metadata.create_all)
 
-	app.state.settings = settings
-	print("[STARTUP] ✅ Таблицы БД успешно созданы")
+		app.state.settings = settings
+		log.info("[STARTUP] ✅ Таблицы БД успешно созданы")
 
-	yield
-
-	await engine.dispose()
-	print("[SHUTDOWN] Соединения с БД закрыты.")
+		yield
+	except Exception as e:
+		log.critical(f"[FATAL STARTUP ERROR] {e}", exc_info=True)
+		raise RuntimeError("Критическая ошибка при старте приложения.") from e
+	finally:
+		await engine.dispose()
+		log.info("[SHUTDOWN] Соединения с БД закрыты.")
 
 app = FastAPI(
 	title=settings.PROJECT_NAME,
@@ -108,8 +120,8 @@ app.add_middleware(
 )
 
 # --- СТАТИЧЕСКИЕ ФАЙЛЫ И ШАБЛОНЫ ---
-app.mount("/frontend/static", StaticFiles(directory=str(BASE_DIR / "frontend" / "static")), name="static")
-templates = Jinja2Templates(directory=str(BASE_DIR / "frontend" / "templates"))
+app.mount("/frontend/static", StaticFiles(directory=str(BASE_DIR+"/frontend"+"/static")), name="static")
+templates = Jinja2Templates(directory=str(BASE_DIR+"/frontend"+"/templates"))
 env = templates.env
 
 def static_url(filename: str) -> str:
@@ -118,6 +130,7 @@ def static_url(filename: str) -> str:
 def b64encode_filter(value):
 	return base64.b64encode(value).decode('utf-8')
 
+env.filters['static_url'] = static_url
 env.globals["static_url"] = static_url
 env.filters['b64encode'] = b64encode_filter
 
@@ -146,7 +159,7 @@ app.state.project_root = BASE_DIR
 # --- ПОДКЛЮЧЕНИЕ РОУТЕРОВ ---
 app.include_router(api_module.router)
 app.include_router(web_module.router)
-#app.include_router(profile_module.router)
+app.include_router(profile_module.router)
 
 # Применяем фиксы форм ко всем API-роутам
 for route in app.router.routes:

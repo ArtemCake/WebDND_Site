@@ -11,11 +11,15 @@ from backend.app.database.models.core.user import User
 from backend.app.database.models.core.auth import UserRole
 from backend.app.enums.enums_BD import SystemRole
 from backend.app.Services import security_service, user_service, mail_service
+import logging
+
 
 router = APIRouter(
 	prefix="/auth",
 	tags=["auth"],
 )
+
+log = logging.getLogger("WebDND_Site")
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
@@ -58,21 +62,25 @@ async def register_user_action(
 		}
 
 	except HTTPException as e:
-		# Прокидываем ошибки FastAPI как текст для верстки
+	# Логируем попытку несанкционированного доступа или ошибку бизнес-логики
+		log.warning(f"HTTP Error in register_user_action: {e.status_code} - {e.detail}")
 		return {"error": e.detail}
 	except Exception as e:
-		print(f"[REGISTRATION ERROR]: {e}")
-		return {"error": "Непредвиденная ошибка сервера."}
+		# Критическая ошибка со стектрейсом (exc_info=True)
+		log.error(f"Critical server error during user registration for email '{email}'", exc_info=True)
+		return {"error": "Непредвиденная ошибка сервера. Администраторы уведомлены."}
 
 @router.post("/login", response_model=dict)
 async def login_for_access_token(
-		form_data: OAuth2PasswordRequestForm = Depends(),
+		email: str = Form(...),
+		password: str = Form(...),
 		session: AsyncSession = Depends(get_async_session)
 ):
 	"""
 	Стандартный вход по паролю. Возвращает JWT-токены.
 	"""
-	user = await user_service.authenticate_user(session, form_data.username, form_data.password)
+	# Теперь мы передаем сразу email
+	user = await user_service.authenticate_user(session, email, password)
 	if not user or not user.is_active:
 		raise HTTPException(
 			status_code=status.HTTP_401_UNAUTHORIZED,
