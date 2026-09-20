@@ -1,23 +1,35 @@
 /* frontend/static/css/modules/base/_variables.scss */
 
+// Базовые цвета фона (строго тёмные, отсутствие светлых областей)
 :root {
-  --bg-main: #0f0f14;
-  --bg-card: #1a1a24;
-  --text-primary: #e6eaee;
-  --accent-magic: #a855f7;
-  --accent-dmg: #ef4444;
-  --border-subtle: #2d2d3c;
-  --radius-xl: 16px;
-  --font-family-base: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --color-bg-page: #0a0b10; // Угольный фон всей страницы
+    --color-bg-panel: #12131a; // Фон карточек и модалок
+    --color-bg-input: #1a1b24;
+    --color-bg-button: #252631;
 
---color-error-text-light: #b91c1c; // Luminance ~18% (высокая читаемость на белом)
- --color-error-bg-light: #fef2f2;
- --color-border-error-light: #dc2626;
+    // Текст (высокая читаемость на темном фоне)
+    --color-text-primary: #f5f5f5; // Основной текст
+    --color-text-secondary: #c7c8d1; // Второстепенный/плейсхолдеры
+    --color-text-accent: #ffd700; // Золотой для активных элементов
+    --color-text-error: #ef4444; // Красный для ошибок (из предыдущего задания)
 
-/* Автоматическая адаптация под dark-mode */
-    @media (prefers-color-scheme: dark) {
-        --color-error-text-dark: #fecaca; // Светлый красный (Luminance ~87%)
-        --color-error-bg-dark: #450a0a;   // Темно-красный фон для отделения от черного UI
-        --color-border-error-dark: #fca5a5;
-    }
+    // Границы и разделители
+    --color-border-subtle: #2a2b37;
+    --color-border-medium: #3a3b49;
+    --color-border-accent: #ffd700;
+}
+
+.theme-light {
+    --color-bg-page: #ffffff;
+    --color-bg-panel: #f8f9fa;
+    --color-text-primary: #1a1a1a;
+    --color-border-accent: #ffd700;
+}
+
+.theme-high-contrast {
+    --color-bg-page: #000000;
+    --color-bg-panel: #000000;
+    --color-text-primary: #ffffff;
+    --color-text-accent: #00ffff; // Циановый вместо золотого
+    --color-border-accent: #00ffff;
 }

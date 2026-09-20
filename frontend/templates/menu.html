@@ -81,5 +81,15 @@
 			<a href="/register" hx-get="/register" hx-target="body" hx-push-url="true" class="btn btn-success btn-sm">Регистрация</a>
 			{% endif %}
 		</div>
+		<div class="theme-switcher">
+			<label for="theme-select">Тема:</label>
+			<select id="theme-select">
+				<option value="dark-fantasy">Тёмная фэнтези</option>
+				<option value="light">Светлая</option>
+				<option value="high-contrast">Контрастная</option>
+			</select>
+			
+			<input type="color" id="accent-picker" value="#ffd700">
+		</div>
 	</div>
 </nav>
