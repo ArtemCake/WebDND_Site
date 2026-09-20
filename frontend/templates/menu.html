@@ -5,24 +5,27 @@
 		<a href="/" class="nav-brand">WebDND</a>
 		
 		<ul class="nav-list">
-			<!-- Блок "Игровой процесс" -->
+			<!-- Блок "Игровой процесс" (Доступен всем авторизованным) -->
+			{% if user %}
 			<li class="nav-item dropdown">
 				<button type="button" class="dropdown-toggle">Игры</button>
 				<ul class="dropdown-menu">
 					<li><a href="/games/search" hx-get="/games/search" hx-target="body" hx-push-url="true">Поиск игр</a></li>
 					<li><a href="/lobby/create" hx-get="/lobby/create" hx-target="body" hx-push-url="true">Создать игру</a></li>
-					{% if user %} <!-- Проверка наличия пользователя -->
 					<li><a href="/profile/games" hx-get="/profile/games" hx-target="body" hx-push-url="true">Мои игры</a></li>
-					{% endif %}
 				</ul>
 			</li>
+			{% endif %}
 			
-			<!-- Справочники доступны всем -->
+			<!-- Справочники контента (Доступны ВСЕМ пользователям, включая гостей) -->
 			<li class="nav-item"><a href="/bestiary" hx-get="/bestiary" hx-target="body" hx-push-url="true">Бестиарий</a></li>
 			<li class="nav-item"><a href="/spells" hx-get="/spells" hx-target="body" hx-push-url="true">Заклинания</a></li>
 			<li class="nav-item"><a href="/equipment" hx-get="/equipment" hx-target="body" hx-push-url="true">Снаряжение</a></li>
+			<li class="nav-item"><a href="/races" hx-get="/races" hx-target="body" hx-push-url="true">Расы</a></li>
+			<li class="nav-item"><a href="/classes" hx-get="/classes" hx-target="body" hx-push-url="true">Классы</a></li>
 			
-			<!-- Блок "Карты" -->
+			<!-- Блок "Карты" (Доступен всем авторизованным) -->
+			{% if user %}
 			<li class="nav-item dropdown">
 				<button type="button" class="dropdown-toggle">Карты</button>
 				<ul class="dropdown-menu">
@@ -30,21 +33,46 @@
 					<li><a href="/maps/library" hx-get="/maps/library" hx-target="body" hx-push-url="true">Библиотека карт</a></li>
 				</ul>
 			</li>
+			{% endif %}
 			
-			<!-- Инструменты Мастера -->
-			{% if user and user.role in ['master', 'admin', 'editor'] %}
-			<li class="nav-item"><a href="/tools/dice" hx-get="/tools/dice" hx-target="body" hx-push-url="true">Кубики</a></li>
+			<!-- Инструменты Мастера (Только Master и Admin) -->
+			{#
+			ВАЖНО: Исключаем role='editor'.
+			В соответствии с ТЗ уровень редактора = 2, мастера = 1.
+			Но функционално редактор работает со справочниками, а мастер управляет игрой.
+			#}
+			{% if user and user.role in ['master', 'admin'] %}
+			<li class="nav-item dropdown">
+				<button type="button" class="dropdown-toggle">Инструменты DM</button>
+				<ul class="dropdown-menu">
+					<li><a href="/tools/dice" hx-get="/tools/dice" hx-target="body" hx-push-url="true">Кубики</a></li>
+					<li><a href="/tools/initiative" hx-get="/tools/initiative" hx-target="body" hx-push-url="true">Инициатива</a></li>
+					<li><a href="/campaigns" hx-get="/campaigns" hx-target="body" hx-push-url="true">Кампании</a></li>
+				</ul>
+			</li>
+			{% endif %}
+			
+			<!-- Панель Администратора / Редактора (Уровень доступа >= 2) -->
+			{% if user and user.role in ['editor', 'admin'] %}
+			<li class="nav-item dropdown">
+				<button type="button" class="dropdown-toggle">Управление контентом</button>
+				<ul class="dropdown-menu">
+					<li><a href="/admin/content" hx-get="/admin/content" hx-target="body" hx-push-url="true">Справочники</a></li>
+					<li><a href="/admin/users" hx-get="/admin/users" hx-target="body" hx-push-url="true">Пользователи</a></li>
+					<li><a href="/admin/reports" hx-get="/admin/reports" hx-target="body" hx-push-url="true">Жалобы</a></li>
+				</ul>
+			</li>
 			{% endif %}
 		</ul>
 		
 		<!-- Правый блок (Профиль) -->
 		<div class="nav-user">
 			{% if user %}
-			<span>{{ user.nickname }}</span>
+			<span class="nav-nickname">{{ user.nickname }}</span>
 			<a href="/profile" hx-get="/profile" hx-target="body" hx-push-url="true" class="avatar-sm">
-				<img src="{{ user.avatar_url or '/static/image/default-avatar.jpg' }}" alt="Аватар">
+				<img alt="Аватар" id="01a0bdfd-6cb7-7c19-a1d1-289613c56452">
 			</a>
-			<form action="/auth/logout" method="post" hx-post="/auth/logout" hx-target="body" hx-push-url="true">
+			<form action="/auth/logout" method="post" hx-post="/auth/logout" hx-target="body" hx-push-url="true" hx-swap="outerHTML">
 				<button type="submit" class="btn btn-danger btn-sm">Выйти</button>
 			</form>
 			{% else %}

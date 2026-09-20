@@ -1,9 +1,11 @@
-<!--  frontend/templates/login.html -->
-
+<!-- frontend/templates/login.html -->
 {% extends "base.html" %}
 {% block title %}Вход{% endblock %}
 {% block content %}
 <h2>Вход в аккаунт</h2>
+
+<!-- ВАЖНО: У сообщения должен быть именно такой ID -->
+<div id="message-box"></div>
 
 <form hx-post="/auth/login"
       hx-target="#message-box"
@@ -11,11 +13,16 @@
       hx-trigger="submit"
       hx-validate="true"
       method="post">
+	
 	<input type="email" name="email" placeholder="Email" required autocomplete="username">
 	<input type="password" name="password" placeholder="Пароль" required autocomplete="current-password">
+	
+	<!-- Кнопка должна иметь тип submit -->
 	<button type="submit">Войти</button>
 </form>
 
-<div id="message-box"></div>
-<p><a href="/register" hx-get="/register" hx-target="body" hx-push-url="true">Нет аккаунта? Регистрация</a></p>
+<p><a href="/register"
+      hx-get="/register"
+      hx-target="body"
+      hx-push-url="true">Нет аккаунта? Регистрация</a></p>
 {% endblock %}

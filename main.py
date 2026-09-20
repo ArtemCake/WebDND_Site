@@ -139,7 +139,8 @@ templates = Jinja2Templates(directory=str(templates_dir))
 env = templates.env
 
 def static_url(filename: str) -> str:
-	return f"{static_dir}/{filename.lstrip('/')}"
+	file_dir = str("/frontend"+"/static/"+filename.lstrip('/'))
+	return f"{file_dir}"
 
 def b64encode_filter(value):
 	return base64.b64encode(value).decode('utf-8')

@@ -66,8 +66,10 @@ class WebAppSettings(BaseSettings):
 	# --- Настройки CORS (для фронтенда) ---
 	@property
 	def BACKEND_CORS_ORIGINS(self) -> list[str]:
-		"""Возвращает список разрешенных origin для CORS."""
-		return [item.strip() for item in os.environ.get("BACKEND_CORS_ORIGINS", "").split(',')]
+		raw = os.getenv("BACKEND_CORS_ORIGINS", "")
+		if not raw:
+			return []
+		return [url.strip() for url in raw.split(",") if url.strip()]
 
 	model_config = SettingsConfigDict(
 		env_file="data/.env",
@@ -76,5 +78,13 @@ class WebAppSettings(BaseSettings):
 		extra="ignore",  # Игнорирует лишние переменные в .env
 	)
 
-# Создаем глобальный объект настроек, который можно импортировать в других файлах
-settings = WebAppSettings()
+
+# Глобальный объект
+try:
+	settings = WebAppSettings()
+except Exception as e:
+	print(f"[CONFIG FATAL] Cannot load settings: {e}")
+	# Создаем пустой объект-заглушку, чтобы main.py не упал при импорте
+	class DummySettings:
+		pass
+	settings = DummySettings()

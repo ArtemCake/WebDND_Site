@@ -5,20 +5,16 @@
 <head>
 	<meta charset="UTF-8">
 	<title>{% block title %}WebDND{% endblock %}</title>
-	
-	<!-- HTMX для асинхронной подгрузки страниц без перезагрузки -->
 	<script src="https://unpkg.com/htmx.org@2.0.4"></script>
-	
-	<!-- Стили проекта -->
 	<link rel="stylesheet" href="{{ static_url('css/style.min.css') }}">
 </head>
 <body class="auth-body">
 
-<!-- ПОДКЛЮЧЕНИЕ МЕНЮ -->
+<!-- Подключение меню навигации -->
 {% include "menu.html" %}
 
-<!-- Контейнер для вывода сообщений системы (ошибки входа, успех регистрации) -->
-{% with messages = get_flashed_messages(with_categories=true) %}
+<!-- БЛОК СООБЩЕНИЙ (ИСПРАВЛЕНО ДЛЯ FASTAPI) -->
+{% set messages = request.session.pop('_flashes', []) if '_flashes' in request.session else [] %}
 {% if messages %}
 <div id="global-message-box">
 	{% for category, message in messages %}
@@ -26,14 +22,12 @@
 	{% endfor %}
 </div>
 {% endif %}
-{% endwith %}
 
-<!-- Основной контент страницы -->
+<!-- Центральный контейнер формы -->
 <div class="auth-container page-content">
 	{% block content %}{% endblock %}
 </div>
 
-<!-- JS скрипты -->
 <script type="module" src="{{ static_url('js/main.min.js') }}"></script>
 </body>
 </html>

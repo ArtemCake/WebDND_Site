@@ -9,14 +9,10 @@ from Config.imports import (JSONResponse, HTMLResponse, APIRouter, Depends, HTTP
                             AsyncSession, UUID, Form, Path, Jinja2Templates, asyncio)
 
 
-router = APIRouter(
-	prefix="/profile",
+router = APIRouter(	prefix="/profile",
 	tags=["profile"],
-	dependencies=[Depends(oauth2_scheme)]
-)
-# Определяем путь к папке с шаблонами относительно корня проекта
-templates_dir = Path(settings.BASE_DIR+"/frontend"+"/templates")
-templates = Jinja2Templates(directory=str(templates_dir))
+	dependencies=[Depends(oauth2_scheme)])
+
 env_lock = asyncio.Lock()
 
 # --- СХЕМЫ ЗАПРОСОВ И ОТВЕТОВ ---
@@ -50,6 +46,7 @@ async def get_profile_page(request: Request, user: User = Depends(get_current_us
 		"user": user,
 		"project_name": settings.PROJECT_NAME
 	}
+	templates = request.app.state.templates
 	return templates.TemplateResponse(request, "profile.html", context)
 
 @router.get("/data", response_model=ProfileResponseDTO, operation_id="getCurrentUserProfile")

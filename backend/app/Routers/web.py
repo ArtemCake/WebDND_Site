@@ -10,10 +10,6 @@ router = APIRouter()
 
 secret_key = os.environ.get("SECRET_KEY", settings.SECRET_KEY)
 serializer = URLSafeTimedSerializer(secret_key)
-
-# Корректное определение пути относительно корня проекта
-templates_dir = Path(settings.BASE_DIR+"/frontend"+"/templates")
-templates = Jinja2Templates(directory=str(templates_dir))
 env_lock = asyncio.Lock()
 
 @router.get("/", response_class=HTMLResponse, name="main_page_get")
@@ -21,6 +17,7 @@ async def get_main_page(request: Request):
 	"""
 	Главная заглушка сайта.
 	"""
+	templates = request.app.state.templates
 
 	try:
 		return templates.TemplateResponse(request=request,name="index.html")
@@ -50,7 +47,7 @@ async def get_login_page(request: Request):
 	context = {
 		"project_name": settings.PROJECT_NAME
 	}
-
+	templates = request.app.state.templates
 	try:
 		return templates.TemplateResponse( request=request, name="login.html", context=context)
 	except TemplateNotFound as e:
@@ -64,7 +61,7 @@ async def get_register_page(request: Request):
 	"""
 	if request.session.get("user_id"):
 		return RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
-
+	templates = request.app.state.templates
 	try:
 		return templates.TemplateResponse(request=request,  name="register.html")
 	except TemplateNotFound:
@@ -85,6 +82,7 @@ async def get_dashboard_page(request: Request):
 	}
 
 	async with env_lock:
+		templates = request.app.state.templates
 		try:
 			return templates.TemplateResponse(request=request, name="dashboard.html", context=context)
 		except TemplateNotFound:
