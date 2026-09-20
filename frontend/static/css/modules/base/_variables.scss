@@ -9,4 +9,15 @@
   --border-subtle: #2d2d3c;
   --radius-xl: 16px;
   --font-family-base: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+
+--color-error-text-light: #b91c1c; // Luminance ~18% (высокая читаемость на белом)
+ --color-error-bg-light: #fef2f2;
+ --color-border-error-light: #dc2626;
+
+/* Автоматическая адаптация под dark-mode */
+    @media (prefers-color-scheme: dark) {
+        --color-error-text-dark: #fecaca; // Светлый красный (Luminance ~87%)
+        --color-error-bg-dark: #450a0a;   // Темно-красный фон для отделения от черного UI
+        --color-border-error-dark: #fca5a5;
+    }
 }

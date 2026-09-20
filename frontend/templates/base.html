@@ -7,12 +7,13 @@
 	<title>{% block title %}WebDND{% endblock %}</title>
 	<script src="https://unpkg.com/htmx.org@2.0.4"></script>
 	<link rel="stylesheet" href="{{ static_url('css/style.min.css') }}">
-	<link rel="icon" href="{{ static_url('images/favicon.ico') }}" type="image/x-icon">
+	<link rel="icon" href="{{ static_url('image/favicon.ico') }}" type="image/x-icon">
 </head>
+<header class="site-header">
+	<!-- Подключение меню навигации -->
+	{% include "menu.html" %}
+</header>
 <body class="auth-body">
-
-<!-- Подключение меню навигации -->
-{% include "menu.html" %}
 
 <!-- БЛОК СООБЩЕНИЙ (ИСПРАВЛЕНО ДЛЯ FASTAPI) -->
 {% set messages = request.session.pop('_flashes', []) if '_flashes' in request.session else [] %}

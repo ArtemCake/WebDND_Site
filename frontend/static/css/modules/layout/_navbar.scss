@@ -90,3 +90,28 @@
         padding: 0.75rem 0;
     }
 }
+
+.navbar-main {
+    // Позиционирование поверх основного контента
+    position: sticky;
+    top: 0;
+
+    // Обеспечение видимости над другими слоями
+    z-index: 1000;
+
+    // Ширина во весь экран
+    width: 100%;
+
+    // Плавная тень при появлении скролла (опционально)
+    transition: box-shadow 0.3s ease-in-out;
+
+    &--scrolled {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+}
+
+// Фон должен перекрывать контент под собой
+.site-header {
+    background-color: var(--color-bg-panel); // Использование переменных из _variables.scss
+    backdrop-filter: saturate(180%) blur(10px); // Эффект матового стекла (актуально для 2026 года)
+}
