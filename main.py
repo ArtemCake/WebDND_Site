@@ -1,52 +1,65 @@
 # main.py
 
 from Config.Config import settings
-from backend.app.database.database import engine, Base
+from backend.app.database.database import engine
 import backend.app.Routers.api as api_module
 import backend.app.Routers.web as web_module
 import backend.app.Routers.profile as profile_module
 from Config.logger import setup_logging
-from Config.imports import (FastAPI, asynccontextmanager, CORSMiddleware, Path, StaticFiles, Jinja2Templates,
-	base64, RequestValidationError, Request, asyncio, JSONResponse, HTMLResponse, uvicorn,
-	APIRoute, os, command, Config)
-from starlette.middleware.sessions import SessionMiddleware
-import backend.app.database._models
+from Config.imports import (FastAPI, asynccontextmanager, CORSMiddleware, Path, StaticFiles, Jinja2Templates, SessionMiddleware,
+                            base64, RequestValidationError, Request, asyncio, JSONResponse, HTMLResponse, uvicorn, os, command, Config)
 
 
 # --- ПУТЬ К КОНФИГУРАЦИИ ALEMBIC ---
-BASE_DIR = settings.BASE_DIR
-ALEMBIC_CONFIG_PATH = str(BASE_DIR+"/alembic.ini")
-SCRIPT_LOCATION = str(BASE_DIR+"/backend"+"/db_migrations")
+BASE_DIR = Path(settings.BASE_DIR)
+ALEMBIC_CONFIG_PATH = str(BASE_DIR / "alembic.ini")
+SCRIPT_LOCATION = str(BASE_DIR / "backend" / "db_migrations")
 
-# Инициализируем глобальный логгер ДО создания объекта app
+# --- ИНИЦИАЛИЗАЦИЯ ЛОГГЕРА ---
 log = setup_logging(app_name="WebDND_Site")
-
-log.info("=====================================")
-log.info("===   ЗАПУСК ПРИЛОЖЕНИЯ WEB-DND   ===")
-log.info("=====================================")
 
 async def apply_migrations():
 	"""
 	Применяет миграции БД перед запуском сервера.
-	ВАЖНО: Выполняется вне цикла событий FastAPI через run_in_executor,
-	чтобы не блокировать асинхронный старт из-за синхронного Alembic.
 	"""
 	def _run_sync_migrations():
 		try:
-			log.info("[STARTUP] Запущена миграция таблиц БД...")
+			log.info("[STARTUP][MIGRATIONS] Загрузка конфигурации Alembic...")
+
+			if not Path(ALEMBIC_CONFIG_PATH).exists():
+				raise FileNotFoundError(f"Файл alembic.ini не найден: {ALEMBIC_CONFIG_PATH}")
+			if not Path(SCRIPT_LOCATION).exists():
+				raise FileNotFoundError(f"Папка скриптов не найдена: {SCRIPT_LOCATION}")
+
+			# Проверяем, есть ли хотя бы один файл миграции
+			versions_dir = Path(SCRIPT_LOCATION) / "versions"
+			if not versions_dir.exists() or not any(versions_dir.glob("*.py")):
+				log.info("[STARTUP][MIGRATIONS] Папка versions пуста — миграции пропускаются.")
+				return
 
 			cfg = Config(ALEMBIC_CONFIG_PATH)
 			cfg.set_main_option("script_location", SCRIPT_LOCATION)
 
-			# Подставляем URL без драйвера asyncpg для совместимости с Alembic
-			sync_url = settings.DATABASE_URL.replace("postgresql+asyncpg", "postgresql")
+			# Формируем URL для psycopg2 (синхронный режим)
+			sync_url = str(settings.DATABASE_URL).replace("postgresql+asyncpg", "postgresql")
 			cfg.set_main_option("sqlalchemy.url", sync_url)
 
+			log.info(f"[STARTUP][MIGRATIONS] Итоговый URL для Alembic: {sync_url}")
+			log.info("[STARTUP][MIGRATIONS] Выполнение command.upgrade(head)...")
+
 			command.upgrade(cfg, "head")
-			log.info("[STARTUP] ✅ Миграции БД успешно применены")
+			log.info("[STARTUP][MIGRATIONS] ✅ Миграции успешно применены.")
+
 		except Exception as e:
-			log.critical(f"[STARTUP][ERROR] Ошибка применения миграций: {e}", exc_info=True)
-			raise RuntimeError("База данных недоступна или миграции некорректны.") from e
+			log.critical(
+				f"[STARTUP][FATAL MIGRATION ERROR] {type(e).__name__}: {e}",
+				exc_info=True
+			)
+			raise
+
+	# Освобождаем async-пул перед синхронной миграцией,
+	# иначе asyncpg держит соединения и блокирует DDL
+	await engine.dispose()
 
 	loop = asyncio.get_running_loop()
 	await loop.run_in_executor(None, _run_sync_migrations)
@@ -54,14 +67,16 @@ async def apply_migrations():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
 	try:
+		log.info("[STARTUP] Начало инициализации...")
+
+		if not os.path.exists(ALEMBIC_CONFIG_PATH):
+			log.critical(f"[FATAL] Файл alembic.ini не найден: {ALEMBIC_CONFIG_PATH}")
+			raise FileNotFoundError("Нет конфигурации Alembic")
+
 		await apply_migrations()
 
-		async with engine.begin() as conn:
-			log.info("[STARTUP] Запущено создание таблиц БД...")
-			await conn.run_sync(Base.metadata.create_all)
-
 		app.state.settings = settings
-		log.info("[STARTUP] ✅ Таблицы БД успешно созданы")
+		log.info("[STARTUP] Инициализация завершена")
 
 		yield
 	except Exception as e:
@@ -78,9 +93,25 @@ app = FastAPI(
 	lifespan=lifespan,
 )
 
-# --- MIDDLEWARE (ВАЖЕН ПОРЯДОК) ---
+# 1. CORS (внутренний — обрабатывает preflight)
+app.add_middleware(
+	CORSMiddleware,
+	allow_origins=settings.BACKEND_CORS_ORIGINS,
+	allow_credentials=True,
+	allow_methods=["*"],
+	allow_headers=["*"]
+)
 
-# 1. Proxy Header (для правильного определения HTTPS за прокси)
+# 2. Session (должен видеть правильный scheme от ProxyHeader для secure-куки)
+app.add_middleware(
+	SessionMiddleware,
+	secret_key=settings.SECRET_KEY,
+	session_cookie="webdnd_session",
+	max_age=604800,  # 7 дней
+	same_site="lax"
+)
+
+# 3. ProxyHeader (внешний — обновляет scheme до того, как Session проверит is_secure)
 class ProxyHeaderMiddleware:
 	def __init__(self, app):
 		self.app = app
@@ -100,32 +131,15 @@ class ProxyHeaderMiddleware:
 
 app.add_middleware(ProxyHeaderMiddleware)
 
-# 2. Sessions (ДОЛЖЕН быть ДО CORS и роутов!)
-# Решает ошибку 'SessionMiddleware must be installed to access request.session'
-app.add_middleware(
-	SessionMiddleware,
-	secret_key=settings.SECRET_KEY,
-	session_cookie="webdnd_session",
-	max_age=604800, # 7 дней в секундах
-	same_site="lax"
-)
-
-# 3. CORS (должен быть строго до регистрации роутеров)
-app.add_middleware(
-	CORSMiddleware,
-	allow_origins=settings.BACKEND_CORS_ORIGINS,
-	allow_credentials=True,
-	allow_methods=["*"],
-	allow_headers=["*"]
-)
-
 # --- СТАТИЧЕСКИЕ ФАЙЛЫ И ШАБЛОНЫ ---
-app.mount("/frontend/static", StaticFiles(directory=str(BASE_DIR+"/frontend"+"/static")), name="static")
-templates = Jinja2Templates(directory=str(BASE_DIR+"/frontend"+"/templates"))
+static_dir = BASE_DIR / "frontend" / "static"
+app.mount("/frontend/static", StaticFiles(directory=str(static_dir)), name="static")
+templates_dir = BASE_DIR / "frontend" / "templates"
+templates = Jinja2Templates(directory=str(templates_dir))
 env = templates.env
 
 def static_url(filename: str) -> str:
-	return f"/frontend/static/{filename.lstrip('/')}"
+	return f"{static_dir}/{filename.lstrip('/')}"
 
 def b64encode_filter(value):
 	return base64.b64encode(value).decode('utf-8')
@@ -141,15 +155,9 @@ async def validation_exception_handler(request: Request, exc):
 
 @app.exception_handler(404)
 async def not_found_exception_handler(request: Request, exc):
+	if request.url.path.startswith("/api"):
+		return JSONResponse(status_code=404, content={"detail": "Not found"})
 	return HTMLResponse(content="<h1>404 - Страница не найдена</h1>", status_code=404)
-
-# --- ЗАВИСИМОСТЬ ДЛЯ MULTIPART FORM DATA (Fix HTMX + Pydantic) ---
-def use_multipart_form_dep(dep):
-	if hasattr(dep, "func"):
-		for index, param in enumerate(dep.func.__annotations__.get("dependant", {}).get("params", [])):
-			if param["type"] == "form" and param.get("default") is False:
-				param["__class__"] = "multipart_form"
-	return dep
 
 # --- ГЛОБАЛЬНЫЕ НАСТРОЙКИ ---
 os.environ['PROJECT_ROOT'] = str(BASE_DIR)
@@ -160,11 +168,6 @@ app.state.project_root = BASE_DIR
 app.include_router(api_module.router)
 app.include_router(web_module.router)
 app.include_router(profile_module.router)
-
-# Применяем фиксы форм ко всем API-роутам
-for route in app.router.routes:
-	if isinstance(route, APIRoute):
-		route.dependant = use_multipart_form_dep(route.dependant)
 
 if __name__ == "__main__":
 	uvicorn.run(

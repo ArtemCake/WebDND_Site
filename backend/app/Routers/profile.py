@@ -16,7 +16,7 @@ router = APIRouter(
 )
 # Определяем путь к папке с шаблонами относительно корня проекта
 templates_dir = Path(settings.BASE_DIR+"/frontend"+"/templates")
-templates = Jinja2Templates(directory=templates_dir)
+templates = Jinja2Templates(directory=str(templates_dir))
 env_lock = asyncio.Lock()
 
 # --- СХЕМЫ ЗАПРОСОВ И ОТВЕТОВ ---

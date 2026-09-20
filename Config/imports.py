@@ -18,6 +18,8 @@ import asyncio
 import logging
 import secrets
 import uvicorn
+import atexit
+from queue import Queue
 from sqlalchemy.future import select
 from enum import Enum, StrEnum
 from datetime import datetime, timedelta
@@ -25,6 +27,8 @@ from functools import lru_cache
 from typing import Any, Dict, List, Optional, Sequence, Type, Union
 from uuid import UUID, uuid4
 from contextlib import asynccontextmanager
+from starlette.middleware.sessions import SessionMiddleware
+from logging.handlers import TimedRotatingFileHandler, QueueHandler, QueueListener
 
 # --- База данных (SQLAlchemy) ---
 from sqlalchemy.ext.asyncio import (AsyncSession, async_sessionmaker, create_async_engine)

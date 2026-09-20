@@ -13,7 +13,7 @@ serializer = URLSafeTimedSerializer(secret_key)
 
 # Корректное определение пути относительно корня проекта
 templates_dir = Path(settings.BASE_DIR+"/frontend"+"/templates")
-templates = Jinja2Templates(directory=templates_dir)
+templates = Jinja2Templates(directory=str(templates_dir))
 env_lock = asyncio.Lock()
 
 @router.get("/", response_class=HTMLResponse, name="main_page_get")

@@ -78,4 +78,3 @@ class WebAppSettings(BaseSettings):
 
 # Создаем глобальный объект настроек, который можно импортировать в других файлах
 settings = WebAppSettings()
-

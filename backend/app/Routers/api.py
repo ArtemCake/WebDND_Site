@@ -1,17 +1,15 @@
 # backend/app/Routers/api.py
 
+from Config.logger import setup_logging
 from backend.app.Services.security_service import oauth2_scheme
 from backend.app.Services.user_service import soft_delete_user
 from Config.Config import settings
-from Config.imports import (JSONResponse, datetime, AsyncSession, OAuth2PasswordRequestForm, update,
-					APIRouter, Depends, HTTPException, status, timedelta, SecurityScopes, CryptContext,
+from Config.imports import (JSONResponse, datetime, AsyncSession, update,
+					APIRouter, Depends, HTTPException, status, timedelta, CryptContext,
 					Form, secrets)
 from backend.app.database.database import get_async_session
 from backend.app.database.models.core.user import User
-from backend.app.database.models.core.auth import UserRole
-from backend.app.enums.enums_BD import SystemRole
 from backend.app.Services import security_service, user_service, mail_service
-import logging
 
 
 router = APIRouter(
@@ -19,7 +17,7 @@ router = APIRouter(
 	tags=["auth"],
 )
 
-log = logging.getLogger("WebDND_Site")
+log = setup_logging(app_name="WebDND_Site")
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
