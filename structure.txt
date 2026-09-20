@@ -68,6 +68,7 @@
 │       │       │   ├── _reset.scss # Сброс стилей браузера
 │       │       │   └── _typography.scss # Шрифты, параграфы, заголовки
 │       │       ├── layout/
+│       │       │   ├── _navbar.scss
 │       │       │   └── _container.scss # Центральные контейнеры (.auth-container)
 │       │       ├── forms/
 │       │       │   └── _inputs.scss # Поля ввода, текстовые области

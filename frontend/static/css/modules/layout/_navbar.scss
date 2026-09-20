@@ -1,0 +1,92 @@
+/* frontend/static/css/modules/layout/_navbar.scss */
+
+.navbar {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 var(--gap-lg);
+    height: 64px;
+    background: var(--clr-bg-primary);
+    border-bottom: 1px solid var(--clr-border-light);
+    backdrop-filter: saturate(180%) blur(10px);
+    -webkit-backdrop-filter: saturate(180%) blur(10px);
+}
+
+.nav-brand {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--clr-text-primary);
+}
+
+.nav-menu {
+    display: flex;
+    gap: 2rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-menu a {
+    color: var(--clr-text-secondary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s ease;
+    position: relative;
+}
+
+.nav-menu a::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -4px;
+    width: 0;
+    height: 2px;
+    background: var(--clr-accent);
+    transition: width 0.2s ease;
+}
+
+.nav-menu a:hover {
+    color: var(--clr-text-primary);
+}
+.nav-menu a:hover::after {
+    width: 100%;
+}
+
+.nav-menu a.btn {
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    background: var(--clr-accent);
+    color: white !important;
+}
+.nav-menu a.btn:hover {
+    background: var(--clr-accent-hover);
+}
+
+/* Мобильное меню (бургер) */
+@media (max-width: 768px) {
+    .nav-menu {
+        position: fixed;
+        top: 64px;
+        right: 0;
+        background: var(--clr-bg-primary);
+        flex-direction: column;
+        gap: 0;
+        width: 250px;
+        height: calc(100vh - 64px);
+        padding: 1rem;
+        box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+        transform: translateX(100%);
+        transition: transform 0.3s ease-in-out;
+    }
+
+    .nav-menu.active {
+        transform: translateX(0);
+    }
+
+    .nav-menu a {
+        padding: 0.75rem 0;
+    }
+}

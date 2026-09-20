@@ -29,7 +29,7 @@ export default defineConfig({
         // Внедряем переменные во ВСЕ .scss файлы проекта автоматически.
         // Это решает проблему "Unknown variable" в модулях.
         additionalData: `
-          @use "@/static/css/modules/_variables" as *;
+          @use "@/static/css/modules/base/_variables" as *;
         `
       }
     }

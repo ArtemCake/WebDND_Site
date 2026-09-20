@@ -1,19 +1,23 @@
-/* --- frontend/static/css/style.scss --- */
+/* frontend/static/css/style.scss */
 
-/* --- ГЛАВНЫЙ CSS-ФАЙЛ ---
-Этот файл ничего не стилизует сам,
-он лишь подключает все смысловые модули.
-*/
+/* Порядок импорта критически важен для каскада */
+@use 'modules/base/_reset';
+@use 'modules/base/_typography';
+@use 'modules/base/_variables';
+@use 'modules/layout/_navbar';
 
-/* Порядок импорта важен! */
+@use 'modules/layout/_container';
+@use 'modules/forms/_inputs';
+@use 'modules/buttons/_buttons';
+@use 'modules/auth/_auth';
+@use 'modules/dashboard/_dashboard';
+@use 'modules/game-table/_map';
+@use 'modules/toast/_toast';
 
-@use "modules/_variables";
-@use "modules/base/_reset";
-@use "modules/base/_typography";
-@use "modules/layout/_container";
-@use "modules/forms/_inputs";
-@use "modules/buttons/_buttons";
-@use "modules/auth/_auth";
-@use "modules/dashboard/_dashboard";
-@use "modules/game-table/_map";
-@use "modules/toast/_toast";
+/* Утилитарные классы */
+.flex { display: flex; }
+.hidden { display: none; }
+.text-center { text-align: center; }
+.mt-1 { margin-top: 0.25rem; }
+.mt-2 { margin-top: 0.5rem; }
+.mb-1 { margin-bottom: 0.25rem; }
