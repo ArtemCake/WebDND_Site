@@ -1,5 +1,9 @@
 /* --- frontend/static/css/modules/base/_typography.scss --- */
 
+@function asset($path) {
+  @return '/frontend/static/' + $path;
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-weight: 600;
   line-height: 1.2;
@@ -14,4 +18,22 @@ h2 {
 p {
   margin-bottom: 1rem;
   color: var(--text-secondary);
+}
+
+@font-face {
+    font-family: 'FantasyHeader';
+    /* Поднимаемся до корня static и спускаемся в статик еще раз */
+    src: url(asset('fonts/Cinzel-Bold.woff2')) format('woff2'),
+         url(asset('fonts/Cinzel-Bold.woff')) format('woff');
+    font-weight: 700;
+    font-style: normal;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+h1, h2, h3, .section-title {
+    font-family: 'FantasyHeader', serif;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 0 10px rgba(255, 215, 0, 0.2);
 }

@@ -99,6 +99,10 @@
 │                ├── auth.js # Обработчики форм авторизации HTMX
 │                └── ui.js # Глобальные UI утилиты (прокрутка, настройки htmx)
 │
+├── public/
+│       └── fonts/
+│           ├── Cinzel-Bold.woff2
+│           └── Cinzel-Bold.woff
 ├── Config/
 │   ├── Config.py        # Конфигурация проекта
 │   ├── logger.py

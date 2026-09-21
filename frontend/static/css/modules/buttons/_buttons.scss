@@ -22,7 +22,7 @@
 // Карточки персонажей или заклинаний (_dashboard.scss / _map.scss)
 .card-fantasy {
     background: radial-gradient(circle at top left, #1e1f29, #0a0b10);
-    border-image-source: url('/images/borders/parchment_corner.png');
+    border-image-source: url('/frontend/static/images/borders/parchment_corner.png');
     border-image-slice: 30 fill;
     border-width: 4px;
     position: relative;
@@ -31,7 +31,7 @@
         content: '';
         position: absolute;
         inset: 0;
-        background: url('/images/textures/paper_fibers.webp') repeat;
+        background: url('/frontend/static/images/textures/paper-fibers.webp') repeat;
         opacity: 0.15;
         pointer-events: none;
     }
