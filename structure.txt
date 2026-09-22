@@ -1,4 +1,6 @@
-WebDND_Site/
+// structure.txt
+
+WebDND_Site/ (77 файлов)
 │
 ├── Config/
 │   ├── logger.py                  # Асинхронный логгер с очередями для FastAPI/Redis
@@ -74,10 +76,6 @@ WebDND_Site/
 │   │   │       │   └── _buttons.scss
 │   │   │       ├── auth/
 │   │   │       │   └── _auth.scss
-│   │   │       ├── dashboard/
-│   │   │       │   └── _dashboard.scss
-│   │   │       ├── game-table/
-│   │   │       │   └── _map.scss
 │   │   │       ├── toast/
 │   │   │       │   └──	_toast.scss
 │   │   │       └── ...
