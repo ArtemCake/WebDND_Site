@@ -1,125 +1,132 @@
-/webdnd-site
+WebDND_Site/
+│
+├── Config/
+│   ├── logger.py                  # Асинхронный логгер с очередями для FastAPI/Redis
+│   ├── imports.py                 # Централизованный импорт зависимостей (SQLAlchemy, Pydantic)
+│   └── Config.py                  # Настройки приложения через BaseSettings (.env + defaults)
 │
 ├── backend/
 │   ├── app/
-│   │   ├── database/
-│   │   │   ├── models/
-│   │   │   │   │
-│   │   │   │   ├── core/ # Блок "Ядро системы"
-│   │   │   │   │   ├── user.py
-│   │   │   │   │   └── auth.py
-│   │   │   │   │
-│   │   │   │   ├── content/ # Блок "Справочники контента" + Медиа
-│   │   │   │   │   ├── game_systems.py
-│   │   │   │   │   ├── character_building.py
-│   │   │   │   │   ├── magic.py
-│   │   │   │   │   ├── skills.py
-│   │   │   │   │   ├── equipment.py
-│   │   │   │   │   └── worldbuilding.py
-│   │   │   │   │
-│   │   │   │   ├── gameplay/ # Блок "Игровой процесс"
-│   │   │   │   │   ├── lobby.py
-│   │   │   │   │   ├── maps.py
-│   │   │   │   │   ├── characters.py
-│   │   │   │   │   └── communication.py
-│   │   │   │   │
-│   │   │   │   ├── medias/ # Блок "медиа"
-│   │   │   │   │   └── media.py
-│   │   │   │   │
-│   │   │   │   └── systems/ # Блок "Администрирование"
-│   │   │   │       ├── system.py
-│   │   │   │       └── cache.py
-│   │   │   │
-│   │   │   ├── _models.py          # Файл для объединения всех таблиц в одну
-│   │   │   └── database.py         # Основной файл построения таблиц SQL
+│   │   ├── Services/
+│   │   │   ├── security_service.py# JWT-токены, OAuth2 схема, хеширование паролей Argon2
+│   │   │   ├── user_service.py    # CRUD пользователей, смена пароля, инвалидация сессий
+│   │   │   └── mail_service.py    # Отправка писем (верификация, сброс пароля) через aiosmtplib
 │   │   │
-│   │   ├──enums/
-│   │   │   ├── 
-│   │   │   └── enums_BD.py
+│   │   ├── Routers/
+│   │   │   ├── api.py             # Роуты аутентификации: /auth/login, /register, /logout
+│   │   │   ├── profile.py         # Личный кабинет пользователя (HTMX-формы)
+│   │   │   ├── web.py             # HTML-страницы заглушки (index.html, login.html)
+│   │   │   └── ...                # [Ожидаются роуты API игры]
 │   │   │
-│   │   └── Routers/
-│   │       ├── api.py
-│   │       ├── profile.py
-│   │       └── web.py
+│   │   ├── enums/
+│   │   │   └── enums_BD.py      # Enum ролей SystemRole (player, master, admin...)
+│   │   │
+│   │   └── database/
+│   │       ├── database.py        # Создание движков SQLAlchemy (asyncpg), sessionmaker
+│   │       ├── _models.py         # Импорт всех моделей контента для Alembic (__all__)
+│   │       └── models/
+│   │           ├── core/
+│   │           │   ├── auth.py        # Промежуточная таблица UserRole (Many-to-Many)
+│   │           │   └── user.py        # Модель User (пароли, MFA, социальные сети, блокировки)
+│   │           │
+│   │           ├── content/
+│   │           │   ├── game_systems.py         # GameSystem (корневой контейнер правил D&D/Pathfinder)
+│   │           │   ├── character_building.py   # Race, Background, Origin, Feat, Class, Subclass
+│   │           │   ├── skills.py               # Skill, Characteristic, SkillCharacteristicMap (Homebrew-связи)
+│   │           │   ├── magic.py                # Spell, MagicSchool, Ability, Effect, DamageType, SpellSlot
+│   │           │   ├── equipment.py            # Equipment иерархия -> Weapon, Armor, MagicalItem, Artifact
+│   │           │   └── worldbuilding.py        # Language, LoreEntry, CreatureSize, CreatureType, NPC, NPCTag
+│   │           │
+│   │           ├── gameplay/
+│   │           │   ├── lobby.py       # Game, Party, Invite, Session, InitiativeTracker
+│   │           │   ├── characters.py  # Character (глобальный шаблон игрока) и CharacterSheet (версия в игре)
+│   │           │   ├── communication.py # Chat, Message
+│   │           │   └── maps.py        # CampaignMap, MapLayer, MapHex (H3 индекс), MapObject, Token, SpatialAudioZone
+│   │           │
+│   │           ├── systems/
+│   │           │   └── system.py      # AuditLog, ContentReport, ActiveSessionCache (зеркало Redis), SystemEvent
+│   │           │
+│   │           └── medias/
+│   │               └── media.py        # UploadedAsset, AIGenerationJob
 │   │
-│   └── db_migrations/        # Единая точка правды для Alembic
-│       ├── versions/
-│       ├── script.py.mako
-│       ├── README.md
-│       └── env.py
-│
+│   └── db_migrations/              # Скрипты миграций Alembic (шаблон env.py уже есть)
+│           ├── env.py
+│           ├── README
+│           ├── script.py.mako
+│           └── versions/
 │
 ├── frontend/
-│   ├── templates/
-│   │       ├── base.html
-│   │       ├── index.html
-│   │       ├── login.html
-│   │       ├── menu.html
-│   │       ├── profile.html
-│   │       └── register.html
+│   ├── static/
+│   │   ├── css/
+│   │   │   ├── style.scss          # Главный SCSS-файл (порядок импорта модулей)
+│   │   │   ├── style.min.css       # Скомпилированный бандл
+│   │   │   └── modules/            # Архитектура БЭМ/SMACSS
+│   │   │       ├── base/_reset.scss, _typography.scss, _variables.scss
+│   │   │       ├── layout/_navbar.scss, _container.scss
+│   │   │       ├── forms/_inputs.scss
+│   │   │       ├── buttons/_buttons.scss
+│   │   │       ├── auth/_auth.scss
+│   │   │       ├── dashboard/_dashboard.scss
+│   │   │       ├── game-table/_map.scss
+│   │   │       ├── toast/_toast.scss
+│   │   │       └── ...
+│   │   │
+│   │   ├── js/
+│   │   │   ├── pixi.js             # Полная сборка PixiJS v8 (для Canvas/WebGL рендера карт)
+│   │   │   ├── main.js             # Точка входа фронтенда (инициализация HTMX, UI, карты, кубики)
+│   │   │   ├── modules/
+│   │   │   │   ├── ui.js           # Фиксация шапки, управление темами, IntersectionObserver
+│   │   │   │   ├── auth.js         # Обработка ответов сервера при регистрации/входе (htmx:afterOnLoad)
+│   │   │   │   ├── dice.js         # Сервис бросков DiceService (advantage/disadvantage)
+│   │   │   │   ├── map.js          # Класс GameMap (Pixi Application, туман войны, гексы)
+│   │   │   │   └── ...
+│   │   │   └── main.min.js         # Минифицированный бандл Vite
+│   │   │
+│   │   ├── docs/
+│   │   │   ├── privacy_policy.md   # Политика конфиденциальности (19.07.2026)
+│   │   │   └── terms_of_service.md # Пользовательское соглашение
+│   │   │
+│   │   ├── fonts/
+│   │   │   ├── Cinzel-Black.woff
+│   │   │   ├── Cinzel-Black.woff2
+│   │   │   ├── Cinzel-Bold.woff
+│   │   │   ├── Cinzel-Bold.woff2
+│   │   │   ├── Cinzel-Regular.woff
+│   │   │   └── Cinzel-Regular.woff2
+│   │   │
+│   │   └── images/
+│   │       ├── default-avatar.jpg
+│   │       ├── favicon.ico
+│   │       ├── borders/
+│   │       │   ├── parchment_corner.png
+│   │       │   └── ...
+│   │       └── textures/
+│   │           ├── paper-fibers.webp
+│   │           └── ...
 │   │
-│   └── static/
-│       ├── css/
-│       │   ├── style.scss # Главный файл-агрегатор
-│       │   ├── style.min.css
-│       │   ├── _variables.scss # Дизайн-токены проекта
-│       │   └── modules/ # Папка смысловых блоков
-│       │       ├── base/
-│       │       │   ├── _reset.scss # Сброс стилей браузера
-│       │       │   └── _typography.scss # Шрифты, параграфы, заголовки
-│       │       ├── layout/
-│       │       │   ├── _navbar.scss
-│       │       │   └── _container.scss # Центральные контейнеры (.auth-container)
-│       │       ├── forms/
-│       │       │   └── _inputs.scss # Поля ввода, текстовые области
-│       │       ├── buttons/
-│       │       │   └── _buttons.scss # Классы .btn-primary, .btn-danger
-│       │       ├── auth/
-│       │       │   └── _auth.scss # Страницы входа/регистрации (#message-box)
-│       │       ├── dashboard/
-│       │       │   └── _dashboard.scss # Карточки игр на главной мастера
-│       │       ├── game-table/
-│       │       │   └── _map.scss # Canvas карты, токены игроков/мобов
-│       │       └── toast/
-│		│           └── _toast.scss # Всплывающие уведомления об ошибках/успехе
-│       │
-│       ├── docs/
-│       │   ├── privacy_policy.md
-│       │   └── terms_of_service.md
-│       │
-│       ├── images/
-│       │   └── favicon.ico
-│       │
-│       └── js/
-│           ├── main.js       # На данный момент файлы пустые
-│           ├── main.min.js   # На данный момент файлы пустые
-│           └── modules/
-│                ├── dice.js # Модуль бросков кубиков
-│                ├── map.js # Модуль генерации карты, PixiJS и тумана войны
-│                ├── auth.js # Обработчики форм авторизации HTMX
-│                └── ui.js # Глобальные UI утилиты (прокрутка, настройки htmx)
-│
-├── public/
-│       └── fonts/
-│           ├── Cinzel-Bold.woff2
-│           └── Cinzel-Bold.woff
-├── Config/
-│   ├── Config.py        # Конфигурация проекта
-│   ├── logger.py
-│   └── imports.py       # Импорты всех необходимых библиотек
+│   └── templates/
+│       ├── emails/             # Шаблоны писем для MailService
+│       ├── base.html           # Базовый шаблон (Jinja2, навигация, блоки title/content)
+│       ├── index.html          # Главная страница-заглушка
+│       ├── login.html          # Форма входа
+│       ├── register.html       # Форма регистрации
+│       └── profile.html        # Профиль пользователя (смена данных, аватара, пароля)
 │
 ├── data/
-│   └── .env                  # Локальный файл с секретами (в .gitignore)
+│   └── .env                        # Переменные окружения (Postgres, SMTP, Admin password)
 │
-├── amvera.yml                # Специфика хостинга Amvera
-├── alembic.ini               # Должен ссылаться на backend/db_migrations
-├── eslint.config.mjs
+├── .gitignore
+├── alembic.ini                     # Конфиг Alembic (скрипты, URL БД)
+├── amvera.yml                      # Конфигурация деплоя Amvera Cloud
+├── eslint.config.mjs               # Линтер JS
+├── LICENSE
+├── main.py                         # Точка входа FastAPI (логирование, контекст-лифспан, CORS, ProxyHeader)
 ├── package.json
 ├── package-lock.json
-├── vite.config.js
-├── main.py                   # Точка входа Flask
-├── rename-script.js          # Утилиты
-├── .gitignore                # ВАЖНО: проверьте, что /data/.env там есть
-├── structure.txt             # Документация по структуре
-├── requirements.txt          # Расположение переносить запрещено, особенности для корректной работы хостинга Amvera
-├── README.md                 # Инструкция по запуску (runbook)
+├── README.md                       # (предполагаемый) Документация запуска
+├── rename-script.js                # Node.js скрипт пост-обработки билда (нормализация имен CSS/JS)
+├── requirements.txt                # Зависимости бэкенда (FastAPI, SQLAlchemy, PyJWT, aiogram не нужен - aiosmtplib)
+├── structure.txt                   # Структура проекта
+└── vite.config.js                  # Сборщик фронта (Vite + Rollup + PostCSS + авто-префиксы)
+
+
