@@ -61,18 +61,28 @@ WebDND_Site/
 │   │   │   ├── style.scss          # Главный SCSS-файл (порядок импорта модулей)
 │   │   │   ├── style.min.css       # Скомпилированный бандл
 │   │   │   └── modules/            # Архитектура БЭМ/SMACSS
-│   │   │       ├── base/_reset.scss, _typography.scss, _variables.scss
-│   │   │       ├── layout/_navbar.scss, _container.scss
-│   │   │       ├── forms/_inputs.scss
-│   │   │       ├── buttons/_buttons.scss
-│   │   │       ├── auth/_auth.scss
-│   │   │       ├── dashboard/_dashboard.scss
-│   │   │       ├── game-table/_map.scss
-│   │   │       ├── toast/_toast.scss
+│   │   │       ├── base/
+│   │   │       │   ├── _reset.scss,
+│   │   │       │   ├── _typography.scss,
+│   │   │       │   └── _variables.scss
+│   │   │       ├── layout/
+│   │   │       │   ├── _navbar.scss,
+│   │   │       │   └── _container.scss
+│   │   │       ├── forms/
+│   │   │       │   └── _inputs.scss
+│   │   │       ├── buttons/
+│   │   │       │   └── _buttons.scss
+│   │   │       ├── auth/
+│   │   │       │   └── _auth.scss
+│   │   │       ├── dashboard/
+│   │   │       │   └── _dashboard.scss
+│   │   │       ├── game-table/
+│   │   │       │   └── _map.scss
+│   │   │       ├── toast/
+│   │   │       │   └──	_toast.scss
 │   │   │       └── ...
 │   │   │
 │   │   ├── js/
-│   │   │   ├── pixi.js             # Полная сборка PixiJS v8 (для Canvas/WebGL рендера карт)
 │   │   │   ├── main.js             # Точка входа фронтенда (инициализация HTMX, UI, карты, кубики)
 │   │   │   ├── modules/
 │   │   │   │   ├── ui.js           # Фиксация шапки, управление темами, IntersectionObserver
@@ -105,7 +115,6 @@ WebDND_Site/
 │   │           └── ...
 │   │
 │   └── templates/
-│       ├── emails/             # Шаблоны писем для MailService
 │       ├── base.html           # Базовый шаблон (Jinja2, навигация, блоки title/content)
 │       ├── index.html          # Главная страница-заглушка
 │       ├── login.html          # Форма входа
@@ -128,5 +137,3 @@ WebDND_Site/
 ├── requirements.txt                # Зависимости бэкенда (FastAPI, SQLAlchemy, PyJWT, aiogram не нужен - aiosmtplib)
 ├── structure.txt                   # Структура проекта
 └── vite.config.js                  # Сборщик фронта (Vite + Rollup + PostCSS + авто-префиксы)
-
-
