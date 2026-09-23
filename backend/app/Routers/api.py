@@ -75,57 +75,70 @@ async def login_for_access_token(
 	"""
 	log.info(f"[AUTH][LOGIN] Attempt for {email} from {request.client.host}")
 
-	# 1. Проверка существования аккаунта
-	user_record = await user_service.get_user_by_email(session, email)
+	try:
+		# 1. Проверка существования аккаунта
+		user_record = await user_service.get_user_by_email(session, email)
+		if not user_record:
+			log.warning(f"[AUTH][FAILED] Account does not exist for {email}")
+			return JSONResponse(
+				status_code=status.HTTP_404_NOT_FOUND,
+				content={"error": "Аккаунт не найден."}
+			)
 
-	if not user_record:
-		log.warning(f"[AUTH][FAILED] Account does not exist for {email}")
-		# Используем статус 404, чтобы фронт предложил регистрацию
-		raise HTTPException(
-			status_code=status.HTTP_404_NOT_FOUND,
-			detail="Аккаунт не найден. Проверьте правильность написания Email."
-		)
+		# 2. Аутентификация (проверка пароля)
+		user = await user_service.authenticate_user(session, email, password)
+		if not user or not user.is_active:
+			log.warning(f"[AUTH][FAILED] Invalid credentials or inactive account for {email}")
+			return JSONResponse(
+				status_code=status.HTTP_401_UNAUTHORIZED,
+				content={"error": "Неверный пароль."}
+			)
 
-	# 2. Аутентификация (проверка пароля)
-	user = await user_service.authenticate_user(session, email, password)
+		# 3. Проверка подтверждения почты
+		if not user.is_email_verified:
+			log.warning(f"[AUTH][FORBIDDEN] Unverified email attempt for {email}")
+			return JSONResponse(
+				status_code=status.HTTP_403_FORBIDDEN,
+				content={
+					"error": "Необходимо подтвердить адрес электронной почты.",
+					"verification_sent": False,
+					"action": "verify_email"
+				}
+			)
 
-	if not user or not user.is_active:
-		log.warning(f"[AUTH][FAILED] Invalid credentials or inactive account for {email}")
-		# Возвращаем JSON напрямую, чтобы избежать генерации WWW-Authenticate
-		return JSONResponse(
-			status_code=status.HTTP_401_UNAUTHORIZED,
-			content={
-				"error": "Неверный пароль.",
-				"token_hint": None  # Явно гасим любые намеки на токен
+		# УСПЕХ
+		log.info(f"[AUTH][SUCCESS] Login successful for {email} (ID: {user.id})")
+		try:
+			tokens = await security_service.create_jwt_pair(
+				user_obj_or_id=user, # Передаем весь объект, а не просто ID
+				expires_delta=access_token_expires
+			)
+			return {
+				"access_token": tokens["access_token"],
+				"token_type": "bearer",
+				"refresh_token": tokens["refresh_token"]
 			}
-		)
+		except PermissionError as e:
+			# На случай, если юзер стал неактивным между проверкой и генерацией
+			log.warning(f"[AUTH][BLOCKED] Token generation blocked for {email}: {e}")
+			return JSONResponse(
+				status_code=status.HTTP_403_FORBIDDEN,
+				content={"error": "Доступ запрещен."}
+			)
+		log.info(f"[AUTH][SUCCESS] Login successful for {email} (ID: {user.id})")
+		return {
+			"access_token": tokens["access_token"],
+			"token_type": "bearer",
+			"refresh_token": tokens["refresh_token"]
+		}
 
-	# 3. Проверка подтверждения почты
-	if not user.is_email_verified:
-		log.warning(f"[AUTH][FORBIDDEN] Unverified email attempt for {email}")
-		# Возврат JSON вместо исключения, чтобы передать доп. флаги
+	except Exception as e:
+		# Ловим всё, что могло проскочить через сервисы (включая ошибки сериализации JWT)
+		log.error(f"Critical error during login for '{email}'", exc_info=True)
 		return JSONResponse(
-			status_code=status.HTTP_403_FORBIDDEN,
-			content={
-				"error": "Необходимо подтвердить адрес электронной почты.",
-				"verification_sent": False,
-				"action": "verify_email"
-			}
+			status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			content={"error": "Непредвиденная ошибка сервера."}
 		)
-
-	# УСПЕХ
-	access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-	tokens = await security_service.create_jwt_pair(
-		user_id=str(user.id),
-		expires_delta=access_token_expires
-	)
-
-	log.info(f"[AUTH][SUCCESS] Login successful for {email} (ID: {user.id})")
-	return {
-		"access_token": tokens["access_token"],
-		"token_type": "bearer",
-		"refresh_token": tokens["refresh_token"]
-	}
 
 @router.get("/verify-email")
 async def verify_email(token: str, session: AsyncSession = Depends(get_async_session)):
