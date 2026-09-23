@@ -70,7 +70,11 @@ export function setupAuthHandlers() {
                 messageText = 'Аккаунт не найден.';
                 document.getElementById('register-prompt')?.classList.add('active');
             } else if (evt.detail.status === 401) {
-                messageText = data.detail || 'Неверный пароль.';
+                // Приоритет у поля error, а detail используем только как fallback после очистки
+                let rawDetail = data.detail || '';
+                // Удаляем всё, что похоже на JWT (длинные строки из букв, цифр, тире и подчеркиваний)
+                const sanitizedDetail = rawDetail.replace(/[A-Za-z0-9\-_.]+\.[A-Za-z0-9\-_.]+\.[A-Za-z0-9\-_.]+/g, '[токен скрыт]');
+                messageText = data.error || sanitizedDetail || 'Неверный пароль.';
             } else {
                 messageText = data.error || 'Ошибка сети или сервера.';
             }

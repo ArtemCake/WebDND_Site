@@ -5,13 +5,10 @@
 @use 'modules/base/_typography';
 @use 'modules/base/_variables';
 @use 'modules/layout/_navbar';
-
 @use 'modules/layout/_container';
 @use 'modules/forms/_inputs';
 @use 'modules/buttons/_buttons';
 @use 'modules/auth/_auth';
-@use 'modules/dashboard/_dashboard';
-@use 'modules/game-table/_map';
 @use 'modules/toast/_toast';
 
 /* Утилитарные классы */

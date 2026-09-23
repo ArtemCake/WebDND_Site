@@ -91,11 +91,13 @@ async def login_for_access_token(
 
 	if not user or not user.is_active:
 		log.warning(f"[AUTH][FAILED] Invalid credentials or inactive account for {email}")
-		# Статус 401 + явное сообщение о неверном пароле
-		raise HTTPException(
+		# Возвращаем JSON напрямую, чтобы избежать генерации WWW-Authenticate
+		return JSONResponse(
 			status_code=status.HTTP_401_UNAUTHORIZED,
-			detail="Неверный пароль.",
-			headers={"WWW-Authenticate": "Bearer"},
+			content={
+				"error": "Неверный пароль.",
+				"token_hint": None  # Явно гасим любые намеки на токен
+			}
 		)
 
 	# 3. Проверка подтверждения почты
