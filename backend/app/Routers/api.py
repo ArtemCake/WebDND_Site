@@ -70,10 +70,11 @@ async def login_for_access_token(
 		password: str = Form(...),
 		session: AsyncSession = Depends(get_async_session)
 ):
-	"""
-	Вход по паролю. Возвращает детализированные статусы для отображения пользователю.
-	"""
 	log.info(f"[AUTH][LOGIN] Attempt for {email} from {request.client.host}")
+
+	# Выносим расчет времени жизни токена САМЫМ ПЕРВЫМ ДЕЙСТВИЕМ ПОСЛЕ ЛОГА
+	# Это гарантирует создание переменной до любых потенциальных падений ниже по стеку
+	access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
 	try:
 		# 1. Проверка существования аккаунта
@@ -91,7 +92,8 @@ async def login_for_access_token(
 			log.warning(f"[AUTH][FAILED] Invalid credentials or inactive account for {email}")
 			return JSONResponse(
 				status_code=status.HTTP_401_UNAUTHORIZED,
-				content={"error": "Неверный пароль."}
+				content={"error": "Неверный пароль."},
+				headers={"WWW-Authenticate": "Bearer"}
 			)
 
 		# 3. Проверка подтверждения почты
@@ -106,25 +108,13 @@ async def login_for_access_token(
 				}
 			)
 
-		# УСПЕХ
-		log.info(f"[AUTH][SUCCESS] Login successful for {email} (ID: {user.id})")
-		try:
-			tokens = await security_service.create_jwt_pair(
-				user_obj_or_id=user, # Передаем весь объект, а не просто ID
-				expires_delta=access_token_expires
-			)
-			return {
-				"access_token": tokens["access_token"],
-				"token_type": "bearer",
-				"refresh_token": tokens["refresh_token"]
-			}
-		except PermissionError as e:
-			# На случай, если юзер стал неактивным между проверкой и генерацией
-			log.warning(f"[AUTH][BLOCKED] Token generation blocked for {email}: {e}")
-			return JSONResponse(
-				status_code=status.HTTP_403_FORBIDDEN,
-				content={"error": "Доступ запрещен."}
-			)
+		# КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ БЕЗОПАСНОСТИ:
+		# Передаем объект user целиком, чтобы сервис мог финально проверить флаги
+		tokens = await security_service.create_jwt_pair(
+			user_obj_or_id=user,
+			expires_delta=access_token_expires
+		)
+
 		log.info(f"[AUTH][SUCCESS] Login successful for {email} (ID: {user.id})")
 		return {
 			"access_token": tokens["access_token"],
@@ -133,7 +123,8 @@ async def login_for_access_token(
 		}
 
 	except Exception as e:
-		# Ловим всё, что могло проскочить через сервисы (включая ошибки сериализации JWT)
+		# Этот блок поймает NameError, если он возникнет где-то еще,
+		# и предотвратит утечку трассировки пользователю.
 		log.error(f"Critical error during login for '{email}'", exc_info=True)
 		return JSONResponse(
 			status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
