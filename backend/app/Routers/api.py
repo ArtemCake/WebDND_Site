@@ -85,7 +85,6 @@ async def login_for_access_token(
 				status_code=status.HTTP_404_NOT_FOUND,
 				content={"error": "Аккаунт не найден."}
 			)
-
 		# 2. Аутентификация (проверка пароля)
 		user = await user_service.authenticate_user(session, email, password)
 		if not user or not user.is_active:
@@ -93,9 +92,7 @@ async def login_for_access_token(
 			return JSONResponse(
 				status_code=status.HTTP_401_UNAUTHORIZED,
 				content={"error": "Неверный пароль."},
-				headers={"WWW-Authenticate": "Bearer"}
-			)
-
+				headers={"WWW-Authenticate": "Bearer"})
 		# 3. Проверка подтверждения почты
 		if not user.is_email_verified:
 			log.warning(f"[AUTH][FORBIDDEN] Unverified email attempt for {email}")
@@ -107,9 +104,22 @@ async def login_for_access_token(
 					"action": "verify_email"
 				}
 			)
-
-		# КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ БЕЗОПАСНОСТИ:
-		# Передаем объект user целиком, чтобы сервис мог финально проверить флаги
+		# КРИТИЧЕСКАЯ ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА БЕЗОПАСНОСТИ:
+		# Убеждаемся, что пользователь активен непосредственно перед выдачей ключей
+		# (защита от race condition или подмены контекста Dependency).
+		if not getattr(user, 'is_active', False):
+			log.critical(f"[AUTH][RACE_CONDITION] Inactive user reached token generation for {email}")
+			return JSONResponse(
+				status_code=status.HTTP_403_FORBIDDEN,
+				content={"error": "Доступ запрещен."}
+			)
+		# Типизация данных перед передачей в чувствительный сервис
+		if not isinstance(user, User):
+			log.critical(f"[AUTH][TYPE_MISMATCH] Non-User object passed to create_jwt_pair for {email}")
+			return JSONResponse(
+				status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+				content={"error": "Непредвиденная ошибка сервера аутентификации."}
+			)
 		tokens = await security_service.create_jwt_pair(
 			user_obj_or_id=user,
 			expires_delta=access_token_expires
@@ -121,10 +131,13 @@ async def login_for_access_token(
 			"token_type": "bearer",
 			"refresh_token": tokens["refresh_token"]
 		}
-
+	except PermissionError as e:
+		log.warning(f"[AUTH][BLOCKED] Account state issue during login for {email}: {e}")
+		return JSONResponse(
+			status_code=status.HTTP_403_FORBIDDEN,
+			content={"error": "Доступ запрещен."}
+		)
 	except Exception as e:
-		# Этот блок поймает NameError, если он возникнет где-то еще,
-		# и предотвратит утечку трассировки пользователю.
 		log.error(f"Critical error during login for '{email}'", exc_info=True)
 		return JSONResponse(
 			status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

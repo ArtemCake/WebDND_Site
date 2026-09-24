@@ -1,8 +1,8 @@
 # backend/app/Services/security_service.py
 
 from Config.Config import settings
-from Config.imports import (OAuth2PasswordBearer, secrets, jwt, JWTError, datetime, timedelta)
-from backend.app.database.models.core.user import User  # Явный импорт модели для типов
+from Config.imports import (OAuth2PasswordBearer, jwt, JWTError, datetime, timedelta)
+from backend.app.database.models.core.user import User
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
@@ -29,16 +29,22 @@ def verify_token(token: str, purpose: str = "email_verification"):
 async def create_jwt_pair(user_obj_or_id, expires_delta: timedelta = None):
 	"""
 	Генерация пары Access и Refresh токенов.
-	Принимает либо ID строкой, либо объект User для финальной проверки статуса.
+	Принимает либо ID строкой, либо объект User.
 	"""
 	user_id_str = ""
 
-	# Извлекаем ID, если передан объект модели SQLAlchemy
+	# ФИКС: Проверяем наличие атрибутов перед обращением к ним.
+	# Если передан объект, но он поврежден или имеет неполный маппинг - падаем жестко.
 	if hasattr(user_obj_or_id, 'id'):
-		if not getattr(user_obj_or_id, 'is_active', True):
+		# Проверяем строгое наличие флагов безопасности
+		if not hasattr(user_obj_or_id, 'is_active') or not hasattr(user_obj_or_id, 'is_email_verified'):
+			raise PermissionError("User object missing security flags.")
+
+		if not user_obj_or_id.is_active:
 			raise PermissionError("Cannot generate tokens for inactive user.")
-		if not getattr(user_obj_or_id, 'is_email_verified', False):
+		if not user_obj_or_id.is_email_verified:
 			raise PermissionError("Cannot generate tokens for unverified user.")
+
 		user_id_str = str(user_obj_or_id.id)
 	else:
 		user_id_str = str(user_obj_or_id)
@@ -58,5 +64,4 @@ async def create_jwt_pair(user_obj_or_id, expires_delta: timedelta = None):
 	}
 
 async def blacklist_token(token: str):
-	"""Заглушка. В production здесь будет запись в Redis SET с TTL остатка жизни токена."""
 	pass

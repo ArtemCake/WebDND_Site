@@ -37,16 +37,15 @@ async def authenticate_user(session: AsyncSession, email: str, password: str) ->
 	if not user:
 		return None
 
-	# Убираем создание нового экземпляра Passlib!
 	try:
-		# Argon2 автоматически определит параметры соли из строки хеша
 		pwd_context.verify(password, user.password_hash)
 		return user
-	except Exception as e:
-		# Логируем неудачную попытку входа для безопасности
+	# ФИКС: Ловим только специфичные ошибки верификации Passlib.
+	# Ошибки типа MemoryError или TypeError должны падать выше в api.py как Critical Error.
+	except (ValueError, TypeError) as e:
 		from Config.logger import setup_logging
 		log = setup_logging(app_name="WebDND_Site")
-		log.warning(f"[AUTH][PASSWORD_VERIFY_FAILED] For {email}: {str(e)}")
+		log.error(f"[AUTH][CRYPTO_ERROR] Argon2 verification failed for {email}: {str(e)}")
 		return None
 
 async def verify_email(session: AsyncSession, user_id: str) -> bool:
