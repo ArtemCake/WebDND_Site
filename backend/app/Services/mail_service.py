@@ -7,14 +7,14 @@
 """
 
 from Config.Config import settings
-from Config.imports import (asyncio, MIMEText, MIMEMultipart, Environment, FileSystemLoader,
+from Config.imports import (MIMEText, MIMEMultipart, Environment, FileSystemLoader,
                             select_autoescape, Path, List, Optional, ssl, SMTP)
 
 
 class MailService:
 	def __init__(self):
 		# Настройки Jinja2 для рендеринга HTML-шаблонов писем
-		templates_dir = Path(__file__).resolve().parent.parent / "templates" / "emails"
+		templates_dir = settings._base_dir / "frontend" / "templates" / "emails"
 		self.env = Environment(
 			loader=FileSystemLoader(str(templates_dir)),
 			autoescape=select_autoescape(["html", "xml"])
@@ -32,24 +32,29 @@ class MailService:
 		self.sender_email = settings.MAIL_SENDER_EMAIL
 
 	async def _get_smtp_connection(self) -> SMTP:
-		"""Устанавливает и возвращает асинхронное соединение с SMTP-сервером."""
-		security = None
+		"""
+		Создаёт объект SMTP-соединения.
+		Для SSL (порт 465) — implicit TLS.
+		Для STARTTLS (порт 587) — обычное соединение, upgrade до TLS вызывается отдельно в send_email.
+		"""
 		if self.use_ssl:
-			security = "implicit"
-		elif self.use_tls:
-			security = "starttls"
-
-		return SMTP(
-			hostname=self.smtp_host,
-			port=self.smtp_port,
-			username=self.smtp_user,
-			password=self.smtp_password,
-			use_tls=self.use_tls,
-			validate_certs=True,
-			tls_context=ssl.create_default_context() if self.use_tls else None,
-			start_tls=bool(self.use_tls),
-			tls_type=security
-		)
+			# Implicit TLS (порт 465) — шифрование с самого начала
+			return SMTP(
+				hostname=self.smtp_host,
+				port=self.smtp_port,
+				use_tls=True,
+				validate_certs=True,
+				tls_context=ssl.create_default_context(),
+			)
+		else:
+			# Обычное соединение; STARTTLS вызывается отдельно, если нужно
+			return SMTP(
+				hostname=self.smtp_host,
+				port=self.smtp_port,
+				use_tls=False,
+				validate_certs=True,
+				tls_context=ssl.create_default_context() if self.use_tls else None,
+			)
 
 	def _render_template(self, template_name: str, context: dict) -> str:
 		"""Рендерит HTML-шаблон письма."""
@@ -89,8 +94,11 @@ class MailService:
 		try:
 			smtp = await self._get_smtp_connection()
 			await smtp.connect()
+
+			# STARTTLS только для не-SSL соединений с включённым TLS
 			if self.use_tls and not self.use_ssl:
 				await smtp.starttls()
+
 			if self.smtp_user and self.smtp_password:
 				await smtp.login(self.smtp_user, self.smtp_password)
 
@@ -103,7 +111,6 @@ class MailService:
 			await smtp.send_message(msg, sender=self.sender_email, recipients=recipients)
 			return True
 		except Exception as e:
-			# В production здесь должен быть вызов Sentry или логирование в SystemEvent
 			print(f"[MAIL ERROR] Failed to send email to {to_email}. Error: {str(e)}")
 			return False
 		finally:

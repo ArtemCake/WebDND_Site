@@ -55,7 +55,7 @@ class WebAppSettings(BaseSettings):
 	SECRET_KEY: str  # ОБЯЗАТЕЛЬНО указать в .env файле
 	ALGORITHM: str = "HS256"
 	ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 дней
-
+	FRONTEND_URL: str
 	ADMIN_PASSWORD: str   # ОБЯЗАТЕЛЬНО указать в .env файле
 
 	# --- Настройки Twitch API ---
