@@ -9,7 +9,8 @@ from Config.imports import (JSONResponse, datetime, AsyncSession, update,
 	Form, secrets, Request)
 from backend.app.database.database import get_async_session
 from backend.app.database.models.core.user import User
-from backend.app.Services import security_service, user_service, mail_service
+from backend.app.Services import security_service, user_service
+from backend.app.Services.mail_service import mail_service
 
 
 router = APIRouter(
@@ -71,9 +72,6 @@ async def login_for_access_token(
 		session: AsyncSession = Depends(get_async_session)
 ):
 	log.info(f"[AUTH][LOGIN] Attempt for {email} from {request.client.host}")
-
-	# Выносим расчет времени жизни токена САМЫМ ПЕРВЫМ ДЕЙСТВИЕМ ПОСЛЕ ЛОГА
-	# Это гарантирует создание переменной до любых потенциальных падений ниже по стеку
 	access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
 	try:
@@ -81,45 +79,30 @@ async def login_for_access_token(
 		user_record = await user_service.get_user_by_email(session, email)
 		if not user_record:
 			log.warning(f"[AUTH][FAILED] Account does not exist for {email}")
-			return JSONResponse(
-				status_code=status.HTTP_404_NOT_FOUND,
-				content={"error": "Аккаунт не найден."}
-			)
+			return {"error": "Аккаунт не найден."}
+
 		# 2. Аутентификация (проверка пароля)
 		user = await user_service.authenticate_user(session, email, password)
 		if not user or not user.is_active:
 			log.warning(f"[AUTH][FAILED] Invalid credentials or inactive account for {email}")
-			return JSONResponse(
-				status_code=status.HTTP_401_UNAUTHORIZED,
-				content={"error": "Неверный пароль."},
-				headers={"WWW-Authenticate": "Bearer"})
+			return {"error": "Неверный пароль."}
+
 		# 3. Проверка подтверждения почты
 		if not user.is_email_verified:
 			log.warning(f"[AUTH][FORBIDDEN] Unverified email attempt for {email}")
-			return JSONResponse(
-				status_code=status.HTTP_403_FORBIDDEN,
-				content={
-					"error": "Необходимо подтвердить адрес электронной почты.",
-					"verification_sent": False,
-					"action": "verify_email"
-				}
-			)
-		# КРИТИЧЕСКАЯ ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА БЕЗОПАСНОСТИ:
-		# Убеждаемся, что пользователь активен непосредственно перед выдачей ключей
-		# (защита от race condition или подмены контекста Dependency).
+			return {
+				"error": "Необходимо подтвердить адрес электронной почты.",
+				"action": "verify_email"
+			}
+		# Дополнительная проверка
 		if not getattr(user, 'is_active', False):
 			log.critical(f"[AUTH][RACE_CONDITION] Inactive user reached token generation for {email}")
-			return JSONResponse(
-				status_code=status.HTTP_403_FORBIDDEN,
-				content={"error": "Доступ запрещен."}
-			)
-		# Типизация данных перед передачей в чувствительный сервис
+			return {"error": "Доступ запрещен."}
+
 		if not isinstance(user, User):
 			log.critical(f"[AUTH][TYPE_MISMATCH] Non-User object passed to create_jwt_pair for {email}")
-			return JSONResponse(
-				status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-				content={"error": "Непредвиденная ошибка сервера аутентификации."}
-			)
+			return {"error": "Непредвиденная ошибка сервера аутентификации."}
+
 		tokens = await security_service.create_jwt_pair(
 			user_obj_or_id=user,
 			expires_delta=access_token_expires
@@ -133,16 +116,10 @@ async def login_for_access_token(
 		}
 	except PermissionError as e:
 		log.warning(f"[AUTH][BLOCKED] Account state issue during login for {email}: {e}")
-		return JSONResponse(
-			status_code=status.HTTP_403_FORBIDDEN,
-			content={"error": "Доступ запрещен."}
-		)
+		return {"error": "Доступ запрещен."}
 	except Exception as e:
 		log.error(f"Critical error during login for '{email}'", exc_info=True)
-		return JSONResponse(
-			status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-			content={"error": "Непредвиденная ошибка сервера."}
-		)
+		return {"error": "Непредвиденная ошибка сервера."}
 
 @router.get("/verify-email")
 async def verify_email(token: str, session: AsyncSession = Depends(get_async_session)):

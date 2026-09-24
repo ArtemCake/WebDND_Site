@@ -29,19 +29,14 @@ async def create_user(session: AsyncSession, nickname: str, email: str, password
 	return user
 
 async def authenticate_user(session: AsyncSession, email: str, password: str) -> Optional[User]:
-	"""
-	Проверяет существование пользователя и валидность пароля.
-	ВАЖНО: Теперь использует общую схему argon2.
-	"""
 	user = await get_user_by_email(session, email)
 	if not user:
 		return None
 
 	try:
-		pwd_context.verify(password, user.password_hash)
+		if not pwd_context.verify(password, user.password_hash):
+			return None
 		return user
-	# ФИКС: Ловим только специфичные ошибки верификации Passlib.
-	# Ошибки типа MemoryError или TypeError должны падать выше в api.py как Critical Error.
 	except (ValueError, TypeError) as e:
 		from Config.logger import setup_logging
 		log = setup_logging(app_name="WebDND_Site")
