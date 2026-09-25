@@ -70,7 +70,7 @@
 			{% if user %}
 			<span class="nav-nickname">{{ user.nickname }}</span>
 			<a href="/profile" hx-get="/profile" hx-target="body" hx-push-url="true" class="avatar-sm">
-				<img alt="Аватар" id="01a0bdfd-6cb7-7c19-a1d1-289613c56452">
+				<img alt="Аватар" src="{{ user.avatar_url or '/frontend/static/image/default-avatar.jpg' }}>
 			</a>
 			<form action="/auth/logout" method="post" hx-post="/auth/logout" hx-target="body" hx-push-url="true" hx-swap="outerHTML">
 				<button type="submit" class="btn btn-danger btn-sm">Выйти</button>

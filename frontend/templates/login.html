@@ -9,10 +9,7 @@
 <div id="message-box"></div>
 
 <form hx-post="/auth/login"
-      hx-target="#message-box"
-      hx-swap="innerHTML"
       hx-trigger="submit"
-      hx-validate="true"
       method="post">
 	
 	<input type="email" name="email" placeholder="Email" required autocomplete="username">

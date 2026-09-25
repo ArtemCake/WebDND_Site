@@ -1,17 +1,22 @@
 # backend/app/Routers/profile.py
 
 from backend.app.database.database import get_async_session
-from backend.app.Services.security_service import oauth2_scheme
-from backend.app.Services.user_service import (update_user_profile, change_password, User, get_current_user)
 from Config.Config import settings
 from Config.imports import (JSONResponse, HTMLResponse, APIRouter, Depends, HTTPException,
                             status, UploadFile, File, Request, EmailStr, BaseModel, Field,
-                            AsyncSession, UUID, Form, Path, Jinja2Templates, asyncio)
+                            AsyncSession, UUID, Form, jwt, JWTError, datetime, ValidationError,
+                            asyncio)
+from backend.app.database.models.core.user import User
+from backend.app.Services.user_service import (update_user_profile, change_password,
+                                               get_current_user)
 
 
-router = APIRouter(	prefix="/profile",
+router = APIRouter(
+	prefix="/profile",
 	tags=["profile"],
-	dependencies=[Depends(oauth2_scheme)])
+	# ВАЖНО: Убрали dependencies=[Depends(oauth2_scheme)]
+	# oauth2_scheme читает только заголовок Authorization, а токен у нас в куке
+)
 
 env_lock = asyncio.Lock()
 
@@ -36,7 +41,9 @@ class PasswordChangeDTO(BaseModel):
 	current_password: str = Field(..., min_length=8)
 	new_password: str = Field(..., min_length=8)
 
+
 # --- КОНТРОЛЛЕРЫ (ВЬЮХИ) ---
+
 @router.get("/", response_class=HTMLResponse, name="profile_page_get")
 async def get_profile_page(request: Request, user: User = Depends(get_current_user)):
 	"""
@@ -52,8 +59,7 @@ async def get_profile_page(request: Request, user: User = Depends(get_current_us
 @router.get("/data", response_model=ProfileResponseDTO, operation_id="getCurrentUserProfile")
 async def get_profile_data(user: User = Depends(get_current_user)):
 	"""
-	Возвращает структурированные данные текущего пользователя для HTMX-загрузки формы.
-	Используется при открытии страницы и динамическом обновлении данных без перезагрузки.
+	Возвращает структурированные данные текущего пользователя.
 	"""
 	settings_dto = ProfileSettingsDTO(**(user.profile_settings or {}))
 
@@ -76,10 +82,6 @@ async def api_update_profile(
 ):
 	"""
 	Обновляет базовые данные профиля: никнейм, почту и аватар.
-
-	- Raises:
-		HTTPException 409: Если новый email занят другим пользователем.
-		HTTPException 401: Если сессия недействительна.
 	"""
 	try:
 		updated_user = await update_user_profile(
@@ -99,9 +101,11 @@ async def api_update_profile(
 			)
 		raise
 	except Exception as e:
-		# Логируем непредвиденную ошибку перед пробросом
 		print(f"[PROFILE UPDATE ERROR] ID: {user.id}, Error: {e}")
-		raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Ошибка сервера при сохранении профиля.")
+		raise HTTPException(
+			status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+			detail="Ошибка сервера при сохранении профиля."
+		)
 
 @router.post("/change-password", response_class=JSONResponse, status_code=status.HTTP_200_OK, operation_id="changeUserPassword")
 async def api_change_password(
@@ -111,9 +115,6 @@ async def api_change_password(
 ):
 	"""
 	Изменяет пароль текущей учетной записи.
-
-	ВАЖНО: При успешном изменении сервис автоматически инвалирует все активные токены
-	через обновление поля active_session_token в БД (согласно п. 38 ТЗ).
 	"""
 	success = await change_password(
 		session=session,

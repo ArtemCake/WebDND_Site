@@ -21,6 +21,7 @@ router = APIRouter(
 log = setup_logging(app_name="WebDND_Site")
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
+
 @router.post("/register", response_model=dict, status_code=status.HTTP_201_CREATED)
 async def register_user_action(
 		nickname: str = Form(...),
@@ -32,7 +33,10 @@ async def register_user_action(
 		existing_user = await user_service.get_user_by_email(session, email)
 		if existing_user:
 			log.warning(f"[AUTH][REGISTER] Attempt to register existing email: {email}")
-			raise HTTPException(status_code=409, detail="Пользователь с таким email уже существует")
+			return JSONResponse(
+				status_code=409,
+				content={"error": "Пользователь с таким email уже существует"}
+			)
 
 		new_user = await user_service.create_user(
 			session=session,
@@ -48,21 +52,26 @@ async def register_user_action(
 		)
 
 		if not success:
-			return {
-				"message": "Регистрация успешна, но ошибка отправки письма.",
-				"resend_url": f"{settings.API_V1_STR}/auth/resend-verification/{new_user.id}"
-			}
+			return JSONResponse(
+				status_code=201,
+				content={
+					"message": "Регистрация успешна, но ошибка отправки письма.",
+					"resend_url": f"{settings.API_V1_STR}/auth/resend-verification/{new_user.id}"
+				}
+			)
 
 		log.info(f"[AUTH][REGISTER] Success for {email} (ID: {new_user.id})")
-		return {"message": "Регистрация успешна! Письмо отправлено."}
+		return JSONResponse(
+			status_code=201,
+			content={"message": "Регистрация успешна! Письмо отправлено."}
+		)
 
-	except HTTPException as e:
-		log.warning(f"HTTP Error in register_user_action: {e.status_code} - {e.detail}")
-		# ВАЖНО: Возвращаем объект error, чтобы catch сработал во фронте
-		return {"error": e.detail}
 	except Exception as e:
 		log.error(f"Critical server error during user registration for email '{email}'", exc_info=True)
-		return {"error": "Непредвиденная ошибка сервера. Администраторы уведомлены."}
+		return JSONResponse(
+			status_code=500,
+			content={"error": "Непредвиденная ошибка сервера. Администраторы уведомлены."}
+		)
 
 @router.post("/login", response_model=dict)
 async def login_for_access_token(
@@ -75,33 +84,26 @@ async def login_for_access_token(
 	access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
 	try:
-		# 1. Проверка существования аккаунта
 		user_record = await user_service.get_user_by_email(session, email)
 		if not user_record:
 			log.warning(f"[AUTH][FAILED] Account does not exist for {email}")
-			return {"error": "Аккаунт не найден."}
+			return JSONResponse(status_code=404, content={"error": "Аккаунт не найден."})
 
-		# 2. Аутентификация (проверка пароля)
 		user = await user_service.authenticate_user(session, email, password)
 		if not user or not user.is_active:
 			log.warning(f"[AUTH][FAILED] Invalid credentials or inactive account for {email}")
-			return {"error": "Неверный пароль."}
+			return JSONResponse(status_code=401, content={"error": "Неверный пароль."})
 
-		# 3. Проверка подтверждения почты
 		if not user.is_email_verified:
 			log.warning(f"[AUTH][FORBIDDEN] Unverified email attempt for {email}")
-			return {
+			return JSONResponse(status_code=403, content={
 				"error": "Необходимо подтвердить адрес электронной почты.",
 				"action": "verify_email"
-			}
-		# Дополнительная проверка
-		if not getattr(user, 'is_active', False):
-			log.critical(f"[AUTH][RACE_CONDITION] Inactive user reached token generation for {email}")
-			return {"error": "Доступ запрещен."}
+			})
 
 		if not isinstance(user, User):
 			log.critical(f"[AUTH][TYPE_MISMATCH] Non-User object passed to create_jwt_pair for {email}")
-			return {"error": "Непредвиденная ошибка сервера аутентификации."}
+			return JSONResponse(status_code=500, content={"error": "Непредвиденная ошибка сервера."})
 
 		tokens = await security_service.create_jwt_pair(
 			user_obj_or_id=user,
@@ -109,17 +111,36 @@ async def login_for_access_token(
 		)
 
 		log.info(f"[AUTH][SUCCESS] Login successful for {email} (ID: {user.id})")
-		return {
+
+		response = JSONResponse(content={
 			"access_token": tokens["access_token"],
 			"token_type": "bearer",
 			"refresh_token": tokens["refresh_token"]
-		}
+		})
+		response.set_cookie(
+			key="access_token",
+			value=tokens["access_token"],
+			httponly=True,
+			samesite="lax",
+			path="/",
+			max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+		)
+		response.set_cookie(
+			key="refresh_token",
+			value=tokens["refresh_token"],
+			httponly=True,
+			samesite="lax",
+			path="/",
+			max_age=7 * 24 * 60 * 60
+		)
+		return response
+
 	except PermissionError as e:
 		log.warning(f"[AUTH][BLOCKED] Account state issue during login for {email}: {e}")
-		return {"error": "Доступ запрещен."}
+		return JSONResponse(status_code=403, content={"error": "Доступ запрещен."})
 	except Exception as e:
 		log.error(f"Critical error during login for '{email}'", exc_info=True)
-		return {"error": "Непредвиденная ошибка сервера."}
+		return JSONResponse(status_code=500, content={"error": "Непредвиденная ошибка сервера."})
 
 @router.get("/verify-email")
 async def verify_email(token: str, session: AsyncSession = Depends(get_async_session)):

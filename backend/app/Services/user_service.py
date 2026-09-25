@@ -1,13 +1,15 @@
+# backend/app/Services/user_service.py
+
 from Config.Config import settings
 from backend.app.Services.security_service import oauth2_scheme
 from backend.app.database.models.core.user import User
 from Config.imports import (Optional, AsyncSession, select, Depends, HTTPException, status,
-	jwt, JWTError, datetime, ValidationError, Dict, Any, UploadFile, update, CryptContext)
+                            jwt, JWTError, datetime, ValidationError, Dict, Any, UploadFile, update, CryptContext,
+                            Request)
 from backend.app.database.database import get_async_session
 
 
 # ЕДИНСТВЕННЫЙ ИСТОЧНИК ПРАВДЫ ДЛЯ ХЕШИРОВАНИЯ
-# Схема должна строго совпадать с той, что указана в api.py
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 
@@ -16,7 +18,7 @@ async def get_user_by_email(session: AsyncSession, email: str) -> Optional[User]
 	return result.scalar_one_or_none()
 
 async def create_user(session: AsyncSession, nickname: str, email: str, password: str) -> User:
-	hashed_pw = pwd_context.hash(password)  # Используем общий контекст
+	hashed_pw = pwd_context.hash(password)
 	user = User(
 		email=email,
 		nickname=nickname,
@@ -79,8 +81,9 @@ async def get_user_by_id(session: AsyncSession, user_id: str) -> Optional[User]:
 	result = await session.execute(select(User).where(User.id == user_id))
 	return result.scalar_one_or_none()
 
+# --- ИЗМЕНЕНИЕ ЗДЕСЬ ---
 async def get_current_user(
-		token: str = Depends(oauth2_scheme),
+		request: Request,
 		session: AsyncSession = Depends(get_async_session)
 ) -> User:
 	credentials_exception = HTTPException(
@@ -88,6 +91,19 @@ async def get_current_user(
 		detail="Could not validate credentials",
 		headers={"WWW-Authenticate": "Bearer"},
 	)
+
+	# 1. Пробуем токен из заголовка Authorization (для API-клиентов)
+	token = None
+	auth_header = request.headers.get("Authorization")
+	if auth_header and auth_header.startswith("Bearer "):
+		token = auth_header.split(" ")[1]
+
+	# 2. Если нет в заголовке — берём из куки (для браузера после логина)
+	if not token:
+		token = request.cookies.get("access_token")
+
+	if not token:
+		raise credentials_exception
 
 	try:
 		payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
@@ -133,7 +149,6 @@ async def update_user_profile(
 		needs_commit = True
 
 	if avatar_file:
-		# Заглушка загрузки файлов
 		target_user.avatar_url = f"/data/avatars/{target_user.id}/{avatar_file.filename}"
 		needs_commit = True
 
@@ -150,18 +165,13 @@ async def change_password(
 		old_password: str,
 		new_password: str
 ) -> bool:
-	"""
-	Меняет пароль и инвалидацию сессий согласно ТЗ п.38.
-	"""
 	try:
 		pwd_context.verify(old_password, user.password_hash)
 	except Exception:
 		return False
 
-	# Обновляем хеш новым алгоритмом/солью
 	user.password_hash = pwd_context.hash(new_password)
 
-	# Инвалидация всех токенов (п. 38 ТЗ)
 	from secrets import token_urlsafe
 	user.active_session_token = token_urlsafe(64)
 
