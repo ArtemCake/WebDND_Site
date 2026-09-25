@@ -61,6 +61,28 @@ export function setupAuthHandlers() {
             } else if (evt.detail.status === 403) {
                 messageText = 'Необходимо подтвердить адрес электронной почты.';
                 document.getElementById('verify-prompt')?.classList.add('active');
+            } else if (evt.detail.status === 200) {
+                const data = JSON.parse(evt.detail.xhr.responseText);
+
+                // ЗАЩИТА: нет токена — не редиректим
+                if (!data.access_token) {
+                    messageText = data.error || 'Неизвестный ответ сервера.';
+                    isError = true;
+                    showMessage(targetForm, 'danger', messageText);
+                    scrollToMessageBox();
+                    return;
+                }
+
+                messageText = 'Добро пожаловать!';
+                isError = false;
+
+                localStorage.setItem('accessToken', data.access_token);
+                localStorage.setItem('refreshToken', data.refresh_token);
+
+                setTimeout(() => {
+                    htmx.trigger(document.body, 'loadPage');
+                }, 300);
+                return;
             }
         } else {
             // Обработка ошибок HTTP статуса

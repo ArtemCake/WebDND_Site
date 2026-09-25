@@ -6,7 +6,7 @@ from backend.app.Services.user_service import soft_delete_user
 from Config.Config import settings
 from Config.imports import (JSONResponse, datetime, AsyncSession, update,
 	APIRouter, Depends, HTTPException, status, timedelta, CryptContext,
-	Form, secrets, Request)
+	Form, secrets, Request, HTMLResponse)
 from backend.app.database.database import get_async_session
 from backend.app.database.models.core.user import User
 from backend.app.Services import security_service, user_service
