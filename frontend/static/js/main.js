@@ -4,7 +4,7 @@
 // Блок "Ядро" и "Механики"
 import { DiceService } from './modules/dice.js';
 import { initGlobalUI } from './modules/ui.js';
-import { setupAuthHandlers } from './modules/auth.js';
+import { setupAuthHandlers, protectPrivateRoutes } from './modules/auth.js';
 
 // Блок "Геймплей" (Карты)
 import { GameMap } from './modules/map.js';
@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 2. Навешивание обработчиков для форм авторизации (регистрация/вход)
     setupAuthHandlers();
+    protectPrivateRoutes();
 
     // 3. Инициализация игровой карты (Canvas + PixiJS)
     // Выполняется только если на странице присутствует корневой элемент #game-canvas-root
@@ -55,7 +56,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const sum = rolls.reduce((a, b) => a + b, 0) + modifier;
 
             // Отображение результата рядом с кнопкой или в консоль
-            alert(`Результат: ${sum} (${rolls.join(' + ')}${modifier >= 0 ? ' + ' : ''}${modifier})`);
+            const resultBox = document.createElement('div');
+            resultBox.className = 'dice-result-toast';
+            resultBox.textContent = `Результат: ${sum} (${rolls.join(' + ')}${modifier >= 0 ? ' + ' : ''}${modifier})`;
+            document.body.appendChild(resultBox);
+            setTimeout(() => resultBox.remove(), 5000);
         }
     });
 });

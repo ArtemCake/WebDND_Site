@@ -61,6 +61,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from argon2 import PasswordHasher
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from fastapi_csrf_protect import CsrfProtect
+from fastapi_csrf_protect.exceptions import ( CsrfProtectError, MissingTokenError, TokenValidationError, InvalidHeaderError )
 
 # --- Утилиты файлов и путей ---
 from itsdangerous import URLSafeTimedSerializer
