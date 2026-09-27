@@ -10,6 +10,7 @@
 @use 'modules/buttons/_buttons';
 @use 'modules/auth/_auth';
 @use 'modules/toast/_toast';
+@use 'modules/base/responsive';
 
 /* Утилитарные классы */
 .flex { display: flex; }

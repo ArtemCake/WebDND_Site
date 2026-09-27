@@ -64,11 +64,12 @@ WebDND_Site/ (77 файлов)
 │   │   │   ├── style.min.css       # Скомпилированный бандл
 │   │   │   └── modules/            # Архитектура БЭМ/SMACSS
 │   │   │       ├── base/
-│   │   │       │   ├── _reset.scss,
-│   │   │       │   ├── _typography.scss,
+│   │   │       │   ├── _reset.scss
+│   │   │       │   ├── _typography.scss
+│   │   │       │   ├── _responsive.scss
 │   │   │       │   └── _variables.scss
 │   │   │       ├── layout/
-│   │   │       │   ├── _navbar.scss,
+│   │   │       │   ├── _navbar.scss
 │   │   │       │   └── _container.scss
 │   │   │       ├── forms/
 │   │   │       │   └── _inputs.scss
