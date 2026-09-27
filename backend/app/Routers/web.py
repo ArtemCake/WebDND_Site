@@ -1,9 +1,8 @@
 # backend/app/Routers/web.py
 
 from Config.Config import settings
-from Config.imports import (os, URLSafeTimedSerializer, Path,
-                        HTTPException, TemplateNotFound, Jinja2Templates,
-						asyncio, Request, APIRouter, HTMLResponse, status, RedirectResponse)
+from Config.imports import (os, URLSafeTimedSerializer, HTTPException, TemplateNotFound,
+                            asyncio, Request, APIRouter, HTMLResponse, status, RedirectResponse)
 
 
 router = APIRouter()

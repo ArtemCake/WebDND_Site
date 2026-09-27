@@ -3,24 +3,22 @@
 from backend.app.database.database import get_async_session
 from Config.Config import settings
 from Config.imports import (JSONResponse, HTMLResponse, APIRouter, Depends, HTTPException,
-                            status, UploadFile, File, Request, EmailStr, BaseModel, Field,
-                            AsyncSession, UUID, Form, jwt, JWTError, datetime, ValidationError,
-                            asyncio)
+	status, UploadFile, File, Request, EmailStr, BaseModel, Field,
+	AsyncSession, UUID, jwt, JWTError, datetime, ValidationError,
+	asyncio)
 from backend.app.database.models.core.user import User
-from backend.app.Services.user_service import (update_user_profile, change_password,
-                                               get_current_user)
+from backend.app.Services.user_service import (update_user_profile, change_password, get_current_user)
+from app.schemas.auth import ChangePasswordRequest
 
 
 router = APIRouter(
 	prefix="/profile",
 	tags=["profile"],
-	# ВАЖНО: Убрали dependencies=[Depends(oauth2_scheme)]
-	# oauth2_scheme читает только заголовок Authorization, а токен у нас в куке
 )
 
 env_lock = asyncio.Lock()
 
-# --- СХЕМЫ ЗАПРОСОВ И ОТВЕТОВ ---
+# --- DTO МОДЕЛИ (Data Transfer Objects) ---
 
 class ProfileSettingsDTO(BaseModel):
 	"""Настройки визуального профиля пользователя."""
@@ -36,14 +34,7 @@ class ProfileResponseDTO(BaseModel):
 	is_email_verified: bool
 	profile_settings: ProfileSettingsDTO
 
-class PasswordChangeDTO(BaseModel):
-	"""Данные для смены пароля."""
-	current_password: str = Field(..., min_length=8)
-	new_password: str = Field(..., min_length=8)
-
-
 # --- КОНТРОЛЛЕРЫ (ВЬЮХИ) ---
-
 @router.get("/", response_class=HTMLResponse, name="profile_page_get")
 async def get_profile_page(request: Request, user: User = Depends(get_current_user)):
 	"""
@@ -59,7 +50,8 @@ async def get_profile_page(request: Request, user: User = Depends(get_current_us
 @router.get("/data", response_model=ProfileResponseDTO, operation_id="getCurrentUserProfile")
 async def get_profile_data(user: User = Depends(get_current_user)):
 	"""
-	Возвращает структурированные данные текущего пользователя.
+	Возвращает структурированные данные текущего пользователя в формате JSON.
+	Используется фронтендом для динамического обновления интерфейса.
 	"""
 	settings_dto = ProfileSettingsDTO(**(user.profile_settings or {}))
 
@@ -74,6 +66,7 @@ async def get_profile_data(user: User = Depends(get_current_user)):
 
 @router.put("/update", response_class=JSONResponse, status_code=status.HTTP_200_OK, operation_id="updateUserProfile")
 async def api_update_profile(
+		# Оставляем Form(...) так как htmx отправляет multipart/form-data
 		nickname: str = Form(...),
 		email: EmailStr = Form(...),
 		avatar: UploadFile | None = File(None),
@@ -82,6 +75,7 @@ async def api_update_profile(
 ):
 	"""
 	Обновляет базовые данные профиля: никнейм, почту и аватар.
+	Валидатор Pydantic типа EmailStr проверяет формат почты до попадания в сервис.
 	"""
 	try:
 		updated_user = await update_user_profile(
@@ -109,12 +103,14 @@ async def api_update_profile(
 
 @router.post("/change-password", response_class=JSONResponse, status_code=status.HTTP_200_OK, operation_id="changeUserPassword")
 async def api_change_password(
-		data: PasswordChangeDTO,
+		# Используем схему Pydantic v2.x для строгой проверки тела запроса (application/json)
+		data: ChangePasswordRequest,
 		session: AsyncSession = Depends(get_async_session),
 		user: User = Depends(get_current_user)
 ):
 	"""
 	Изменяет пароль текущей учетной записи.
+	Валидация сложности пароля и минимальной длины выполняется схемой ChangePasswordRequest.
 	"""
 	success = await change_password(
 		session=session,
@@ -128,6 +124,16 @@ async def api_change_password(
 			status_code=status.HTTP_401_UNAUTHORIZED,
 			detail="Текущий пароль неверен. Операция отменена."
 		)
+
+	# Инвалидация всех активных сессий после смены пароля (Security best practice)
+	new_session_token = secrets.token_urlsafe(64)
+	stmt = (
+		update(User)
+		.where(User.id == user.id)
+		.values(active_session_token=new_session_token, updated_at=datetime.utcnow())
+	)
+	await session.execute(stmt)
+	await session.commit()
 
 	return {
 		"message": "Пароль успешно изменен в целях безопасности.",

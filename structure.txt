@@ -14,6 +14,9 @@ WebDND_Site/ (77 файлов)
 │   │   │   ├── user_service.py    # CRUD пользователей, смена пароля, инвалидация сессий
 │   │   │   └── mail_service.py    # Отправка писем (верификация, сброс пароля) через aiosmtplib
 │   │   │
+│   │   ├── schemas/
+│   │   │   └── auth.py
+│   │   │
 │   │   ├── Routers/
 │   │   │   ├── api.py             # Роуты аутентификации: /auth/login, /register, /logout
 │   │   │   ├── profile.py         # Личный кабинет пользователя (HTMX-формы)
