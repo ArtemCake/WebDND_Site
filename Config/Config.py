@@ -44,6 +44,7 @@ class WebAppSettings(BaseSettings):
 	POSTGRES_DB: str  # Имя базы данных
 	POSTGRES_HOST: str  # Адрес сервера
 	POSTGRES_PORT: str  # Порт
+	ENVIRONMENT: str = "development"  # development, production, testing
 
 	ASYNC_DB_DRIVER: str = "postgresql+asyncpg"
 

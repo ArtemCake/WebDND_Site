@@ -1,12 +1,14 @@
 # backend/app/Routers/api.py
 
 from Config.logger import setup_logging
-from backend.app.Services.security_service import oauth2_scheme, create_verification_token, verify_token, blacklist_token
-from backend.app.Services.user_service import soft_delete_user, get_current_user, change_password, update_user_profile
+from backend.app.Services.security_service import (oauth2_scheme, create_verification_token,
+	verify_token, blacklist_token)
+from backend.app.Services.user_service import (soft_delete_user, get_current_user,
+	change_password, update_user_profile)
 from Config.Config import settings
 from Config.imports import (JSONResponse, datetime, AsyncSession, update, CsrfProtect, File, Dict,
 	APIRouter, Depends, HTTPException, status, timedelta, CryptContext,
-	Form, secrets, Request, HTMLResponse, UploadFile)
+	Form, secrets, Request, HTMLResponse, UploadFile, EmailStr)
 from backend.app.database.database import get_async_session
 from backend.app.database.models.core.user import User
 from backend.app.Services import security_service, user_service
@@ -25,13 +27,15 @@ csrf = CsrfProtect()
 
 @router.post("/register", response_model=dict, status_code=status.HTTP_201_CREATED)
 async def register_user_action(
-		# Используем готовую схему вместо набора полей Form
+		# Используем готовую схему вместо набора полей Form.
+		# FastAPI автоматически провалидирует JSON body или form-data через Pydantic.
 		data: RegisterRequest,
 		session: AsyncSession = Depends(get_async_session)
 ):
 	"""
 	Регистрация нового пользователя.
-	Входные данные строго валидируются схемой RegisterRequest до попадания в функцию.
+	Входные данные строго валидируются схемой RegisterRequest до попадания в тело функции.
+	Ошибки формата (например, отсутствие '@' в email) вернутся клиенту как 422 VALIDATION_ERROR.
 	"""
 	log.info(f"[AUTH][REGISTER] Attempt for {data.email}")
 	try:
@@ -82,7 +86,7 @@ async def register_user_action(
 @router.post("/login", response_model=dict)
 async def login_for_access_token(
 		request: Request,
-		# Используем готовую схему
+		# Используем готовую схему для строгой валидации пароля и почты
 		data: LoginRequest,
 		session: AsyncSession = Depends(get_async_session)
 ):
@@ -124,6 +128,7 @@ async def login_for_access_token(
 			"refresh_token": tokens["refresh_token"]
 		})
 
+		# Установка безопасных кук
 		response.set_cookie(
 			key="access_token",
 			value=tokens["access_token"],
@@ -143,6 +148,7 @@ async def login_for_access_token(
 			secure=settings.SECURE_COOKIES
 		)
 
+		# Инвалидация предыдущих активных сессий (защита от угона сессии)
 		new_session_token = secrets.token_urlsafe(64)
 		stmt = (
 			update(User)
@@ -161,11 +167,88 @@ async def login_for_access_token(
 		log.error(f"Critical error during login for '{data.email}'", exc_info=True)
 		return JSONResponse(status_code=500, content={"error": "Непредвиденная ошибка сервера."})
 
-# ... [роутеры /verify-email и /logout остаются без изменений, так как принимают query-параметры или токен]
+@router.get("/verify-email")
+async def verify_email(token: str, session: AsyncSession = Depends(get_async_session)):
+	"""Подтверждение адреса почты."""
+	payload = verify_token(token, purpose="email_verification")
+	user_id: str = payload.get("sub") if payload else None
+
+	if not user_id:
+		log.warning("[AUTH][VERIFY] Invalid or expired token provided.")
+		raise HTTPException(status_code=400, detail="Неверный или просроченный токен.")
+
+	success = await user_service.verify_email(session, user_id)
+	if not success:
+		log.error(f"[AUTH][VERIFY] User ID {user_id} not found in DB.")
+		raise HTTPException(status_code=404, detail="Пользователь не найден.")
+
+	log.info(f"[AUTH][VERIFY] Email verified for user ID {user_id}.")
+	return JSONResponse(content={"message": "Email успешно подтвержден."}, status_code=200)
+
+@router.post("/logout")
+async def logout(
+		token: str = Depends(oauth2_scheme),
+		session: AsyncSession = Depends(get_async_session)
+):
+	"""
+	Выход из системы.
+	Фикс безопасности: Добавлена очистка клиентских кук через Set-Cookie с истекшим сроком.
+	"""
+	await security_service.blacklist_token(token)
+
+	response = JSONResponse(content={"message": "Выход выполнен успешно"})
+
+	# Удаляем куки на клиенте
+	response.delete_cookie(key="access_token", path="/")
+	response.delete_cookie(key="refresh_token", path="/")
+
+	log.info(f"[AUTH][LOGOUT] Token invalidated and cookies cleared.")
+	return response
+
+@router.post("/delete-account", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_account(
+		password: str = Form(...),
+		permanent: bool = False,
+		db: AsyncSession = Depends(get_async_session),
+		current_user: User = Depends(oauth2_scheme)
+):
+	"""
+	Удаление аккаунта.
+	Фикс безопасности: Перед удалением принудительно инвалидируются все активные сессии во всей инфраструктуре.
+	"""
+	if not pwd_context.verify(password, current_user.password_hash):
+		log.warning(f"[ACCOUNT][DELETE] Wrong password attempt for {current_user.id}")
+		raise HTTPException(
+			status_code=status.HTTP_401_UNAUTHORIZED,
+			detail="Неверный пароль.",
+			headers={"WWW-Authenticate": "Bearer"},
+		)
+
+	if permanent:
+		await user_service.hard_delete_user(db, current_user.id)
+		action_log = "Account permanently deleted."
+	else:
+		success = await soft_delete_user(db, current_user.id)
+		if not success:
+			log.error(f"[ACCOUNT][DELETE] Soft delete failed for {current_user.id}")
+			raise HTTPException(status_code=404, detail="Пользователь не найден или уже удален.")
+		action_log = "Account marked as deleted."
+
+	new_session_token = secrets.token_urlsafe(64)
+	stmt = (
+		update(User)
+		.where(User.id == current_user.id)
+		.values(active_session_token=new_session_token, updated_at=datetime.utcnow())
+	)
+	await db.execute(stmt)
+	await db.commit()
+
+	log.info(f"[ACCOUNT][DELETED] Account {current_user.id} processed. Action: {action_log}")
+	return None
 
 @router.put("/profile/update", response_model=dict)
 async def api_update_profile(
-		# Для HTMX-форм оставляем ручной сбор данных через Form
+		# Для HTMX-форм оставляем ручной сбор данных через Form, так как они приходят как multipart/form-data
 		nickname: str = Form(...),
 		email: EmailStr = Form(...),
 		avatar: UploadFile | None = File(None),
@@ -178,7 +261,6 @@ async def api_update_profile(
 	Внутри сервиса должна быть повторная проверка уникальности email.
 	"""
 	try:
-		# Собираем словарь вручную, чтобы передать в сервис слой
 		profile_data = {"nickname": nickname, "email": email}
 
 		updated_user = await update_user_profile(
@@ -206,7 +288,7 @@ async def api_update_profile(
 
 @router.post("/change-password", response_model=dict)
 async def change_password_endpoint(
-		# Здесь также используется Form, так как смена пароля обычно идет через форму
+		# Здесь также используется Form, так как смена пароля обычно идет через форму htmx
 		current_password: str = Form(...),
 		new_password: str = Form(...),
 		session: AsyncSession = Depends(get_async_session),
@@ -214,11 +296,8 @@ async def change_password_endpoint(
 ):
 	"""Смена пароля текущим пользователем."""
 
-	# Ручная валидация сложности здесь может быть избыточной,
-	# если вынести её в отдельный Middleware или Service Layer.
-	# Но для единообразия можно создать мини-схему прямо тут:
-	from pydantic import BaseModel
-
+	# Ручная валидация сложности здесь может быть избыточной, если она есть в схеме/сервисе.
+	# Однако сохраняем её для защиты эндпоинта, принимающего raw Form-data.
 	class TempPwdSchema(BaseModel):
 		current_password: str
 		new_password: str

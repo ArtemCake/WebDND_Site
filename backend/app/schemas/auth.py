@@ -1,12 +1,22 @@
 # backend/app/schemas/auth.py
 
-from Config.imports import (BaseModel, EmailStr, Field, field_validator, Optional, re)
+from Config.imports import (BaseModel, EmailStr, Field, field_validator, re, Optional)
 
 
 class LoginRequest(BaseModel):
-	"""Схема входных данных для эндпоинта /auth/login"""
+	"""
+	Схема входных данных для эндпоинта /auth/login.
+
+	Валидирует email и пароль перед передачей в сервис авторизации.
+	Использует Pydantic v2.x согласно списку библиотек в ТЗ (раздел 3).
+	"""
 	email: EmailStr = Field(..., description="Email пользователя")
-	password: str = Field(..., min_length=8, max_length=128, description="Пароль")
+	password: str = Field(
+		...,
+		min_length=8,
+		max_length=128,
+		description="Пароль"
+	)
 
 	@field_validator('password')
 	@classmethod
@@ -17,12 +27,26 @@ class LoginRequest(BaseModel):
 		return v
 
 class RegisterRequest(BaseModel):
-	"""Схема входных данных для эндпоинта /auth/register"""
-	nickname: str = Field(..., min_length=3, max_length=32,
-	                      regex=r'^[\w\-]+$',
-	                      description="Никнейм (латиница, цифры, дефис, подчеркивание)")
+	"""
+	Схема входных данных для эндпоинта /auth/register.
+
+	Исправление ошибки PydanticUserError:
+	Параметр 'regex' заменен на 'pattern' для совместимости с v2.x.
+	"""
+	nickname: str = Field(
+		...,
+		min_length=3,
+		max_length=32,
+		pattern=r'^[\w\-]+$',  # <-- ИСПРАВЛЕНО: regex -> pattern
+		description="Никнейм (латиница, цифры, дефис, подчеркивание)"
+	)
 	email: EmailStr = Field(..., description="Email пользователя")
-	password: str = Field(..., min_length=8, max_length=128, description="Пароль")
+	password: str = Field(
+		...,
+		min_length=8,
+		max_length=128,
+		description="Пароль"
+	)
 
 	@field_validator('password')
 	@classmethod
@@ -32,11 +56,23 @@ class RegisterRequest(BaseModel):
 		return v
 
 class UpdateProfileRequest(BaseModel):
-	"""Схема обновления профиля"""
-	nickname: Optional[str] = Field(None, min_length=3, max_length=32, regex=r'^[\w\-]+$')
+	"""
+	Схема обновления профиля текущего пользователя.
+	Все поля опциональны, так как PATCH-запрос может обновлять только часть данных.
+	"""
+	nickname: Optional[str] = Field(
+		None,
+		min_length=3,
+		max_length=32,
+		pattern=r'^[\w\-]+$'  # <-- ИСПРАВЛЕНО: regex -> pattern
+	)
 	email: Optional[EmailStr] = None
 
 class ChangePasswordRequest(BaseModel):
+	"""
+	Схема смены пароля. Используется как на бэкенде (/change-password),
+	так и внутри фронтенд-модуля auth.js для локальной проверки JSON.
+	"""
 	current_password: str = Field(..., min_length=8)
 	new_password: str = Field(..., min_length=8, max_length=128)
 

@@ -3,12 +3,11 @@
 from backend.app.database.database import get_async_session
 from Config.Config import settings
 from Config.imports import (JSONResponse, HTMLResponse, APIRouter, Depends, HTTPException,
-	status, UploadFile, File, Request, EmailStr, BaseModel, Field,
-	AsyncSession, UUID, jwt, JWTError, datetime, ValidationError,
-	asyncio)
+	status, UploadFile, File, Request, EmailStr, BaseModel, Field, AsyncSession, UUID, jwt,
+	JWTError, datetime, ValidationError, asyncio, Form)
 from backend.app.database.models.core.user import User
 from backend.app.Services.user_service import (update_user_profile, change_password, get_current_user)
-from app.schemas.auth import ChangePasswordRequest
+from backend.app.schemas.auth import ChangePasswordRequest
 
 
 router = APIRouter(

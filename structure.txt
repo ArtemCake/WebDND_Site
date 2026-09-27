@@ -92,6 +92,9 @@ WebDND_Site/ (77 файлов)
 │   │   │   │   ├── pixi/
 │   │   │   │   │   ├── DisplayObjectPool.js
 │   │   │   │   │   └── TokenFactory.js
+│   │   │   │   ├── systems/
+│   │   │   │   │   ├── Dnd5eSystem.js
+│   │   │   │   │   └── ISystem.js
 │   │   │   │   ├── ui.js           # Фиксация шапки, управление темами, IntersectionObserver
 │   │   │   │   ├── auth.js         # Обработка ответов сервера при регистрации/входе (htmx:afterOnLoad)
 │   │   │   │   ├── dice.js         # Сервис бросков DiceService (advantage/disadvantage)
