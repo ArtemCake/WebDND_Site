@@ -22,4 +22,4 @@ class UserRole(Base):
 	role: Mapped[str] = mapped_column( SystemRole.pg_enum_type(), primary_key=True, nullable=False)
 
 	def __repr__(self) -> str:
-		return f"<UserRole(user_id='{self.user_id}', role_id={self.role_id})>"
+		return f"<UserRole(user_id='{self.user_id}', role_id={self.role})>"

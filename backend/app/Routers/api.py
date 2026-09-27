@@ -1,14 +1,13 @@
 # backend/app/Routers/api.py
 
 from Config.logger import setup_logging
-from backend.app.Services.security_service import (oauth2_scheme, create_verification_token,
-	verify_token, blacklist_token)
+from backend.app.Services.security_service import (oauth2_scheme, create_verification_token, verify_token)
 from backend.app.Services.user_service import (soft_delete_user, get_current_user,
-	change_password, update_user_profile)
+                                               change_password, update_user_profile)
 from Config.Config import settings
-from Config.imports import (JSONResponse, datetime, AsyncSession, update, CsrfProtect, File, Dict,
-	APIRouter, Depends, HTTPException, status, timedelta, CryptContext,
-	Form, secrets, Request, HTMLResponse, UploadFile, EmailStr)
+from Config.imports import (JSONResponse, datetime, AsyncSession, update, File, Dict,
+                            APIRouter, Depends, HTTPException, status, timedelta, CryptContext,
+                            Form, secrets, Request, HTMLResponse, UploadFile, EmailStr, BaseModel)
 from backend.app.database.database import get_async_session
 from backend.app.database.models.core.user import User
 from backend.app.Services import security_service, user_service
@@ -23,20 +22,12 @@ router = APIRouter(
 
 log = setup_logging(app_name="WebDND_Site")
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
-csrf = CsrfProtect()
 
 @router.post("/register", response_model=dict, status_code=status.HTTP_201_CREATED)
 async def register_user_action(
-		# Используем готовую схему вместо набора полей Form.
-		# FastAPI автоматически провалидирует JSON body или form-data через Pydantic.
 		data: RegisterRequest,
 		session: AsyncSession = Depends(get_async_session)
 ):
-	"""
-	Регистрация нового пользователя.
-	Входные данные строго валидируются схемой RegisterRequest до попадания в тело функции.
-	Ошибки формата (например, отсутствие '@' в email) вернутся клиенту как 422 VALIDATION_ERROR.
-	"""
 	log.info(f"[AUTH][REGISTER] Attempt for {data.email}")
 	try:
 		existing_user = await user_service.get_user_by_email(session, data.email)
@@ -111,9 +102,12 @@ async def login_for_access_token(
 				"action": "verify_email"
 			})
 
+		new_session_token = secrets.token_urlsafe(64)
+
 		tokens = await security_service.create_jwt_pair(
 			user_obj_or_id=user,
-			expires_delta=access_token_expires
+			expires_delta=access_token_expires,
+			session_token=new_session_token
 		)
 
 		log.info(f"[AUTH][SUCCESS] Login successful for {email} (ID: {user.id})")
@@ -143,7 +137,6 @@ async def login_for_access_token(
 			secure=settings.SECURE_COOKIES
 		)
 
-		new_session_token = secrets.token_urlsafe(64)
 		stmt = (
 			update(User)
 			.where(User.id == user.id)
@@ -181,35 +174,39 @@ async def verify_email(token: str, session: AsyncSession = Depends(get_async_ses
 
 @router.post("/logout")
 async def logout(
-		token: str = Depends(oauth2_scheme),
+		request: Request,
+		current_user: User = Depends(get_current_user),
 		session: AsyncSession = Depends(get_async_session)
 ):
 	"""
 	Выход из системы.
-	Фикс безопасности: Добавлена очистка клиентских кук через Set-Cookie с истекшим сроком.
+	active_session_token обнуляется, поэтому даже уже выпущенный JWT
+	теряет действие сразу, а не по истечении срока годности.
 	"""
-	await security_service.blacklist_token(token)
+	stmt = (
+		update(User)
+		.where(User.id == current_user.id)
+		.values(active_session_token=None, updated_at=datetime.utcnow())
+	)
+	await session.execute(stmt)
+	await session.commit()
 
 	response = JSONResponse(content={"message": "Выход выполнен успешно"})
-
-	# Удаляем куки на клиенте
 	response.delete_cookie(key="access_token", path="/")
 	response.delete_cookie(key="refresh_token", path="/")
 
-	log.info(f"[AUTH][LOGOUT] Token invalidated and cookies cleared.")
+	log.info(f"[AUTH][LOGOUT] Session invalidated and cookies cleared for {current_user.id}.")
 	return response
 
 @router.post("/delete-account", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_account(
+		request: Request,
 		password: str = Form(...),
 		permanent: bool = False,
 		db: AsyncSession = Depends(get_async_session),
-		current_user: User = Depends(oauth2_scheme)
+		current_user: User = Depends(get_current_user)
 ):
-	"""
-	Удаление аккаунта.
-	Фикс безопасности: Перед удалением принудительно инвалидируются все активные сессии во всей инфраструктуре.
-	"""
+	"""Удаление аккаунта."""
 	if not pwd_context.verify(password, current_user.password_hash):
 		log.warning(f"[ACCOUNT][DELETE] Wrong password attempt for {current_user.id}")
 		raise HTTPException(
@@ -228,11 +225,10 @@ async def delete_account(
 			raise HTTPException(status_code=404, detail="Пользователь не найден или уже удален.")
 		action_log = "Account marked as deleted."
 
-	new_session_token = secrets.token_urlsafe(64)
 	stmt = (
 		update(User)
 		.where(User.id == current_user.id)
-		.values(active_session_token=new_session_token, updated_at=datetime.utcnow())
+		.values(active_session_token=None, updated_at=datetime.utcnow())
 	)
 	await db.execute(stmt)
 	await db.commit()
@@ -242,18 +238,13 @@ async def delete_account(
 
 @router.put("/profile/update", response_model=dict)
 async def api_update_profile(
-		# Для HTMX-форм оставляем ручной сбор данных через Form, так как они приходят как multipart/form-data
+		request: Request,
 		nickname: str = Form(...),
 		email: EmailStr = Form(...),
 		avatar: UploadFile | None = File(None),
 		session: AsyncSession = Depends(get_async_session),
 		current_user: User = Depends(get_current_user)
 ):
-	"""
-	Обновляет базовые данные профиля.
-	Примечание: Так как запрос приходит от htmx через form-data, используем Form.
-	Внутри сервиса должна быть повторная проверка уникальности email.
-	"""
 	try:
 		profile_data = {"nickname": nickname, "email": email}
 
@@ -282,41 +273,26 @@ async def api_update_profile(
 
 @router.post("/change-password", response_model=dict)
 async def change_password_endpoint(
-		# Здесь также используется Form, так как смена пароля обычно идет через форму htmx
+		request: Request,
 		current_password: str = Form(...),
 		new_password: str = Form(...),
 		session: AsyncSession = Depends(get_async_session),
 		current_user: User = Depends(get_current_user)
 ):
 	"""Смена пароля текущим пользователем."""
-
-	# Ручная валидация сложности здесь может быть избыточной, если она есть в схеме/сервисе.
-	# Однако сохраняем её для защиты эндпоинта, принимающего raw Form-data.
-	class TempPwdSchema(BaseModel):
-		current_password: str
-		new_password: str
-
-	validated = TempPwdSchema(current_password=current_password, new_password=new_password)
-
 	success = await change_password(
 		session=session,
 		user=current_user,
-		old_password=validated.current_password,
-		new_password=validated.new_password
+		old_password=current_password,
+		new_password=new_password
 	)
 	if not success:
 		log.warning(f"[SECURITY] Password change failed for {current_user.id} - wrong old pass.")
-		raise HTTPException(status_code=401, detail="Текущий пароль неверен.")
+		raise HTTPException(status_code=401, detail="Текущий пароль неверен. Операция отменена.")
 
-	# После смены пароля сбрасываем активную сессию
-	new_session_token = secrets.token_urlsafe(64)
-	stmt = (
-		update(User)
-		.where(User.id == current_user.id)
-		.values(active_session_token=new_session_token, updated_at=datetime.utcnow())
-	)
-	await session.execute(stmt)
-	await session.commit()
-
-	log.info(f"[SECURITY] Password changed successfully for {current_user.id}. Session rotated.")
-	return {"message": "Пароль успешно изменен."}
+	log.info(f"[SECURITY] Password changed successfully for {current_user.id}.")
+	return {
+		"message": "Пароль успешно изменен в целях безопасности.",
+		"security_note": "Все ваши активные сессии на других устройствах были завершены.",
+		"redirect_url": "/auth/login"
+	}

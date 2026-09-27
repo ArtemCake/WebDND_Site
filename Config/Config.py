@@ -1,6 +1,6 @@
 # Config/Config.py
 
-from Config.imports import (BaseSettings, SettingsConfigDict, os, Path)
+from Config.imports import (BaseSettings, SettingsConfigDict, os, Path, ValidationError)
 
 
 # --- НАСТРОЙКИ ТАЙМЕРА ---
@@ -82,12 +82,11 @@ class WebAppSettings(BaseSettings):
 		extra="ignore",  # Игнорирует лишние переменные в .env
 	)
 
-
 # Глобальный объект
 try:
 	settings = WebAppSettings()
-except Exception as e:
-	print(f"[CONFIG FATAL] Cannot load settings: {e}")
+except ValidationError as e:
+	raise RuntimeError(f"Ошибка конфигурации: не заданы обязательные переменные окружения — {e}")
 	# Создаем пустой объект-заглушку, чтобы main.py не упал при импорте
 	class DummySettings:
 		pass
