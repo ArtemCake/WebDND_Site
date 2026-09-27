@@ -86,6 +86,8 @@ WebDND_Site/ (77 файлов)
 │   │   │
 │   │   ├── js/
 │   │   │   ├── main.js             # Точка входа фронтенда (инициализация HTMX, UI, карты, кубики)
+│   │   │   ├── config/
+│   │   │   │   └── appConfig.js
 │   │   │   ├── modules/
 │   │   │   │   ├── pixi/
 │   │   │   │   │   ├── DisplayObjectPool.js
