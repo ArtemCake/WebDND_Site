@@ -20,10 +20,10 @@
 			<div class="">
 				<!-- Аватар -->
 				<label class="relative">
-					<img src="{{ user.avatar_url or '/frontend/static/image/default-avatar.jpg' }}"
+					<img src="{{ user.avatar_url or '/frontend/static/images/default-avatar.jpg' }}"
 					     alt="Аватар"
 					     class="">
-					<input type="file" name="avatar" accept="image/*" class="hidden" onchange="previewAvatar(event)">
+					<input type="file" name="avatar" accept="images/*" class="hidden" onchange="previewAvatar(event)">
 					<button type="button" class="">
 						Изменить
 					</button>
@@ -88,20 +88,4 @@
 		</div>
 	</div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-	function previewAvatar(event) {
-		const input = event.target;
-		if (input.files && input.files[0]) {
-			const reader = new FileReader();
-			reader.onload = function(e) {
-				// Находим предыдущее изображение и меняем его src
-				document.querySelector('#profile-form-section img').src = e.target.result;
-			}
-			reader.readAsDataURL(input.files[0]);
-		}
-	}
-</script>
 {% endblock %}
