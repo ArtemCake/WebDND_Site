@@ -1,79 +1,93 @@
 // frontend/static/js/modules/map.js
 
 import * as PIXI from 'pixi.js';
-import { BLEND_MODES } from '@pixi/constants';
+import { DisplayObjectPool } from './pixi/DisplayObjectPool.js';
+import { TokenFactory } from './pixi/TokenFactory.js';
 
 export class GameMap {
-    constructor(containerId) {
+    constructor(canvasId) {
         this.app = new PIXI.Application({
-            backgroundColor: 0x0a0f14,
-            resolution: window.devicePixelRatio || 1,
-            autoDensity: true
+            view: document.getElementById(canvasId),
+            resizeTo: window,
+            backgroundColor: 0x1a1a1a
         });
 
-        document.getElementById(containerId).appendChild(this.app.view);
+        this.gridContainer = new PIXI.Container();
+        this.tokensContainer = new PIXI.Container();
 
-        // Слой тумана войны (самый верхний)
-        this.fogContainer = new PIXI.Container();
-        this.app.stage.addChild(this.fogContainer);
-        this.applyGlobalFog();
+        this.app.stage.addChild(this.gridContainer);
+        this.app.stage.addChild(this.tokensContainer);
+
+        // --- ИНИЦИАЛИЗАЦИЯ ПУЛА ---
+        // Передаем фабричную функцию, которая знает, как создать чистый токен
+        this.tokenPool = new DisplayObjectPool(() => TokenFactory.createDefaultToken());
+        console.log('[MAP] Object pool initialized.');
     }
 
-    applyGlobalFog() {
-        const fullFog = new PIXI.Graphics();
-        fullFog.beginFill(0x000000);
-        fullFog.drawRect(0, 0, this.app.screen.width, this.app.screen.height);
-        fullFog.endFill();
-        this.fogContainer.addChild(fullFog);
-    }
+    drawHexGrid(size, cols, rows) {
+        const graphics = new PIXI.Graphics();
+        graphics.lineStyle(1, 0x333333, 0.2);
 
-    revealCircle(x, y, radius) {
-        const maskGraphics = new PIXI.Graphics();
-        maskGraphics.beginFill(0xffffff);
-        maskGraphics.drawCircle(x, y, radius);
-        maskGraphics.endFill();
+        for (let c = 0; c < cols; c++) {
+            for (let r = 0; r < rows; r++) {
+                const x = c * size * 1.5;
+                const y = r * size * Math.sqrt(3) + (c % 2 * size * Math.sqrt(3) / 2);
 
-        const maskSprite = new PIXI.Sprite(maskGraphics.generateCanvasTexture());
-        maskSprite.x = 0;
-        maskSprite.y = 0;
-
-        // Используем правильную константу из импорта выше
-        maskSprite.blendMode = BLEND_MODES.DESTINATION_OUT;
-
-        this.fogContainer.addChild(maskSprite);
-    }
-
-    drawHexGrid(size, cols, rows) { // Переименовано для ясности: columns & rows
-        for (let q = 0; q < cols; q++) {
-            for (let r = 0; r < rows; r++) { // <--- ИСПРАВЛЕНО: сравнение с rows
-                const gfx = new PIXI.Graphics();
-
-                // Расчет координат гекса (смещение "вперехлест")
-                const offsetX = size * 1.5 * q;
-                const offsetY = size * Math.sqrt(3) * (r + (q % 2) * 0.5);
-
-                this.drawHex(gfx, offsetX, offsetY, size, 0x2d2d3c);
-                this.app.stage.addChild(gfx);
+                graphics.moveTo(x + size, y);
+                for (let i = 1; i <= 6; i++) {
+                    const angle = (Math.PI / 3) * i;
+                    graphics.lineTo(x + size + size * Math.cos(angle), y + size * Math.sin(angle));
+                }
             }
         }
+
+        this.gridContainer.addChild(graphics);
     }
 
-    drawHex(graphics, cx, cy, size, color) {
-        graphics.lineStyle(1, 0x333333, 0.5);
-        graphics.beginFill(color);
+    /**
+     * Создание токена игрока через объектный пул.
+     * @param {string} playerId - Уникальный ID игрока.
+     * @param {number} x - Координата X.
+     * @param {number} y - Координата Y.
+     */
+    createPlayerToken(playerId, x, y) {
+        // Вместо new PIXI.Graphics() берем готовый объект из пула
+        let token = this.tokenPool.acquire();
 
-        // Рисуем правильный шестиугольник
-        for (let i = 0; i < 6; i++) { // Здесь 'i' объявлен правильно!
-            const angle = (Math.PI / 3) * i - (Math.PI / 6); // Смещение угла, чтобы гекс стоял "плоско" сверху
-            const px = cx + size * Math.cos(angle);
-            const py = cy + size * Math.sin(angle);
+        // Если нужно изменить цвет под конкретного игрока (расширяемо)
+        // token.tint = ...
 
-            if (i === 0) {
-                graphics.moveTo(px, py);
-            } else {
-                graphics.lineTo(px, py);
-            }
+        token.visible = true;
+        token.position.set(x, y);
+
+        // Привязываем ID для возможности возврата в пул
+        token.playerId = playerId;
+
+        this.tokensContainer.addChild(token);
+        return token;
+    }
+
+    /**
+     * Удаляет токен со сцены, возвращая его в пул.
+     * Это предотвращает утечки памяти и снижает лаги.
+     * @param {PIXI.DisplayObject} token
+     */
+    removePlayerToken(token) {
+        if (!token) return;
+
+        // Убираем из контейнера отображения
+        this.tokensContainer.removeChild(token);
+
+        // Возвращаем в пул для переиспользования
+        this.tokenPool.release(token);
+
+        console.log(`[MAP] Token returned to pool. Pool size: ${this.tokenPool.size}`);
+    }
+
+    updateTokenPosition(token, x, y) {
+        if (token && token.visible) {
+            token.x = x;
+            token.y = y;
         }
-        graphics.endFill();
     }
 }

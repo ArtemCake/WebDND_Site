@@ -83,6 +83,9 @@ WebDND_Site/ (77 файлов)
 │   │   ├── js/
 │   │   │   ├── main.js             # Точка входа фронтенда (инициализация HTMX, UI, карты, кубики)
 │   │   │   ├── modules/
+│   │   │   │   ├── pixi/
+│   │   │   │   │   ├── DisplayObjectPool.js
+│   │   │   │   │   └── TokenFactory.js
 │   │   │   │   ├── ui.js           # Фиксация шапки, управление темами, IntersectionObserver
 │   │   │   │   ├── auth.js         # Обработка ответов сервера при регистрации/входе (htmx:afterOnLoad)
 │   │   │   │   ├── dice.js         # Сервис бросков DiceService (advantage/disadvantage)
