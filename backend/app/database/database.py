@@ -64,5 +64,5 @@ async def get_async_session() -> AsyncSession:
 			yield session
 	except Exception as db_error:
 		# Логируем ошибки работы с сессией (FIX FOR LOG-004)
-		logger.error(f"[DB][SESSION] Session error: {db_error}")
+		log.error(f"[DB][SESSION] Session error: {db_error}")
 		raise

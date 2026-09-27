@@ -86,30 +86,26 @@ async def register_user_action(
 @router.post("/login", response_model=dict)
 async def login_for_access_token(
 		request: Request,
-		# Используем готовую схему для строгой валидации пароля и почты
-		data: LoginRequest,
+		email: str = Form(...),
+		password: str = Form(...),
 		session: AsyncSession = Depends(get_async_session)
 ):
-	"""
-	Авторизация по паролю.
-	Валидатор Pydantic проверил сложность пароля еще до вызова этой функции.
-	"""
-	log.info(f"[AUTH][LOGIN] Attempt for {data.email} from {request.client.host}")
+	log.info(f"[AUTH][LOGIN] Attempt for {email} from {request.client.host}")
 	access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
 	try:
-		user_record = await user_service.get_user_by_email(session, data.email)
+		user_record = await user_service.get_user_by_email(session, email)
 		if not user_record:
-			log.warning(f"[AUTH][FAILED] Account does not exist for {data.email}")
+			log.warning(f"[AUTH][FAILED] Account does not exist for {email}")
 			return JSONResponse(status_code=404, content={"error": "Аккаунт не найден."})
 
-		user = await user_service.authenticate_user(session, data.email, data.password)
+		user = await user_service.authenticate_user(session, email, password)
 		if not user or not user.is_active:
-			log.warning(f"[AUTH][FAILED] Invalid credentials or inactive account for {data.email}")
+			log.warning(f"[AUTH][FAILED] Invalid credentials or inactive account for {email}")
 			return JSONResponse(status_code=401, content={"error": "Неверный пароль."})
 
 		if not user.is_email_verified:
-			log.warning(f"[AUTH][FORBIDDEN] Unverified email attempt for {data.email}")
+			log.warning(f"[AUTH][FORBIDDEN] Unverified email attempt for {email}")
 			return JSONResponse(status_code=403, content={
 				"error": "Необходимо подтвердить адрес электронной почты.",
 				"action": "verify_email"
@@ -120,7 +116,7 @@ async def login_for_access_token(
 			expires_delta=access_token_expires
 		)
 
-		log.info(f"[AUTH][SUCCESS] Login successful for {data.email} (ID: {user.id})")
+		log.info(f"[AUTH][SUCCESS] Login successful for {email} (ID: {user.id})")
 
 		response = JSONResponse(content={
 			"access_token": tokens["access_token"],
@@ -128,7 +124,6 @@ async def login_for_access_token(
 			"refresh_token": tokens["refresh_token"]
 		})
 
-		# Установка безопасных кук
 		response.set_cookie(
 			key="access_token",
 			value=tokens["access_token"],
@@ -148,7 +143,6 @@ async def login_for_access_token(
 			secure=settings.SECURE_COOKIES
 		)
 
-		# Инвалидация предыдущих активных сессий (защита от угона сессии)
 		new_session_token = secrets.token_urlsafe(64)
 		stmt = (
 			update(User)
@@ -161,10 +155,10 @@ async def login_for_access_token(
 		return response
 
 	except PermissionError as e:
-		log.warning(f"[AUTH][BLOCKED] Account state issue during login for {data.email}: {e}")
+		log.warning(f"[AUTH][BLOCKED] Account state issue during login for {email}: {e}")
 		return JSONResponse(status_code=403, content={"error": "Доступ запрещен."})
 	except Exception as e:
-		log.error(f"Critical error during login for '{data.email}'", exc_info=True)
+		log.error(f"Critical error during login for '{email}'", exc_info=True)
 		return JSONResponse(status_code=500, content={"error": "Непредвиденная ошибка сервера."})
 
 @router.get("/verify-email")
