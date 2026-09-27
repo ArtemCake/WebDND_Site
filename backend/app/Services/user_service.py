@@ -80,8 +80,6 @@ async def hard_delete_user(session: AsyncSession, user_id: str) -> None:
 async def get_user_by_id(session: AsyncSession, user_id: str) -> Optional[User]:
 	result = await session.execute(select(User).where(User.id == user_id))
 	return result.scalar_one_or_none()
-
-# --- ИЗМЕНЕНИЕ ЗДЕСЬ ---
 async def get_current_user(
 		request: Request,
 		session: AsyncSession = Depends(get_async_session)
