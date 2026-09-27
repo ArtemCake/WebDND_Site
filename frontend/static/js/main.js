@@ -5,6 +5,7 @@ import { DiceService } from './modules/dice.js';
 import { initGlobalUI } from './modules/ui.js';
 import { setupAuthHandlers, protectPrivateRoutes } from './modules/auth.js';
 import { GameMap } from './modules/map.js';
+import { AppConfig } from './config/appConfig.js';
 
 // --- ТОЧКА ВХОДА ПРИЛОЖЕНИЯ ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -76,12 +77,17 @@ document.addEventListener('DOMContentLoaded', () => {
     setupAuthHandlers();
     protectPrivateRoutes();
 
-    // 3. Инициализация игровой карты (Canvas + PixiJS)
-    const canvasRoot = document.getElementById('game-canvas-root');
-    if (canvasRoot) {
-        const gameMap = new GameMap('game-canvas-root');
-        gameMap.drawHexGrid(64, 20, 20);
-    }
+       // 3. Инициализация игровой карты (Canvas + PixiJS)
+       const canvasRoot = document.getElementById('game-canvas-root');
+       if (canvasRoot) {
+           // Используем параметры из единого конфига вместо магических чисел
+           const gameMap = new GameMap('game-canvas-root');
+           gameMap.drawHexGrid(
+               AppConfig.map.hexSize,
+               AppConfig.map.gridCols,
+               AppConfig.map.gridRows
+           );
+       }
 
     // 4. Делегирование событий для бросков кубиков (перенесено в dice.js)
     DiceService();

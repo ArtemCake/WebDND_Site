@@ -44,7 +44,8 @@ export class DiceService {
         resultBox.textContent = `Результат: ${sum} (${rolls.join(' + ')}${modifier >= 0 ? ' + ' : ''}${modifier})`;
         document.body.appendChild(resultBox);
 
-        setTimeout(() => resultBox.remove(), 5000);
+        // Используем значение из конфига вместо хардкода 5000
+        setTimeout(() => resultBox.remove(), AppConfig.ui.toastDuration);
     }
 }
 
