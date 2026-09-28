@@ -194,6 +194,7 @@ async def logout(
 	response = JSONResponse(content={"message": "Выход выполнен успешно"})
 	response.delete_cookie(key="access_token", path="/")
 	response.delete_cookie(key="refresh_token", path="/")
+	response.headers["HX-Redirect"] = "/login"
 
 	log.info(f"[AUTH][LOGOUT] Session invalidated and cookies cleared for {current_user.id}.")
 	return response

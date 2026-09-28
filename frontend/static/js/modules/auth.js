@@ -78,8 +78,9 @@ export function checkAuthValidity() {
 /**
  * Глобальная настройка обработчиков форм авторизации.
  * Фикс безопасности: Добавлен интерсептор для отправки CSRF-токена.
- * Фикс UX: /profile/* запросы теперь тоже разбираются как JSON,
- * а не вставляются сырым текстом в фигурных скобках.
+ * Фикс UX: /profile/* запросы разбираются как JSON, а не вставляются сырым текстом.
+ * Фикс logout: выход больше не проваливается в ветку логина (она ждёт access_token),
+ * а сразу чистит локальные токены и уводит на /login.
  */
 export function setupAuthHandlers() {
 
@@ -99,19 +100,37 @@ export function setupAuthHandlers() {
         const path = evt.detail.requestConfig?.path;
         const isAuthPath = path && path.startsWith('/auth/');
         const isProfilePath = path && path.startsWith('/profile/');
+        const isLogoutPath = path === '/auth/logout';
 
         if (!isAuthPath && !isProfilePath) return;
 
-        // Блокируем стандартную вставку ответа от HTMX, чтобы обработать JSON вручную
         evt.preventDefault();
 
         const xhr = evt.detail.xhr;
+
+        // === Ручная обработка HX-Redirect ===
+        // Раз мы сами глушим стандартную обработку HTMX через preventDefault,
+        // заголовок HX-Redirect он больше не увидит — читаем его сами.
+        const hxRedirect = xhr.getResponseHeader('HX-Redirect');
+        if (hxRedirect) {
+            if (isLogoutPath) {
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
+            }
+            window.location.href = hxRedirect;
+            return;
+        }
+
         const targetForm = evt.detail.requestConfig.elt;
         const status = xhr.status;
 
-        // hx-target конкретной формы (на странице профиля их несколько,
-        // например #message-box-password и #message-box-profile)
-        const hxTarget = targetForm?.getAttribute('hx-target') || null;
+        // Запасной вариант для logout, если по какой-то причине заголовка не было
+        if (isLogoutPath) {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            window.location.href = '/login';
+            return;
+        }
 
         let data = {};
         try {
