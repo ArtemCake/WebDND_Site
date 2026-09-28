@@ -292,7 +292,7 @@ async def change_password_endpoint(
 
 	log.info(f"[SECURITY] Password changed successfully for {current_user.id}.")
 	return {
-		"message": "Пароль успешно изменен в целях безопасности.",
-		"security_note": "Все ваши активные сессии на других устройствах были завершены.",
-		"redirect_url": "/auth/login"
+		"message": "Пароль успешно изменён!",
+		"security_note": "На всякий случай мы завершили ваши сессии на других устройствах — просто войдите снова с новым паролем.",
+		"redirect_url": "/login"
 	}

@@ -5,13 +5,23 @@
  * @param {HTMLElement} formEl - Элемент формы (для контекста).
  * @param {'success'|'danger'} type - Тип сообщения.
  * @param {string} text - Текст сообщения.
+ * @param {string|null} targetSelector - Явный CSS-селектор контейнера (hx-target формы), если есть.
  */
-export function showMessage(formEl, type, text) {
-    // Ищем общий контейнер страницы (согласно ТЗ он вынесен отдельно)
-    const box = document.getElementById('message-box');
+export function showMessage(formEl, type, text, targetSelector = null) {
+    // Если у формы задан свой hx-target (как на странице профиля,
+    // где смена пароля и обновление данных выводятся в разные блоки) —
+    // используем именно его. Иначе — общий #message-box (страницы логина/регистрации).
+    let box = null;
+
+    if (targetSelector) {
+        box = document.querySelector(targetSelector);
+    }
+
+    if (!box) {
+        box = document.getElementById('message-box');
+    }
+
     if (box) {
-        // Используем .innerHTML с осторожностью, так как текст контролируется нами,
-        // либо можно использовать textContent + классы Bootstrap.
         box.innerHTML = `<div class="alert alert-${type}" role="alert">${text}</div>`;
     }
 }
@@ -19,8 +29,11 @@ export function showMessage(formEl, type, text) {
 /**
  * Плавная прокрутка к сообщению об ошибке/успехе.
  */
-export function scrollToMessageBox() {
-    const messageBox = document.getElementById('message-box');
+export function scrollToMessageBox(targetSelector = null) {
+    const messageBox = targetSelector
+        ? document.querySelector(targetSelector)
+        : document.getElementById('message-box');
+
     if (messageBox) {
         setTimeout(() => {
             messageBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -65,6 +78,8 @@ export function checkAuthValidity() {
 /**
  * Глобальная настройка обработчиков форм авторизации.
  * Фикс безопасности: Добавлен интерсептор для отправки CSRF-токена.
+ * Фикс UX: /profile/* запросы теперь тоже разбираются как JSON,
+ * а не вставляются сырым текстом в фигурных скобках.
  */
 export function setupAuthHandlers() {
 
@@ -82,14 +97,21 @@ export function setupAuthHandlers() {
     // === БЛОК ОБРАБОТКИ ОТВЕТОВ СЕРВЕРА ===
     document.body.addEventListener('htmx:beforeOnLoad', function (evt) {
         const path = evt.detail.requestConfig?.path;
-        if (!path || !path.startsWith('/auth/')) return;
+        const isAuthPath = path && path.startsWith('/auth/');
+        const isProfilePath = path && path.startsWith('/profile/');
 
-        // Блокируем стандартную вставку HTML от HTMX, чтобы обработать JSON вручную
+        if (!isAuthPath && !isProfilePath) return;
+
+        // Блокируем стандартную вставку ответа от HTMX, чтобы обработать JSON вручную
         evt.preventDefault();
 
         const xhr = evt.detail.xhr;
         const targetForm = evt.detail.requestConfig.elt;
         const status = xhr.status;
+
+        // hx-target конкретной формы (на странице профиля их несколько,
+        // например #message-box-password и #message-box-profile)
+        const hxTarget = targetForm?.getAttribute('hx-target') || null;
 
         let data = {};
         try {
@@ -100,7 +122,25 @@ export function setupAuthHandlers() {
             data = { error: 'Неизвестный формат ответа сервера' };
         }
 
-        // Скрываем вспомогательные подсказки
+        // === Простые профильные формы (смена пароля, обновление профиля) ===
+        if (isProfilePath) {
+            const isError = status >= 400;
+            const text = isError
+                ? (data.detail || data.error || `Ошибка сервера (${status})`)
+                : (data.message || 'Изменения успешно сохранены.');
+
+            showMessage(targetForm, isError ? 'danger' : 'success', text, hxTarget);
+            scrollToMessageBox(hxTarget);
+
+            if (!isError && data.redirect_url) {
+                setTimeout(() => {
+                    window.location.href = data.redirect_url;
+                }, 1200);
+            }
+            return;
+        }
+
+        // === Существующая логика для /auth/* (логин, регистрация) ===
         document.getElementById('register-prompt')?.classList.remove('active');
         document.getElementById('verify-prompt')?.classList.remove('active');
 
