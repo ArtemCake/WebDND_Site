@@ -2,7 +2,9 @@
 
 from Config.Config import settings
 from Config.imports import (os, URLSafeTimedSerializer, HTTPException, TemplateNotFound,
-                            asyncio, Request, APIRouter, HTMLResponse, status, RedirectResponse)
+                            asyncio, Request, APIRouter, HTMLResponse, status, RedirectResponse, Depends)
+from backend.app.Services.user_service import get_optional_user
+from backend.app.database.models.core.user import User
 
 
 router = APIRouter()
@@ -35,12 +37,18 @@ async def get_main_page(request: Request):
         """
 
 @router.get("/login", response_class=HTMLResponse, name="login_page_get")
-async def get_login_page(request: Request):
+async def get_login_page(request: Request, user: User | None = Depends(get_optional_user)):
 	"""
 	Страница входа.
 	Если пользователь уже авторизован — перенаправляем в лобби.
+
+	ФИКС: раньше проверялось request.session.get("user_id"), но /auth/login
+	никогда не пишет ничего в request.session — авторизация там идёт через
+	JWT в cookie. Из-за этого уже вошедший пользователь всё равно видел
+	страницу логина. Теперь статус проверяется тем же механизмом (cookie),
+	что и в api.py.
 	"""
-	if request.session.get("user_id"):
+	if user:
 		return RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
 
 	context = {
@@ -53,12 +61,12 @@ async def get_login_page(request: Request):
 		raise HTTPException(status_code=404, detail="Страница login.html не найдена")
 
 @router.get("/register", response_class=HTMLResponse, name="register_page_get")
-async def get_register_page(request: Request):
+async def get_register_page(request: Request, user: User | None = Depends(get_optional_user)):
 	"""
 	Страница регистрации.
 	Если пользователь уже авторизован — перенаправляем в лобби.
 	"""
-	if request.session.get("user_id"):
+	if user:
 		return RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
 	templates = request.app.state.templates
 	try:
@@ -67,16 +75,22 @@ async def get_register_page(request: Request):
 		raise HTTPException(status_code=404, detail="Страница register.html не найдена")
 
 @router.get("/dashboard", response_class=HTMLResponse, name="dashboard_page_get")
-async def get_dashboard_page(request: Request):
+async def get_dashboard_page(request: Request, user: User | None = Depends(get_optional_user)):
 	"""
 	Личный кабинет игрока.
-	Защищенный роутер: проверяет наличие user_id в сессии.
+	Защищенный роутер: проверяет наличие авторизации через JWT-cookie.
+
+	ФИКС: раньше проверка шла по request.session.get("user_id"), которое
+	не заполняется процессом логина из api.py — реальный авторизованный
+	пользователь всё равно бесконечно редиректился на /auth/login.
+	Теперь используется get_optional_user (тот же JWT-cookie, что и в API),
+	а никнейм берётся из объекта пользователя, а не из сессии.
 	"""
-	if not request.session.get("user_id"):
+	if not user:
 		return RedirectResponse(url="/auth/login", status_code=status.HTTP_307_TEMPORARY_REDIRECT)
 
 	context = {
-		"nickname": request.session.get("nickname"),
+		"nickname": user.nickname,
 		"project_name": settings.PROJECT_NAME
 	}
 

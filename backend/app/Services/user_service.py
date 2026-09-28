@@ -9,9 +9,7 @@ from Config.imports import (Optional, AsyncSession, select, Depends, HTTPExcepti
 from backend.app.database.database import get_async_session
 
 
-# ЕДИНСТВЕННЫЙ ИСТОЧНИК ПРАВДЫ ДЛЯ ХЕШИРОВАНИЯ
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
-
 
 async def get_user_by_email(session: AsyncSession, email: str) -> Optional[User]:
 	result = await session.execute(select(User).where(User.email == email))
@@ -80,29 +78,8 @@ async def hard_delete_user(session: AsyncSession, user_id: str) -> None:
 async def get_user_by_id(session: AsyncSession, user_id: str) -> Optional[User]:
 	result = await session.execute(select(User).where(User.id == user_id))
 	return result.scalar_one_or_none()
-async def get_current_user(
-		request: Request,
-		session: AsyncSession = Depends(get_async_session)
-) -> User:
-	credentials_exception = HTTPException(
-		status_code=status.HTTP_401_UNAUTHORIZED,
-		detail="Could not validate credentials",
-		headers={"WWW-Authenticate": "Bearer"},
-	)
 
-	# 1. Пробуем токен из заголовка Authorization (для API-клиентов)
-	token = None
-	auth_header = request.headers.get("Authorization")
-	if auth_header and auth_header.startswith("Bearer "):
-		token = auth_header.split(" ")[1]
-
-	# 2. Если нет в заголовке — берём из куки (для браузера после логина)
-	if not token:
-		token = request.cookies.get("access_token")
-
-	if not token:
-		raise credentials_exception
-
+def _decode_and_extract(token: str, credentials_exception: HTTPException) -> tuple[str, str | None]:
 	try:
 		payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
 		user_id: str = payload.get("sub")
@@ -113,14 +90,58 @@ async def get_current_user(
 		if exp_timestamp and datetime.utcnow().timestamp() > exp_timestamp:
 			raise credentials_exception
 
+		return user_id, payload.get("sid")
 	except (JWTError, ValidationError):
 		raise credentials_exception
+
+async def get_current_user(
+		request: Request,
+		session: AsyncSession = Depends(get_async_session)
+) -> User:
+	credentials_exception = HTTPException(
+		status_code=status.HTTP_401_UNAUTHORIZED,
+		detail="Could not validate credentials",
+		headers={"WWW-Authenticate": "Bearer"},
+	)
+
+	token = None
+	auth_header = request.headers.get("Authorization")
+	if auth_header and auth_header.startswith("Bearer "):
+		token = auth_header.split(" ")[1]
+
+	if not token:
+		token = request.cookies.get("access_token")
+
+	if not token:
+		raise credentials_exception
+
+	user_id, sid = _decode_and_extract(token, credentials_exception)
 
 	user = await get_user_by_id(session, user_id)
 	if user is None or not user.is_active:
 		raise credentials_exception
 
+	# ФИКС: реальная инвалидация сессии. Раньше active_session_token
+	# перезаписывался при логауте/смене пароля/удалении аккаунта, но
+	# здесь никогда не проверялся — старый JWT продолжал работать до
+	# истечения своего срока действия (до 7 дней), несмотря на "выход
+	# со всех устройств". Теперь токен обязан нести тот же sid, что
+	# сейчас хранится в БД у пользователя.
+	if not sid or user.active_session_token != sid:
+		raise credentials_exception
+
 	return user
+
+async def get_optional_user(
+		request: Request,
+		session: AsyncSession = Depends(get_async_session)
+) -> User | None:
+	"""То же самое, но без исключения — для страниц, где авторизация не обязательна
+	(login/register должны просто понимать, что пользователь уже вошёл)."""
+	try:
+		return await get_current_user(request, session)
+	except HTTPException:
+		return None
 
 async def update_user_profile(
 		session: AsyncSession,

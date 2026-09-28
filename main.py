@@ -1,6 +1,7 @@
 # main.py
 
 from Config.Config import settings
+from Config import csrf_config
 from backend.app.database.database import engine
 import backend.app.Routers.api as api_module
 import backend.app.Routers.web as web_module
