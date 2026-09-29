@@ -146,6 +146,15 @@ def static_url(filename: str) -> str:
 def b64encode_filter(value):
 	return base64.b64encode(value).decode('utf-8')
 
+def get_reload_mode() -> bool:
+	return settings.ENVIRONMENT != "production"
+
+def get_host() -> str:
+	if settings.ENVIRONMENT == "production":
+		return "0.0.0.0"
+	else:
+		return "127.0.0.1"
+
 env.filters['static_url'] = static_url
 env.globals["static_url"] = static_url
 env.filters['b64encode'] = b64encode_filter
@@ -179,8 +188,8 @@ app.include_router(profile_module.router)
 if __name__ == "__main__":
 	uvicorn.run(
 		"main:app",
-		host="127.0.0.1",
+		host=get_host(),
 		port=8080,
 		log_level="info",
-		reload=True
+		reload=get_reload_mode()
 	)

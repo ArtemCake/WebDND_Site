@@ -8,7 +8,7 @@
 
 from Config.Config import settings
 from Config.imports import (MIMEText, MIMEMultipart, Environment, FileSystemLoader,
-                            select_autoescape, Path, List, Optional, ssl, SMTP)
+                            select_autoescape, List, Optional, ssl, SMTP)
 
 
 class MailService:

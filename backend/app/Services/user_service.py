@@ -1,7 +1,6 @@
 # backend/app/Services/user_service.py
 
 from Config.Config import settings
-from backend.app.Services.security_service import oauth2_scheme
 from backend.app.database.models.core.user import User
 from Config.imports import (Optional, AsyncSession, select, Depends, HTTPException, status,
                             jwt, JWTError, datetime, ValidationError, Dict, Any, UploadFile, update, CryptContext,

@@ -1,19 +1,17 @@
 # backend/app/Routers/api.py
 
 from Config.logger import setup_logging
-from backend.app.Services.security_service import (oauth2_scheme, create_verification_token, verify_token)
-from backend.app.Services.user_service import (soft_delete_user, get_current_user,
-                                               change_password, update_user_profile)
+from backend.app.Services.security_service import (create_verification_token, verify_token)
+from backend.app.Services.user_service import (soft_delete_user, get_current_user)
 from Config.Config import settings
-from Config.imports import (JSONResponse, datetime, AsyncSession, update, File, Dict,
+from Config.imports import (JSONResponse, datetime, AsyncSession, update,
                             APIRouter, Depends, HTTPException, status, timedelta, CryptContext,
-                            Form, secrets, Request, HTMLResponse, UploadFile, EmailStr, BaseModel, CsrfProtect)
+                            Form, secrets, Request, CsrfProtect)
 from backend.app.database.database import get_async_session
 from backend.app.database.models.core.user import User
 from backend.app.Services import security_service, user_service
 from backend.app.Services.mail_service import mail_service
-from backend.app.schemas.auth import RegisterRequest, LoginRequest, UpdateProfileRequest, ChangePasswordRequest
-
+from backend.app.schemas.auth import RegisterRequest
 
 router = APIRouter(
 	prefix="/auth",
@@ -233,64 +231,3 @@ async def delete_account(
 
 	log.info(f"[ACCOUNT][DELETED] Account {current_user.id} processed. Action: {action_log}")
 	return None
-
-@router.put("/profile/update", response_model=dict)
-async def api_update_profile(
-		request: Request,
-		nickname: str = Form(...),
-		email: EmailStr = Form(...),
-		avatar: UploadFile | None = File(None),
-		session: AsyncSession = Depends(get_async_session),
-		current_user: User = Depends(get_current_user)
-):
-	try:
-		profile_data = {"nickname": nickname, "email": email}
-
-		updated_user = await update_user_profile(
-			session=session,
-			target_user=current_user,
-			data=profile_data,
-			avatar_file=avatar
-		)
-
-		return {"message": "Профиль успешно обновлен.", "avatar_url": updated_user.avatar_url}
-
-	except ValueError as e:
-		if "already exists" in str(e).lower():
-			raise HTTPException(
-				status_code=status.HTTP_409_CONFLICT,
-				detail="Пользователь с таким адресом электронной почты уже существует."
-			)
-		raise
-	except Exception as e:
-		print(f"[PROFILE UPDATE ERROR] ID: {current_user.id}, Error: {e}")
-		raise HTTPException(
-			status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-			detail="Ошибка сервера при сохранении профиля."
-		)
-
-@router.post("/change-password", response_model=dict)
-async def change_password_endpoint(
-		request: Request,
-		current_password: str = Form(...),
-		new_password: str = Form(...),
-		session: AsyncSession = Depends(get_async_session),
-		current_user: User = Depends(get_current_user)
-):
-	"""Смена пароля текущим пользователем."""
-	success = await change_password(
-		session=session,
-		user=current_user,
-		old_password=current_password,
-		new_password=new_password
-	)
-	if not success:
-		log.warning(f"[SECURITY] Password change failed for {current_user.id} - wrong old pass.")
-		raise HTTPException(status_code=401, detail="Текущий пароль неверен. Операция отменена.")
-
-	log.info(f"[SECURITY] Password changed successfully for {current_user.id}.")
-	return {
-		"message": "Пароль успешно изменён!",
-		"security_note": "На всякий случай мы завершили ваши сессии на других устройствах — просто войдите снова с новым паролем.",
-		"redirect_url": "/login"
-	}

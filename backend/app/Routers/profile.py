@@ -1,12 +1,10 @@
 # backend/app/Routers/profile.py
 
-import secrets
-from sqlalchemy import update
 from backend.app.database.database import get_async_session
 from Config.Config import settings
 from Config.imports import (JSONResponse, HTMLResponse, APIRouter, Depends, HTTPException,
-                            status, UploadFile, File, Request, EmailStr, BaseModel, Field, AsyncSession, UUID, jwt,
-                            JWTError, datetime, ValidationError, asyncio, Form, CsrfProtect)
+                            status, UploadFile, File, Request, EmailStr, BaseModel, Field, AsyncSession, UUID,
+                            asyncio, Form, CsrfProtect)
 from backend.app.database.models.core.user import User
 from backend.app.Services.user_service import (update_user_profile, change_password, get_current_user)
 
