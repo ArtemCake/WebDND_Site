@@ -72,9 +72,12 @@ async def get_register_page(request: Request,
 	templates = request.app.state.templates
 
 	try:
-		return templates.TemplateResponse(request=request,  name="register.html", context=context)
+		response = templates.TemplateResponse(request=request, name="register.html", context=context)
 	except TemplateNotFound:
 		raise HTTPException(status_code=404, detail="Страница register.html не найдена")
+
+	csrf_protect.set_csrf_cookie(signed_token, response)
+	return response
 
 @router.get("/dashboard", response_class=HTMLResponse, name="dashboard_page_get")
 async def get_dashboard_page(request: Request, user: User | None = Depends(get_optional_user), csrf_protect: CsrfProtect = Depends()):

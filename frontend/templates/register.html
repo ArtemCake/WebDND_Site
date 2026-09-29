@@ -9,6 +9,7 @@
 <div id="message-box"></div>
 
 <form hx-post="/auth/register"
+      hx-ext="json-enc"
       hx-trigger="submit"
       method="post">
 	<input type="text" name="nickname" placeholder="Никнейм" required>

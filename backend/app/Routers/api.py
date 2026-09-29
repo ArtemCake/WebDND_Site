@@ -77,8 +77,10 @@ async def login_for_access_token(
 		request: Request,
 		email: str = Form(...),
 		password: str = Form(...),
-		session: AsyncSession = Depends(get_async_session)
+		session: AsyncSession = Depends(get_async_session),
+		csrf_protect: CsrfProtect = Depends()
 ):
+	await csrf_protect.validate_csrf(request)
 	log.info(f"[AUTH][LOGIN] Attempt for {email} from {request.client.host}")
 	access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
@@ -194,15 +196,25 @@ async def logout(
 	log.info(f"[AUTH][LOGOUT] Session invalidated and cookies cleared for {current_user.id}.")
 	return response
 
-@router.post("/delete-account", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/delete-account")
 async def delete_account(
 		request: Request,
 		password: str = Form(...),
 		permanent: bool = False,
 		db: AsyncSession = Depends(get_async_session),
-		current_user: User = Depends(get_current_user)
+		current_user: User = Depends(get_current_user),
+		csrf_protect: CsrfProtect = Depends()
 ):
 	"""Удаление аккаунта."""
+	await csrf_protect.validate_csrf(request)
+
+	if not current_user.password_hash:
+		log.warning(f"[ACCOUNT][DELETE] No local password set (OAuth-only account) for {current_user.id}")
+		raise HTTPException(
+			status_code=status.HTTP_400_BAD_REQUEST,
+			detail="Для этого аккаунта не задан пароль (вход через соцсеть). Удаление по паролю недоступно.",
+		)
+
 	if not pwd_context.verify(password, current_user.password_hash):
 		log.warning(f"[ACCOUNT][DELETE] Wrong password attempt for {current_user.id}")
 		raise HTTPException(
@@ -230,4 +242,9 @@ async def delete_account(
 	await db.commit()
 
 	log.info(f"[ACCOUNT][DELETED] Account {current_user.id} processed. Action: {action_log}")
-	return None
+
+	response = JSONResponse(content={"message": "Аккаунт удалён."})
+	response.delete_cookie(key="access_token", path="/")
+	response.delete_cookie(key="refresh_token", path="/")
+	response.headers["HX-Redirect"] = "/login"
+	return response

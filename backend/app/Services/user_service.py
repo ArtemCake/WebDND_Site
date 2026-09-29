@@ -183,8 +183,12 @@ async def change_password(
 		old_password: str,
 		new_password: str
 ) -> bool:
+	if not user.password_hash:
+		return False
+
 	try:
-		pwd_context.verify(old_password, user.password_hash)
+		if not pwd_context.verify(old_password, user.password_hash):
+			return False
 	except Exception:
 		return False
 
