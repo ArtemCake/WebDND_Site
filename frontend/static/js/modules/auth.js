@@ -115,7 +115,6 @@ export function setupAuthHandlers() {
         if (hxRedirect) {
             if (isLogoutPath) {
                 localStorage.removeItem('accessToken');
-                localStorage.removeItem('accessToken');
                 localStorage.removeItem('refreshToken');
             }
             window.location.href = hxRedirect;
@@ -194,25 +193,22 @@ export function setupAuthHandlers() {
                 }
                 break;
 
-            case 401: // Не подтвержден email
-                messageText = 'Необходимо подтвердить адрес электронной почты.';
-                document.getElementById('verify-prompt')?.classList.add('active');
-                break;
-
-            case 401: // Аккаунт не найден
-                messageText = 'Аккаунт не найден.';
-                document.getElementById('register-prompt')?.classList.add('active');
-                break;
-
-            case 401: // Неверный пароль
-                // Маскировка любых случайно попавших в ошибку токенов (защита от утечки)
-                let rawDetail = data.detail || '';
-                const sanitizedDetail = rawDetail.replace(
-                    /[A-Za-z0-9\-_.]+\.[A-Za-z0-9\-_.]+\.[A-Za-z0-9\-_.]+/g,
-                    '[токен скрыт]'
-                );
-                messageText = data.error || sanitizedDetail || 'Ошибка входа.';
-                break;
+			case 401:
+			    if (data.action === 'verify_email') {
+			        messageText = data.error || 'Необходимо подтвердить адрес электронной почты.';
+			        document.getElementById('verify-prompt')?.classList.add('active');
+			    } else if (data.action === 'account_not_found') {
+			        messageText = data.error || 'Аккаунт не найден.';
+			        document.getElementById('register-prompt')?.classList.add('active');
+			    } else {
+			        let rawDetail = data.detail || '';
+			        const sanitizedDetail = rawDetail.replace(
+			            /[A-Za-z0-9\-_.]+\.[A-Za-z0-9\-_.]+\.[A-Za-z0-9\-_.]+/g,
+			            '[токен скрыт]'
+			        );
+			        messageText = data.error || sanitizedDetail || 'Ошибка входа.';
+			    }
+			    break;
 
             default:
                 messageText = data.error || data.detail || `Ошибка сервера (${status})`;
