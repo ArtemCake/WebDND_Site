@@ -37,7 +37,10 @@ async def get_main_page(request: Request):
         """
 
 @router.get("/login", response_class=HTMLResponse, name="login_page_get")
-async def get_login_page(request: Request, user: User | None = Depends(get_optional_user), csrf_protect: CsrfProtect = Depends()):
+async def get_login_page(request: Request,
+                         user: User | None = Depends(get_optional_user),
+                         csrf_protect: CsrfProtect = Depends()
+                         ):
 	if user:
 		return RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
 
@@ -53,7 +56,10 @@ async def get_login_page(request: Request, user: User | None = Depends(get_optio
 	return response
 
 @router.get("/register", response_class=HTMLResponse, name="register_page_get")
-async def get_register_page(request: Request, user: User | None = Depends(get_optional_user)):
+async def get_register_page(request: Request,
+                            user: User | None = Depends(get_optional_user),
+                            csrf_protect: CsrfProtect = Depends()
+                            ):
 	"""
 	Страница регистрации.
 	Если пользователь уже авторизован — перенаправляем в лобби.
