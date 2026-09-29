@@ -115,6 +115,7 @@ export function setupAuthHandlers() {
         if (hxRedirect) {
             if (isLogoutPath) {
                 localStorage.removeItem('accessToken');
+                localStorage.removeItem('accessToken');
                 localStorage.removeItem('refreshToken');
             }
             window.location.href = hxRedirect;
@@ -144,8 +145,8 @@ export function setupAuthHandlers() {
         // === Простые профильные формы (смена пароля, обновление профиля) ===
         if (isProfilePath) {
             const isError = status >= 400;
-            const text = isError
             const hxTarget = targetForm?.getAttribute('hx-target') || null;
+            const text = isError
                 ? (data.detail || data.error || `Ошибка сервера (${status})`)
                 : (data.message || 'Изменения успешно сохранены.');
 
@@ -193,12 +194,12 @@ export function setupAuthHandlers() {
                 }
                 break;
 
-            case 403: // Не подтвержден email
+            case 401: // Не подтвержден email
                 messageText = 'Необходимо подтвердить адрес электронной почты.';
                 document.getElementById('verify-prompt')?.classList.add('active');
                 break;
 
-            case 404: // Аккаунт не найден
+            case 401: // Аккаунт не найден
                 messageText = 'Аккаунт не найден.';
                 document.getElementById('register-prompt')?.classList.add('active');
                 break;
