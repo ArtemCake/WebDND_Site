@@ -88,7 +88,7 @@ async def login_for_access_token(
 		user_record = await user_service.get_user_by_email(session, email)
 		if not user_record:
 			log.warning(f"[AUTH][FAILED] Account does not exist for {email}")
-			return JSONResponse(status_code=404, content={"error": "Аккаунт не найден."})
+			return JSONResponse(status_code=401, content={"error": "Аккаунт не найден."})
 
 		user = await user_service.authenticate_user(session, email, password)
 		if not user or not user.is_active:
@@ -97,7 +97,7 @@ async def login_for_access_token(
 
 		if not user.is_email_verified:
 			log.warning(f"[AUTH][FORBIDDEN] Unverified email attempt for {email}")
-			return JSONResponse(status_code=403, content={
+			return JSONResponse(status_code=401, content={
 				"error": "Необходимо подтвердить адрес электронной почты.",
 				"action": "verify_email"
 			})

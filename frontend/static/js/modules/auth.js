@@ -145,6 +145,7 @@ export function setupAuthHandlers() {
         if (isProfilePath) {
             const isError = status >= 400;
             const text = isError
+            const hxTarget = targetForm?.getAttribute('hx-target') || null;
                 ? (data.detail || data.error || `Ошибка сервера (${status})`)
                 : (data.message || 'Изменения успешно сохранены.');
 
