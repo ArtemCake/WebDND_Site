@@ -161,8 +161,28 @@ env.filters['b64encode'] = b64encode_filter
 
 # --- ГЛОБАЛЬНЫЕ ОБРАБОТЧИКИ ОШИБОК ---
 @app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc):
-	return JSONResponse(status_code=422, content={"detail": f"Некорректные данные: {exc.errors()}"})
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+	field_names = {
+		"email": "Email",
+		"password": "Пароль",
+		"nickname": "Никнейм",
+		"old_password": "Текущий пароль",
+		"new_password": "Новый пароль",
+	}
+
+	missing_fields = [
+		field_names.get(str(err["loc"][-1]), str(err["loc"][-1]))
+		for err in exc.errors()
+		if err.get("type") == "missing" and err.get("loc")
+	]
+
+	if missing_fields:
+		detail = "Не заполнены обязательные поля: " + ", ".join(missing_fields)
+	else:
+		detail = "Некорректные данные в запросе. Проверьте правильность заполнения формы."
+
+	log.warning(f"[VALIDATION] {request.method} {request.url.path}: {exc.errors()}")
+	return JSONResponse(status_code=422, content={"detail": detail})
 
 @app.exception_handler(404)
 async def not_found_exception_handler(request: Request, exc):
