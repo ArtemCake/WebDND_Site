@@ -81,8 +81,6 @@ class MailService:
 
 		if cc:
 			msg["Cc"] = ", ".join(cc)
-		if bcc:
-			msg["Bcc"] = ", ".join(bcc)
 
 		part1 = MIMEText(text_content or "Это HTML-письмо. Пожалуйста, просмотрите его в почтовом клиенте, поддерживающем HTML.", "plain", "utf-8")
 		part2 = MIMEText(html_content, "html", "utf-8")

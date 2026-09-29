@@ -1,7 +1,7 @@
 # backend/app/Routers/web.py
 
 from Config.Config import settings
-from Config.imports import (os, URLSafeTimedSerializer, HTTPException, TemplateNotFound,
+from Config.imports import (os, URLSafeTimedSerializer, HTTPException, TemplateNotFound, CsrfProtect,
                             asyncio, Request, APIRouter, HTMLResponse, status, RedirectResponse, Depends)
 from backend.app.Services.user_service import get_optional_user
 from backend.app.database.models.core.user import User
@@ -37,28 +37,20 @@ async def get_main_page(request: Request):
         """
 
 @router.get("/login", response_class=HTMLResponse, name="login_page_get")
-async def get_login_page(request: Request, user: User | None = Depends(get_optional_user)):
-	"""
-	Страница входа.
-	Если пользователь уже авторизован — перенаправляем в лобби.
-
-	ФИКС: раньше проверялось request.session.get("user_id"), но /auth/login
-	никогда не пишет ничего в request.session — авторизация там идёт через
-	JWT в cookie. Из-за этого уже вошедший пользователь всё равно видел
-	страницу логина. Теперь статус проверяется тем же механизмом (cookie),
-	что и в api.py.
-	"""
+async def get_login_page(request: Request, user: User | None = Depends(get_optional_user), csrf_protect: CsrfProtect = Depends()):
 	if user:
 		return RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
 
-	context = {
-		"project_name": settings.PROJECT_NAME
-	}
+	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+	context = {"project_name": settings.PROJECT_NAME, "csrf_token": csrf_token}
 	templates = request.app.state.templates
 	try:
-		return templates.TemplateResponse( request=request, name="login.html", context=context)
-	except TemplateNotFound as e:
+		response = templates.TemplateResponse(request=request, name="login.html", context=context)
+	except TemplateNotFound:
 		raise HTTPException(status_code=404, detail="Страница login.html не найдена")
+
+	csrf_protect.set_csrf_cookie(signed_token, response)
+	return response
 
 @router.get("/register", response_class=HTMLResponse, name="register_page_get")
 async def get_register_page(request: Request, user: User | None = Depends(get_optional_user)):
@@ -68,35 +60,35 @@ async def get_register_page(request: Request, user: User | None = Depends(get_op
 	"""
 	if user:
 		return RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
+
+	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+	context = {"project_name": settings.PROJECT_NAME, "csrf_token": csrf_token}
 	templates = request.app.state.templates
+
 	try:
-		return templates.TemplateResponse(request=request,  name="register.html")
+		return templates.TemplateResponse(request=request,  name="register.html", context=context)
 	except TemplateNotFound:
 		raise HTTPException(status_code=404, detail="Страница register.html не найдена")
 
 @router.get("/dashboard", response_class=HTMLResponse, name="dashboard_page_get")
-async def get_dashboard_page(request: Request, user: User | None = Depends(get_optional_user)):
-	"""
-	Личный кабинет игрока.
-	Защищенный роутер: проверяет наличие авторизации через JWT-cookie.
-
-	ФИКС: раньше проверка шла по request.session.get("user_id"), которое
-	не заполняется процессом логина из api.py — реальный авторизованный
-	пользователь всё равно бесконечно редиректился на /auth/login.
-	Теперь используется get_optional_user (тот же JWT-cookie, что и в API),
-	а никнейм берётся из объекта пользователя, а не из сессии.
-	"""
+async def get_dashboard_page(request: Request, user: User | None = Depends(get_optional_user), csrf_protect: CsrfProtect = Depends()):
 	if not user:
 		return RedirectResponse(url="/auth/login", status_code=status.HTTP_307_TEMPORARY_REDIRECT)
 
+	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
 	context = {
+		"user": user,
 		"nickname": user.nickname,
-		"project_name": settings.PROJECT_NAME
+		"project_name": settings.PROJECT_NAME,
+		"csrf_token": csrf_token
 	}
 
 	async with env_lock:
 		templates = request.app.state.templates
 		try:
-			return templates.TemplateResponse(request=request, name="dashboard.html", context=context)
+			response = templates.TemplateResponse(request=request, name="dashboard.html", context=context)
 		except TemplateNotFound:
 			raise HTTPException(status_code=404, detail="Шаблон dashboard.html не найден")
+
+	csrf_protect.set_csrf_cookie(signed_token, response)
+	return response

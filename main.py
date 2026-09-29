@@ -7,7 +7,7 @@ import backend.app.Routers.api as api_module
 import backend.app.Routers.web as web_module
 import backend.app.Routers.profile as profile_module
 from Config.logger import setup_logging
-from Config.imports import (FastAPI, asynccontextmanager, CORSMiddleware, Path, StaticFiles, Jinja2Templates, SessionMiddleware,
+from Config.imports import (FastAPI, asynccontextmanager, CORSMiddleware, Path, StaticFiles, Jinja2Templates, SessionMiddleware, CsrfProtectError,
                             base64, RequestValidationError, Request, asyncio, JSONResponse, HTMLResponse, uvicorn, os, command, Config)
 
 
@@ -160,6 +160,11 @@ async def not_found_exception_handler(request: Request, exc):
 	if request.url.path.startswith("/api"):
 		return JSONResponse(status_code=404, content={"detail": "Not found"})
 	return HTMLResponse(content="<h1>404 - Страница не найдена</h1>", status_code=404)
+
+@app.exception_handler(CsrfProtectError)
+async def csrf_protect_exception_handler(request: Request, exc: CsrfProtectError):
+	log.warning(f"[SECURITY][CSRF] Validation failed for {request.method} {request.url.path}: {exc.message}")
+	return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
 
 # --- ГЛОБАЛЬНЫЕ НАСТРОЙКИ ---
 os.environ['PROJECT_ROOT'] = str(BASE_DIR)

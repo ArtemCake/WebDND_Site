@@ -7,7 +7,7 @@ from backend.app.Services.user_service import (soft_delete_user, get_current_use
 from Config.Config import settings
 from Config.imports import (JSONResponse, datetime, AsyncSession, update, File, Dict,
                             APIRouter, Depends, HTTPException, status, timedelta, CryptContext,
-                            Form, secrets, Request, HTMLResponse, UploadFile, EmailStr, BaseModel)
+                            Form, secrets, Request, HTMLResponse, UploadFile, EmailStr, BaseModel, CsrfProtect)
 from backend.app.database.database import get_async_session
 from backend.app.database.models.core.user import User
 from backend.app.Services import security_service, user_service
@@ -176,13 +176,10 @@ async def verify_email(token: str, session: AsyncSession = Depends(get_async_ses
 async def logout(
 		request: Request,
 		current_user: User = Depends(get_current_user),
-		session: AsyncSession = Depends(get_async_session)
+		session: AsyncSession = Depends(get_async_session),
+		csrf_protect: CsrfProtect = Depends()
 ):
-	"""
-	Выход из системы.
-	active_session_token обнуляется, поэтому даже уже выпущенный JWT
-	теряет действие сразу, а не по истечении срока годности.
-	"""
+	await csrf_protect.validate_csrf(request)
 	stmt = (
 		update(User)
 		.where(User.id == current_user.id)

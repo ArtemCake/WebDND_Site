@@ -6,7 +6,7 @@ from backend.app.database.database import get_async_session
 from Config.Config import settings
 from Config.imports import (JSONResponse, HTMLResponse, APIRouter, Depends, HTTPException,
                             status, UploadFile, File, Request, EmailStr, BaseModel, Field, AsyncSession, UUID, jwt,
-                            JWTError, datetime, ValidationError, asyncio, Form)
+                            JWTError, datetime, ValidationError, asyncio, Form, CsrfProtect)
 from backend.app.database.models.core.user import User
 from backend.app.Services.user_service import (update_user_profile, change_password, get_current_user)
 
@@ -31,13 +31,17 @@ class ProfileResponseDTO(BaseModel):
 	profile_settings: ProfileSettingsDTO
 
 @router.get("/", response_class=HTMLResponse, name="profile_page_get")
-async def get_profile_page(request: Request, user: User = Depends(get_current_user)):
+async def get_profile_page(request: Request, user: User = Depends(get_current_user), csrf_protect: CsrfProtect = Depends()):
+	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
 	context = {
 		"user": user,
-		"project_name": settings.PROJECT_NAME
+		"project_name": settings.PROJECT_NAME,
+		"csrf_token": csrf_token
 	}
 	templates = request.app.state.templates
-	return templates.TemplateResponse(request, "profile.html", context)
+	response = templates.TemplateResponse(request, "profile.html", context)
+	csrf_protect.set_csrf_cookie(signed_token, response)
+	return response
 
 @router.get("/data", response_model=ProfileResponseDTO, operation_id="getCurrentUserProfile")
 async def get_profile_data(user: User = Depends(get_current_user)):
@@ -59,8 +63,10 @@ async def api_update_profile(
 		email: EmailStr = Form(...),
 		avatar: UploadFile | None = File(None),
 		session: AsyncSession = Depends(get_async_session),
-		user: User = Depends(get_current_user)
+		user: User = Depends(get_current_user),
+		csrf_protect: CsrfProtect = Depends()
 ):
+	await csrf_protect.validate_csrf(request)
 	try:
 		updated_user = await update_user_profile(
 			session=session,
@@ -91,8 +97,10 @@ async def api_change_password(
 		current_password: str = Form(...),
 		new_password: str = Form(...),
 		session: AsyncSession = Depends(get_async_session),
-		user: User = Depends(get_current_user)
+		user: User = Depends(get_current_user),
+		csrf_protect: CsrfProtect = Depends()
 ):
+	await csrf_protect.validate_csrf(request)
 	success = await change_password(
 		session=session,
 		user=user,
