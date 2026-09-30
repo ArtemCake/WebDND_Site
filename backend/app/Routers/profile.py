@@ -4,7 +4,7 @@ from backend.app.database.database import get_async_session
 from Config.Config import settings
 from Config.imports import (JSONResponse, HTMLResponse, APIRouter, Depends, HTTPException,
                             status, UploadFile, File, Request, EmailStr, BaseModel, Field, AsyncSession, UUID,
-                            asyncio, Form, CsrfProtect)
+                            Form, CsrfProtect)
 from backend.app.database.models.core.user import User
 from backend.app.Services.user_service import (update_user_profile, change_password, get_current_user)
 
@@ -13,8 +13,6 @@ router = APIRouter(
 	prefix="/profile",
 	tags=["profile"],
 )
-
-env_lock = asyncio.Lock()
 
 class ProfileSettingsDTO(BaseModel):
 	theme_color: str | None = Field(default="#a855f7", description="Основной цвет темы")

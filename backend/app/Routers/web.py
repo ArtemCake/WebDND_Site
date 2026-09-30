@@ -2,7 +2,7 @@
 
 from Config.Config import settings
 from Config.imports import (os, URLSafeTimedSerializer, HTTPException, TemplateNotFound, CsrfProtect,
-                            asyncio, Request, APIRouter, HTMLResponse, status, RedirectResponse, Depends)
+                            Request, APIRouter, HTMLResponse, status, RedirectResponse, Depends)
 from backend.app.Services.user_service import get_optional_user
 from backend.app.database.models.core.user import User
 
@@ -11,7 +11,6 @@ router = APIRouter()
 
 secret_key = os.environ.get("SECRET_KEY", settings.SECRET_KEY)
 serializer = URLSafeTimedSerializer(secret_key)
-env_lock = asyncio.Lock()
 
 @router.get("/", response_class=HTMLResponse, name="main_page_get")
 async def get_main_page(request: Request):
@@ -92,12 +91,11 @@ async def get_dashboard_page(request: Request, user: User | None = Depends(get_o
 		"csrf_token": csrf_token
 	}
 
-	async with env_lock:
-		templates = request.app.state.templates
-		try:
-			response = templates.TemplateResponse(request=request, name="dashboard.html", context=context)
-		except TemplateNotFound:
-			raise HTTPException(status_code=404, detail="Шаблон dashboard.html не найден")
+	templates = request.app.state.templates
+	try:
+		response = templates.TemplateResponse(request=request, name="dashboard.html", context=context)
+	except TemplateNotFound:
+		raise HTTPException(status_code=404, detail="Шаблон dashboard.html не найден")
 
 	csrf_protect.set_csrf_cookie(signed_token, response)
 	return response
