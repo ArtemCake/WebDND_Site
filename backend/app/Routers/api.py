@@ -241,7 +241,7 @@ async def logout(
 async def delete_account(
 		request: Request,
 		password: str = Form(...),
-		permanent: bool = False,
+		permanent: bool = Form(False),
 		db: AsyncSession = Depends(get_async_session),
 		current_user: User = Depends(get_current_user),
 		csrf_protect: CsrfProtect = Depends()
