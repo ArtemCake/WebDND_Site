@@ -81,7 +81,7 @@ async def get_register_page(request: Request,
 @router.get("/dashboard", response_class=HTMLResponse, name="dashboard_page_get")
 async def get_dashboard_page(request: Request, user: User | None = Depends(get_optional_user), csrf_protect: CsrfProtect = Depends()):
 	if not user:
-		return RedirectResponse(url="/auth/login", status_code=status.HTTP_307_TEMPORARY_REDIRECT)
+		return RedirectResponse(url="/login", status_code=status.HTTP_307_TEMPORARY_REDIRECT)
 
 	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
 	context = {

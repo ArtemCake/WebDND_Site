@@ -55,7 +55,7 @@ class WebAppSettings(BaseSettings):
 	# --- Настройки JWT (Аутентификация) ---
 	SECRET_KEY: str  # ОБЯЗАТЕЛЬНО указать в .env файле
 	ALGORITHM: str = "HS256"
-	ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 дней
+	ACCESS_TOKEN_EXPIRE_MINUTES: int = 30  # 30 минут — короткий access, продление через /auth/refresh
 	SECURE_COOKIES: bool = False
 	""" Если True, браузер отправит куку только по HTTPS. В режиме разработки (localhost) должно быть False, 
 	иначе куки не установятся. На боевом сервере с SSL-сертификатом обязательно установить True. """
@@ -87,7 +87,3 @@ try:
 	settings = WebAppSettings()
 except ValidationError as e:
 	raise RuntimeError(f"Ошибка конфигурации: не заданы обязательные переменные окружения — {e}")
-	# Создаем пустой объект-заглушку, чтобы main.py не упал при импорте
-	class DummySettings:
-		pass
-	settings = DummySettings()

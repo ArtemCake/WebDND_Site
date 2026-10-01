@@ -289,3 +289,60 @@ async def delete_account(
 	response.delete_cookie(key="refresh_token", path="/")
 	response.headers["HX-Redirect"] = "/login"
 	return response
+
+@router.post("/refresh", response_model=dict)
+async def refresh_access_token(
+		request: Request,
+		session: AsyncSession = Depends(get_async_session),
+):
+	"""Выдача новой пары токенов по refresh_token из cookie."""
+	refresh_token = request.cookies.get("refresh_token")
+	if not refresh_token:
+		raise HTTPException(status_code=401, detail="Refresh-токен отсутствует.")
+
+	try:
+		payload = security_service.jwt.decode(
+			refresh_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
+		)
+	except security_service.JWTError:
+		raise HTTPException(status_code=401, detail="Недействительный refresh-токен.")
+
+	if payload.get("type") != "refresh":
+		log.warning("[AUTH][REFRESH] Token with wrong type used as refresh.")
+		raise HTTPException(status_code=401, detail="Недействительный refresh-токен.")
+
+	user_id = payload.get("sub")
+	token_sid = payload.get("sid")
+	user = await user_service.get_user_by_id(session, user_id)
+
+	if not user or not user.is_active or user.active_session_token != token_sid:
+		log.warning(f"[AUTH][REFRESH] Session revoked or user inactive for {user_id}.")
+		raise HTTPException(status_code=401, detail="Сессия завершена, войдите снова.")
+
+	new_session_token = secrets.token_urlsafe(64)
+	tokens = await security_service.create_jwt_pair(
+		user_obj_or_id=user,
+		session_token=new_session_token
+	)
+
+	stmt = (
+		update(User)
+		.where(User.id == user.id)
+		.values(active_session_token=new_session_token, updated_at=datetime.utcnow())
+	)
+	await session.execute(stmt)
+	await session.commit()
+
+	response = JSONResponse(content={"message": "Токен обновлён."})
+	response.set_cookie(
+		key="access_token", value=tokens["access_token"],
+		httponly=True, samesite="lax", path="/",
+		max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60, secure=settings.SECURE_COOKIES
+	)
+	response.set_cookie(
+		key="refresh_token", value=tokens["refresh_token"],
+		httponly=True, samesite="lax", path="/",
+		max_age=7 * 24 * 60 * 60, secure=settings.SECURE_COOKIES
+	)
+	log.info(f"[AUTH][REFRESH] Tokens refreshed for {user.id}")
+	return response

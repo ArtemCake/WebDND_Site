@@ -76,11 +76,52 @@ export function checkAuthValidity() {
 }
 
 /**
+ * Тихое обновление пары токенов через /auth/refresh при истёкшем access.
+ * При успехе повторяет исходный HTMX-запрос; при неудаче — уводит на /login.
+ * @param {object} requestConfig - evt.detail.requestConfig исходного запроса.
+ * @param {HTMLElement} targetForm - элемент, инициировавший исходный запрос.
+ */
+async function attemptTokenRefresh(requestConfig, targetForm) {
+    try {
+        const resp = await fetch('/auth/refresh', {
+            method: 'POST',
+            credentials: 'include'
+        });
+
+        if (!resp.ok) {
+            throw new Error('refresh_failed');
+        }
+
+        const data = await resp.json();
+        if (data.access_token) {
+            localStorage.setItem('accessToken', data.access_token);
+        }
+        if (data.refresh_token) {
+            localStorage.setItem('refreshToken', data.refresh_token);
+        }
+
+        // Повторяем исходный запрос тем же методом и путём, что и упавший
+        htmx.ajax(requestConfig.verb.toUpperCase(), requestConfig.path, {
+            source: targetForm,
+            target: targetForm
+        });
+
+    } catch (e) {
+        console.warn('[AUTH] Token refresh failed, redirecting to login.', e);
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+    }
+}
+
+/**
  * Глобальная настройка обработчиков форм авторизации.
  * Фикс безопасности: Добавлен интерсептор для отправки CSRF-токена.
  * Фикс UX: /profile/* запросы разбираются как JSON, а не вставляются сырым текстом.
  * Фикс logout: выход больше не проваливается в ветку логина (она ждёт access_token),
  * а сразу чистит локальные токены и уводит на /login.
+ * Фикс сессии: истёкший access на /profile/* теперь тихо обновляется через /auth/refresh
+ * перед показом ошибки пользователю.
  */
 export function setupAuthHandlers() {
 
@@ -139,6 +180,14 @@ export function setupAuthHandlers() {
             }
         } catch (e) {
             data = { error: 'Неизвестный формат ответа сервера' };
+        }
+
+        // === Истёкший access-токен на защищённой профильной форме ===
+        // Access теперь живёт недолго, поэтому 401 здесь — не всегда "выйди и зайди заново":
+        // сначала пробуем тихо обновить пару токенов через refresh_token.
+        if (isProfilePath && status === 401) {
+            attemptTokenRefresh(evt.detail.requestConfig, targetForm);
+            return;
         }
 
         // === Простые профильные формы (смена пароля, обновление профиля) ===
