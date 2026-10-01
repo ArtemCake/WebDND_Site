@@ -5,6 +5,8 @@ from Config.Config import settings
 from Config.imports import (JSONResponse, HTMLResponse, APIRouter, Depends, HTTPException,
                             status, UploadFile, File, Request, EmailStr, BaseModel, Field, AsyncSession, UUID,
                             Form, CsrfProtect)
+from backend.app.Services.security_service import create_verification_token
+from backend.app.Services.mail_service import mail_service
 from backend.app.database.models.core.user import User
 from backend.app.Services.user_service import (update_user_profile, change_password, get_current_user)
 
@@ -63,6 +65,8 @@ async def api_update_profile(
 		csrf_protect: CsrfProtect = Depends()
 ):
 	await csrf_protect.validate_csrf(request)
+	old_email = user.email
+
 	try:
 		updated_user = await update_user_profile(
 			session=session,
@@ -71,7 +75,25 @@ async def api_update_profile(
 			avatar_file=avatar
 		)
 
-		return {"message": "Профиль успешно обновлен.", "avatar_url": updated_user.avatar_url}
+		email_changed = updated_user.email != old_email
+
+		if email_changed:
+			verification_token = create_verification_token(updated_user.id)
+			mail_sent = await mail_service.send_verification_email(
+				user_email=updated_user.email,
+				verification_token=verification_token
+			)
+			if not mail_sent:
+				print(f"[PROFILE UPDATE] Verification email failed for ID: {user.id}")
+
+		message = (
+			"Профиль обновлён. На новый адрес отправлено письмо для подтверждения — "
+			"до его подтверждения вход будет недоступен."
+			if email_changed else
+			"Профиль успешно обновлен."
+		)
+
+		return {"message": message, "avatar_url": updated_user.avatar_url}
 
 	except ValueError as e:
 		if "already exists" in str(e).lower():

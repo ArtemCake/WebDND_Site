@@ -4,7 +4,7 @@ from Config.logger import setup_logging
 from backend.app.Services.security_service import (create_verification_token, verify_token)
 from backend.app.Services.user_service import (soft_delete_user, get_current_user)
 from Config.Config import settings
-from Config.imports import (JSONResponse, datetime, AsyncSession, update,
+from Config.imports import (JSONResponse, datetime, AsyncSession, update, UUID,
                             APIRouter, Depends, HTTPException, status, timedelta, CryptContext,
                             Form, secrets, Request, CsrfProtect)
 from backend.app.database.database import get_async_session
@@ -175,6 +175,43 @@ async def verify_email(token: str, session: AsyncSession = Depends(get_async_ses
 
 	log.info(f"[AUTH][VERIFY] Email verified for user ID {user_id}.")
 	return JSONResponse(content={"message": "Email успешно подтвержден."}, status_code=200)
+
+@router.post("/resend-verification/{user_id}", response_model=dict)
+async def resend_verification_email(
+		user_id: UUID,
+		session: AsyncSession = Depends(get_async_session)
+):
+	"""Повторная отправка письма подтверждения почты."""
+	target_user = await user_service.get_user_by_id(session, user_id)
+
+	if not target_user:
+		raise HTTPException(status_code=404, detail="Пользователь не найден.")
+
+	if target_user.is_email_verified:
+		return JSONResponse(
+			status_code=200,
+			content={"message": "Почта уже подтверждена, письмо не отправлено."}
+		)
+
+	verification_token = create_verification_token(target_user.id)
+
+	try:
+		await mail_service.send_verification_email(
+			user_email=target_user.email,
+			verification_token=verification_token
+		)
+	except Exception as e:
+		log.error(f"[AUTH][RESEND] Failed to send verification email to {target_user.email}: {e}")
+		raise HTTPException(
+			status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+			detail="Не удалось отправить письмо. Попробуйте позже."
+		)
+
+	log.info(f"[AUTH][RESEND] Verification email re-sent for {target_user.id}")
+	return JSONResponse(
+		status_code=200,
+		content={"message": "Письмо с подтверждением отправлено повторно."}
+	)
 
 @router.post("/logout")
 async def logout(
