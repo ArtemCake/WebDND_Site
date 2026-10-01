@@ -158,8 +158,12 @@ async def update_user_profile(
 	new_email = data.get("email")
 
 	if new_nickname and new_nickname != target_user.nickname:
+		existing_nick = await session.execute(select(User).where(User.nickname == new_nickname))
+		if existing_nick.scalar_one_or_none():
+			raise ValueError("Nickname already exists")
 		target_user.nickname = new_nickname
 		needs_commit = True
+
 
 	if new_email and new_email != target_user.email:
 		existing_user = await get_user_by_email(session, new_email)
