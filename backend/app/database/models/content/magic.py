@@ -2,7 +2,7 @@
 
 """Модели магии: заклинания, школы, уровни."""
 
-from Config.imports import (Mapped, mapped_column, relationship, JSONB, ARRAY, text, uuid4, Table, Column,
+from Config.imports import (Mapped, mapped_column, relationship, JSONB, ARRAY, text, uuid4, UniqueConstraint, Column,
                             DateTime, String, Text, Integer, Boolean, ForeignKey, PG_UUID, datetime)
 from backend.app.database.database import Base
 
@@ -89,8 +89,8 @@ class MagicSchool(Base):
 	system_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True)
 	# Для Homebrew
 	owner_id: Mapped[PG_UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
-	name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False) # e.g. 'Evocation', 'Necromancy'
-	slug: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+	name: Mapped[str] = mapped_column(String(50), nullable=False)
+	slug: Mapped[str] = mapped_column(String(50), nullable=False)
 	description: Mapped[str | None] = mapped_column(Text, nullable=True)
 	# Лор и ограничения согласно ТЗ
 	is_forbidden_in_setting: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -103,7 +103,11 @@ class MagicSchool(Base):
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
 	system: Mapped["GameSystem"] = relationship("GameSystem", back_populates="magic_schools") # (нужно добавить в GameSystem)
 	owner: Mapped["User"] = relationship("User", back_populates="created_magic_schools")
-	spells: Mapped[list["Spell"]] = relationship("Spell", back_populates="school", cascade="all, delete-orphan")
+	spells: Mapped[list["Spell"]] = relationship("Spell", back_populates="school")
+
+	__table_args__ = (
+		UniqueConstraint("system_id", "slug", name="uq_magic_schools_system_slug"),
+	)
 
 	def __repr__(self) -> str:
 		return f"<MagicSchool(id='{self.id}', name='{self.name}')>"

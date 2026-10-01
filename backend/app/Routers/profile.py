@@ -96,11 +96,11 @@ async def api_update_profile(
 		return {"message": message, "avatar_url": updated_user.avatar_url}
 
 	except ValueError as e:
-		if "already exists" in str(e).lower():
-			raise HTTPException(
-				status_code=status.HTTP_409_CONFLICT,
-				detail="Пользователь с таким адресом электронной почты уже существует."
-			)
+		msg = str(e).lower()
+		if "email" in msg:
+			raise HTTPException(status_code=409, detail="Пользователь с таким адресом электронной почты уже существует.")
+		if "nickname" in msg:
+			raise HTTPException(status_code=409, detail="Этот никнейм уже занят.")
 		raise
 	except Exception as e:
 		print(f"[PROFILE UPDATE ERROR] ID: {user.id}, Error: {e}")

@@ -4,7 +4,7 @@
 
 from Config.imports import (Mapped, mapped_column, relationship, ARRAY, PG_UUID, uuid4,
 						DateTime, datetime, String, Text, Boolean, ForeignKey, text,
-						JSONB, Integer, Float, backref, Column, Table, Index)
+						JSONB, Integer, Float, backref, Column, Table, Index, UniqueConstraint)
 from backend.app.database.database import Base
 
 
@@ -43,8 +43,8 @@ class Language(Base):
 	system_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True)
 	# Для Homebrew
 	owner_id: Mapped[PG_UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
-	name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False) # e.g. 'Common', 'Elvish'
-	slug: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+	name: Mapped[str] = mapped_column(String(50), nullable=False)
+	slug: Mapped[str] = mapped_column(String(50), nullable=False)
 	script: Mapped[str | None] = mapped_column(String(50), nullable=True) # 'Common Script', 'Dwarvish Runes'
 	is_standard: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False) # True - базовый язык сеттинга
 	is_secret: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False) # Thieves' Cant, Druidic
@@ -58,8 +58,12 @@ class Language(Base):
 	races: Mapped[list["Race"]] = relationship("Race", secondary="race_languages", back_populates="languages")
 	backgrounds: Mapped[list["Background"]] = relationship("Background", secondary="background_languages", back_populates="languages")
 	origins: Mapped[list["Origin"]] = relationship("Origin", secondary="origin_languages", back_populates="languages")
+	__table_args__ = (
+		UniqueConstraint("system_id", "slug", name="uq_languages_system_slug"),
+	)
 
-	def __repr__(self) -> str:
+
+def __repr__(self) -> str:
 		return f"<Language(id='{self.id}', name='{self.name}')>"
 
 # --- БЕСТИАРИЙ ---
@@ -126,9 +130,9 @@ class CreatureSize(Base):
 	system_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True)
 	# Для Homebrew
 	owner_id: Mapped[PG_UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
-	name: Mapped[str] = mapped_column(String(20), unique=True, nullable=False) # e.g. 'Medium', 'Huge'
-	slug: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
-	abbreviation: Mapped[str] = mapped_column(String(5), unique=True, nullable=False) # M, L, H, G...
+	name: Mapped[str] = mapped_column(String(20), nullable=False)
+	slug: Mapped[str] = mapped_column(String(20), nullable=False)
+	abbreviation: Mapped[str] = mapped_column(String(5), nullable=False)
 	space_feet: Mapped[int] = mapped_column(Integer, nullable=False) # Занимаемое пространство в футах (5x5, 10x10...)
 	reach_feet: Mapped[int] = mapped_column(Integer, nullable=False) # Базовая досягаемость
 	carrying_capacity_multiplier: Mapped[float] = mapped_column(Float, nullable=False, server_default="1.0")
@@ -139,11 +143,16 @@ class CreatureSize(Base):
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
 	system: Mapped["GameSystem"] = relationship("GameSystem", back_populates="creature_sizes") # (нужно добавить в GameSystem)
 	owner: Mapped["User"] = relationship("User", back_populates="created_creature_sizes")
-	creatures: Mapped[list["Creature"]] = relationship("Creature", back_populates="size", cascade="all, delete-orphan")
-	races: Mapped[list["Race"]] = relationship("Race", back_populates="size", cascade="all, delete-orphan")
+	creatures: Mapped[list["Creature"]] = relationship("Creature", back_populates="size")
+	races: Mapped[list["Race"]] = relationship("Race", back_populates="size")
+
+	__table_args__ = (
+		UniqueConstraint("system_id", "slug", name="uq_creature_sizes_system_slug"),
+		UniqueConstraint("system_id", "abbreviation", name="uq_creature_sizes_system_abbr"),
+	)
 
 	def __repr__(self) -> str:
-		return f"<CreatureSize(id={self.id}, name='{self.name}', space={self.space_feet}')>"
+			return f"<CreatureSize(id={self.id}, name='{self.name}', space={self.space_feet}')>"
 
 # --- ТИПЫ СУЩЕСТВ ---
 class CreatureType(Base):
@@ -158,8 +167,8 @@ class CreatureType(Base):
 	system_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True)
 	# Для Homebrew
 	owner_id: Mapped[PG_UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
-	name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False) # e.g. 'Humanoid', 'Beast', 'Dragon'
-	slug: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+	name: Mapped[str] = mapped_column(String(50), nullable=False)
+	slug: Mapped[str] = mapped_column(String(50), nullable=False)
 	description: Mapped[str | None] = mapped_column(Text, nullable=True)
 	is_homebrew: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 	visibility_scope: Mapped[str] = mapped_column(String(50), nullable=False, server_default="private")
@@ -171,6 +180,9 @@ class CreatureType(Base):
 	races: Mapped[list["Race"]] = relationship( "Race", secondary="creature_type_race_link", back_populates="creature_types")
 	creatures: Mapped[list["Creature"]] = relationship( "Creature", secondary="creature_type_link", single_parent=True, back_populates="types", cascade="all, delete-orphan")
 
+	__table_args__ = (
+		UniqueConstraint("system_id", "slug", name="uq_creature_types_system_slug"),
+	)
 	def __repr__(self) -> str:
 		return f"<CreatureType(id={self.id}, name='{self.name}')>"
 

@@ -1,6 +1,6 @@
 # Config/Config.py
 
-from Config.imports import (BaseSettings, SettingsConfigDict, os, Path, ValidationError)
+from Config.imports import (BaseSettings, SettingsConfigDict, os, Path, ValidationError, Field)
 
 
 # --- НАСТРОЙКИ ТАЙМЕРА ---
@@ -68,12 +68,14 @@ class WebAppSettings(BaseSettings):
 	TIMER_DEFAULT_INTERVAL_MIN: int = TIMER_DEFAULT_INTERVAL_MIN
 
 	# --- Настройки CORS (для фронтенда) ---
+	BACKEND_CORS_ORIGINS_RAW: str = Field(default="", alias="BACKEND_CORS_ORIGINS")
+
 	@property
 	def BACKEND_CORS_ORIGINS(self) -> list[str]:
-		raw = os.getenv("BACKEND_CORS_ORIGINS", "")
-		if not raw:
+		if not self.BACKEND_CORS_ORIGINS_RAW:
 			return []
-		return [url.strip() for url in raw.split(",") if url.strip()]
+		return [url.strip() for url in self.BACKEND_CORS_ORIGINS_RAW.split(",") if url.strip()]
+
 
 	model_config = SettingsConfigDict(
 		env_file="data/.env",

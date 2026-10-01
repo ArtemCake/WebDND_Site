@@ -115,7 +115,7 @@ class MapObject(Base):
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
 	layer: Mapped["MapLayer"] = relationship("MapLayer", back_populates="objects")
 	template: Mapped["Equipment"] = relationship("Equipment") # Предмет из справочника снаряжения
-	owner: Mapped["User | None"] = relationship( "User", back_populates="created_map_objects", cascade="all, delete-orphan", lazy="selectin", single_parent=True)
+	owner: Mapped["User | None"] = relationship("User", back_populates="created_map_objects", lazy="selectin")
 
 	def __repr__(self) -> str:
 		return f"<MapObject(id='{self.id}', x={self.position_x}, y={self.position_y})>"

@@ -2,7 +2,7 @@
 
 """Модели снаряжения, предметов и их иерархии."""
 
-from Config.imports import (Mapped, mapped_column, relationship, JSONB, ARRAY, text, Float, backref,
+from Config.imports import (Mapped, mapped_column, relationship, JSONB, UniqueConstraint, text, Float, backref,
 					DateTime, String, Text, Integer, Boolean, ForeignKey, PG_UUID, uuid4, datetime)
 from backend.app.database.database import Base
 
@@ -92,8 +92,8 @@ class Rarity(Base):
 	system_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True)
 	# Для Homebrew
 	owner_id: Mapped[PG_UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
-	name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False) # e.g. 'Common', 'Very Rare'
-	slug: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+	name: Mapped[str] = mapped_column(String(50), nullable=False)
+	slug: Mapped[str] = mapped_column(String(50), nullable=False)
 	description: Mapped[str | None] = mapped_column(Text, nullable=True)
 	sort_order: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0") # Для сортировки в фильтрах UI
 	color_theme: Mapped[str | None] = mapped_column(String(7), nullable=True) # HEX цвет (#1A8BFF для Uncommon)
@@ -107,6 +107,10 @@ class Rarity(Base):
 	equipment: Mapped[list["Equipment"]] = relationship("Equipment", back_populates="rarity")
 	magical_items: Mapped[list["MagicalItem"]] = relationship("MagicalItem", back_populates="rarity")
 	artifacts: Mapped[list["Artifact"]] = relationship("Artifact", back_populates="rarity")
+
+	__table_args__ = (
+		UniqueConstraint("system_id", "slug", name="uq_rarities_system_slug"),
+	)
 
 	def __repr__(self) -> str:
 		return f"<Rarity(id={self.id}, name='{self.name}', order={self.sort_order})>"
@@ -155,8 +159,8 @@ class WeaponType(Base):
 	system_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True)
 	# Для Homebrew
 	owner_id: Mapped[PG_UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
-	name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False) # e.g. 'Martial', 'Simple'
-	slug: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+	name: Mapped[str] = mapped_column(String(50), nullable=False)
+	slug: Mapped[str] = mapped_column(String(50), nullable=False)
 	description: Mapped[str | None] = mapped_column(Text, nullable=True)
 	is_homebrew: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 	visibility_scope: Mapped[str] = mapped_column(String(50), nullable=False, server_default="private")
@@ -166,6 +170,10 @@ class WeaponType(Base):
 	system: Mapped["GameSystem"] = relationship("GameSystem", back_populates="weapon_types") # (нужно добавить в GameSystem)
 	owner: Mapped["User"] = relationship("User", back_populates="created_weapon_types")
 	weapons: Mapped[list["Weapon"]] = relationship("Weapon", back_populates="type_obj", cascade="all, delete-orphan")
+
+	__table_args__ = (
+		UniqueConstraint("system_id", "slug", name="uq_weapon_types_system_slug"),
+	)
 
 	def __repr__(self) -> str:
 		return f"<WeaponType(id={self.id}, name='{self.name}')>"

@@ -2,7 +2,7 @@
 
 """Модели характеристик и навыков персонажа."""
 
-from Config.imports import (Mapped, mapped_column, relationship, ARRAY, ForeignKey, text,
+from Config.imports import (Mapped, mapped_column, relationship, UniqueConstraint, ForeignKey, text,
 					Text, String, Integer, Boolean, DateTime, PG_UUID, datetime, uuid4)
 from backend.app.database.database import Base
 
@@ -19,8 +19,8 @@ class Skill(Base):
 	system_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True)
 	# Для Homebrew
 	owner_id: Mapped[PG_UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
-	name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False) # e.g. 'Acrobatics', 'Stealth'
-	slug: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+	name: Mapped[str] = mapped_column(String(50), nullable=False)
+	slug: Mapped[str] = mapped_column(String(50), nullable=False)
 	description: Mapped[str | None] = mapped_column(Text, nullable=True)
 	ability_score_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("characteristics.id", ondelete="RESTRICT"), nullable=False, index=True)
 	is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
@@ -29,6 +29,10 @@ class Skill(Base):
 	system: Mapped["GameSystem"] = relationship("GameSystem", back_populates="skills") # (нужно добавить в GameSystem)
 	owner: Mapped["User"] = relationship("User", back_populates="created_skills")
 	characteristic: Mapped["Characteristic"] = relationship("Characteristic", back_populates="skills")
+
+	__table_args__ = (
+		UniqueConstraint("system_id", "slug", name="uq_skills_system_slug"),
+	)
 
 	def __repr__(self) -> str:
 		return f"<Skill(id='{self.id}', name='{self.name}')>"
@@ -42,8 +46,8 @@ class Characteristic(Base):
 
 	id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
 	system_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True)
-	abbreviation: Mapped[str] = mapped_column(String(3), unique=True, nullable=False) # STR, DEX, CON...
-	full_name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+	abbreviation: Mapped[str] = mapped_column(String(3), nullable=False)
+	full_name: Mapped[str] = mapped_column(String(50), nullable=False)
 	description: Mapped[str | None] = mapped_column(Text, nullable=True)
 	is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
@@ -51,6 +55,11 @@ class Characteristic(Base):
 	system: Mapped["GameSystem"] = relationship("GameSystem", back_populates="characteristics") # (нужно добавить в GameSystem)
 	skills: Mapped[list["Skill"]] = relationship("Skill", back_populates="characteristic", cascade="all, delete-orphan")
 	sheets: Mapped[list["CharacterSheetAbilityScore"]] = relationship( "CharacterSheetAbilityScore", back_populates="characteristic", cascade="all, delete-orphan", lazy="selectin" )
+
+	__table_args__ = (
+		UniqueConstraint("system_id", "abbreviation", name="uq_characteristics_system_abbr"),
+		UniqueConstraint("system_id", "full_name", name="uq_characteristics_system_name"),
+	)
 
 	def __repr__(self) -> str:
 		return f"<Characteristic(id='{self.id}', abbr='{self.abbreviation}')>"
