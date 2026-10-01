@@ -10,11 +10,11 @@
 	<script src="https://unpkg.com/htmx-ext-json-enc@2.0.1/json-enc.js"></script>
 	<link rel="stylesheet" href="{{ static_url('css/style.min.css') }}">
 	<link rel="icon" href="{{ static_url('images/favicon.ico') }}" type="image/x-icon">
+	<header class="site-header">
+		<!-- Подключение меню навигации -->
+		{% include "menu.html" %}
+	</header>
 </head>
-<header class="site-header">
-	<!-- Подключение меню навигации -->
-	{% include "menu.html" %}
-</header>
 <body class="auth-body">
 
 <!-- БЛОК СООБЩЕНИЙ (ИСПРАВЛЕНО ДЛЯ FASTAPI) -->

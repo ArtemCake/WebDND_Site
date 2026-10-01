@@ -23,9 +23,12 @@ pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 @router.post("/register", response_model=dict, status_code=status.HTTP_201_CREATED)
 async def register_user_action(
+		request: Request,
 		data: RegisterRequest,
-		session: AsyncSession = Depends(get_async_session)
+		session: AsyncSession = Depends(get_async_session),
+		csrf_protect: CsrfProtect = Depends()
 ):
+	await csrf_protect.validate_csrf(request)
 	log.info(f"[AUTH][REGISTER] Attempt for {data.email}")
 	try:
 		existing_user = await user_service.get_user_by_email(session, data.email)

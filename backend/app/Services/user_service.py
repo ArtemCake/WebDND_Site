@@ -81,6 +81,10 @@ async def get_user_by_id(session: AsyncSession, user_id: str) -> Optional[User]:
 def _decode_and_extract(token: str, credentials_exception: HTTPException) -> tuple[str, str | None]:
 	try:
 		payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+
+		if payload.get("type") != "access":
+			raise credentials_exception
+
 		user_id: str = payload.get("sub")
 		if user_id is None:
 			raise credentials_exception
