@@ -61,8 +61,8 @@ class Party(Base):
 	# {"mentions": true, "session_start": true}
 	game: Mapped["Game"] = relationship("Game", back_populates="party")
 	user: Mapped["User"] = relationship("User")
-	character_sheets: Mapped[list["CharacterSheet"]] = relationship("CharacterSheet", back_populates="game", lazy="selectin")
-	dice_rolls: Mapped[list["DiceRoll"]] = relationship("DiceRoll", back_populates="game", lazy="selectin")
+	character_sheets: Mapped[list["CharacterSheet"]] = relationship("CharacterSheet", back_populates="party", lazy="selectin")
+	dice_rolls: Mapped[list["DiceRoll"]] = relationship("DiceRoll", back_populates="party", lazy="selectin")
 
 	def __repr__(self) -> str:
 		return f"<Party(game_id='{self.game_id}', user_id='{self.user_id}', role='{self.role_in_game}')>"

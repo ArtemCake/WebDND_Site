@@ -68,7 +68,7 @@ class AIGenerationJob(Base):
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
 	completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-	target_asset: Mapped["UploadedAsset | None"] = relationship( "UploadedAsset", back_populates="job", uselist=False, cascade="all, delete-orphan", lazy="selectin", single_parent=True)
+	target_asset: Mapped["UploadedAsset | None"] = relationship("UploadedAsset", back_populates="job", uselist=False, lazy="selectin")
 	owner: Mapped["User | None"] = relationship( "User", back_populates="created_ai_jobs",foreign_keys=[owner_id], lazy="selectin" )
 
 	def __repr__(self) -> str:
