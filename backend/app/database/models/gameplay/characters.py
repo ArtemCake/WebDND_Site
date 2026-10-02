@@ -61,7 +61,7 @@ class CharacterSheet(Base):
 	base_character: Mapped["Character"] = relationship("Character") # Глобальный персонаж пользователя
 	npc: Mapped["NPC"] = relationship("NPC")
 	inventory: Mapped[list["CharacterInventory"]] = relationship("CharacterInventory", back_populates="sheet", cascade="all, delete-orphan")
-	tokens: Mapped[list["Token"]] = relationship("Token", back_populates="character_sheet", cascade="all, delete-orphan")
+	tokens: Mapped[list["Token"]] = relationship("Token", back_populates="character_sheet")
 	ability_scores: Mapped[list["CharacterSheetAbilityScore"]] = relationship( "CharacterSheetAbilityScore", back_populates="sheet", cascade="all, delete-orphan" )
 	party: Mapped["Party | None"] = relationship("Party", back_populates="character_sheets")
 	game: Mapped["Game"] = relationship("Game", back_populates="character_sheets")
