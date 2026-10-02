@@ -122,10 +122,10 @@ class Session(Base):
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
 	game: Mapped["Game"] = relationship("Game", back_populates="sessions")
 	initiative: Mapped["InitiativeTracker"] = relationship("InitiativeTracker", uselist=False, back_populates="session", cascade="all, delete-orphan")
-	dice_rolls: Mapped[list["DiceRoll"]] = relationship("DiceRoll", back_populates="session", cascade="all, delete-orphan")
 	chats: Mapped[list["Chat"]] = relationship("Chat", back_populates="session", cascade="all, delete-orphan")
-	maps: Mapped[list["CampaignMap"]] = relationship("CampaignMap", back_populates="session", cascade="all, delete-orphan")
 	tokens: Mapped[list["Token"]] = relationship("Token", back_populates="session", cascade="all, delete-orphan")
+	maps: Mapped[list["CampaignMap"]] = relationship("CampaignMap", back_populates="session")
+	dice_rolls: Mapped[list["DiceRoll"]] = relationship("DiceRoll", back_populates="session")
 
 	def __repr__(self) -> str:
 		return f"<Session(id='{self.id}', game_id='{self.game_id}', active={self.is_active})>"
