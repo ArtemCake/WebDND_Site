@@ -35,7 +35,7 @@ class Game(Base):
 	invites: Mapped[list["Invite"]] = relationship("Invite", back_populates="game", cascade="all, delete-orphan")
 	sessions: Mapped[list["Session"]] = relationship("Session", back_populates="game", cascade="all, delete-orphan")
 	campaign_maps: Mapped[list["CampaignMap"]] = relationship("CampaignMap", back_populates="game", cascade="all, delete-orphan")
-	character_sheets: Mapped[list["CharacterSheet"]] = relationship( "CharacterSheet", back_populates="game", cascade="all, delete-orphan", lazy="selectin" )
+	character_sheets: Mapped[list["CharacterSheet"]] = relationship( "CharacterSheet", back_populates="game", lazy="selectin")
 
 	def __repr__(self) -> str:
 		return f"<Game(id='{self.id}', title='{self.title}', status='{self.status}')>"
@@ -61,8 +61,8 @@ class Party(Base):
 	# {"mentions": true, "session_start": true}
 	game: Mapped["Game"] = relationship("Game", back_populates="party")
 	user: Mapped["User"] = relationship("User")
-	character_sheets: Mapped[list["CharacterSheet"]] = relationship( "CharacterSheet", back_populates="party", cascade="all, delete-orphan", lazy="selectin" )
-	dice_rolls: Mapped[list["DiceRoll"]] = relationship( "DiceRoll", back_populates="party", cascade="all, delete-orphan", lazy="selectin")
+	character_sheets: Mapped[list["CharacterSheet"]] = relationship("CharacterSheet", back_populates="game", lazy="selectin")
+	dice_rolls: Mapped[list["DiceRoll"]] = relationship("DiceRoll", back_populates="game", lazy="selectin")
 
 	def __repr__(self) -> str:
 		return f"<Party(game_id='{self.game_id}', user_id='{self.user_id}', role='{self.role_in_game}')>"

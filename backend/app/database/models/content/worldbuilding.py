@@ -292,8 +292,8 @@ class LoreEntry(Base):
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
 	system: Mapped["GameSystem"] = relationship("GameSystem", back_populates="lore") # (нужно добавить в GameSystem)
 	owner: Mapped["User"] = relationship("User", back_populates="created_lore")
-	children: Mapped[list["LoreEntry"]] = relationship("LoreEntry", backref=backref("parent", remote_side=[id]), cascade="all, delete-orphan")
 	npcs: Mapped[list["NPC"]] = relationship("NPC", back_populates="lore", cascade="all, delete-orphan")
+	children: Mapped[list["LoreEntry"]] = relationship("LoreEntry", backref=backref("parent_entry", remote_side=[id]))
 
 	def __repr__(self) -> str:
 		return f"<LoreEntry(id='{self.id}', title='{self.title}')>"
