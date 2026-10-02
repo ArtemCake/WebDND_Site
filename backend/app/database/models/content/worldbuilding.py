@@ -62,8 +62,7 @@ class Language(Base):
 		UniqueConstraint("system_id", "slug", name="uq_languages_system_slug"),
 	)
 
-
-def __repr__(self) -> str:
+	def __repr__(self) -> str:
 		return f"<Language(id='{self.id}', name='{self.name}')>"
 
 # --- БЕСТИАРИЙ ---

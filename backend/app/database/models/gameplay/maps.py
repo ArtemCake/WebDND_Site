@@ -32,7 +32,7 @@ class CampaignMap(Base):
 	game: Mapped["Game"] = relationship("Game", back_populates="campaign_maps")
 	session: Mapped["Session"] = relationship("Session", back_populates="maps")
 	layers: Mapped[list["MapLayer"]] = relationship("MapLayer", back_populates="map", cascade="all, delete-orphan")
-	tokens: Mapped[list["Token"]] = relationship( "Token", back_populates="current_map", cascade="all, delete-orphan", lazy="selectin" )
+	tokens: Mapped[list["Token"]] = relationship("Token", back_populates="current_map", lazy="selectin")
 
 	def __repr__(self) -> str:
 		return f"<CampaignMap(id='{self.id}', title='{self.title}')>"
@@ -153,11 +153,10 @@ class Token(Base):
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
 	session: Mapped["Session"] = relationship("Session", back_populates="tokens")
-	map: Mapped["CampaignMap"] = relationship("CampaignMap", back_populates="tokens", lazy="selectin", overlaps="current_map")
 	owner: Mapped["User"] = relationship("User")
 	character_sheet: Mapped["CharacterSheet"] = relationship("CharacterSheet")
 	npc: Mapped["NPC"] = relationship("NPC")
-	current_map: Mapped["CampaignMap | None"] = relationship("CampaignMap", back_populates="tokens")
+	current_map: Mapped["CampaignMap | None"] = relationship("CampaignMap", back_populates="tokens", lazy="selectin")
 
 	def __repr__(self) -> str:
 		return f"<Token(id='{self.id}', name='{self.display_name or 'Unnamed'}', x={self.grid_x})>"

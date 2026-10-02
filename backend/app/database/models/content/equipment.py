@@ -74,8 +74,8 @@ class ItemType(Base):
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
 	system: Mapped["GameSystem"] = relationship("GameSystem", back_populates="item_types") # (нужно добавить в GameSystem)
 	owner: Mapped["User"] = relationship("User", back_populates="created_item_types")
-	children: Mapped[list["ItemType"]] = relationship("ItemType", backref=backref("parent", remote_side=[id]), cascade="all, delete-orphan")
 	equipment: Mapped[list["Equipment"]] = relationship("Equipment", back_populates="type_obj")
+	children: Mapped[list["ItemType"]] = relationship("ItemType", backref=backref("parent", remote_side=[id]))
 
 	def __repr__(self) -> str:
 		return f"<ItemType(id={self.id}, name='{self.name}')>"
