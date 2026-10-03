@@ -6,6 +6,10 @@
  */
 
 export const AppConfig = {
+
+	game: {
+        activeSystem: 'dnd5e'
+    },
     /**
      * Настройки игровой карты (Hex Grid)
      */
