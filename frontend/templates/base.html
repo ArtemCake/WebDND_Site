@@ -10,12 +10,12 @@
 	<script src="https://unpkg.com/htmx-ext-json-enc@2.0.1/json-enc.js"></script>
 	<link rel="stylesheet" href="{{ static_url('css/style.min.css') }}">
 	<link rel="icon" href="{{ static_url('images/favicon.ico') }}" type="image/x-icon">
-	<header class="site-header">
-		<!-- Подключение меню навигации -->
-		{% include "menu.html" %}
-	</header>
 </head>
 <body class="auth-body">
+<header class="site-header">
+	<!-- Подключение меню навигации -->
+	{% include "menu.html" %}
+</header>
 
 <!-- БЛОК СООБЩЕНИЙ (ИСПРАВЛЕНО ДЛЯ FASTAPI) -->
 {% set messages = request.session.pop('_flashes', []) if '_flashes' in request.session else [] %}
@@ -32,6 +32,9 @@
 	{% block content %}{% endblock %}
 </div>
 
+<footer class="site-footer">
+
+</footer>
 <script type="module" src="{{ static_url('js/main.min.js') }}"></script>
 </body>
 </html>

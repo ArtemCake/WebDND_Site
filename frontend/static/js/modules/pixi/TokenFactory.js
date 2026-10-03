@@ -11,34 +11,21 @@ const COLORS = {
     gray: 0x95a5a6
 };
 
-/**
- * Фабрика создает стандартизированные токены.
- * Разделена ради соблюдения правила "один файл — один функционал".
- */
 export class TokenFactory {
-    static createColoredCircle(colorKey = 'blue', radius = 32) {
+    /**
+     * @param {PIXI.Renderer} renderer - рендерер приложения (нужен для генерации текстуры в v8)
+     */
+    static createColoredCircle(renderer, colorKey = 'blue', radius = 32) {
         const color = COLORS[colorKey] || COLORS.blue;
 
         const graphics = new PIXI.Graphics();
-        graphics.beginFill(color, 1);
-        graphics.drawCircle(0, 0, radius);
-        graphics.endFill();
+        graphics.circle(radius, radius, radius).fill(color);
 
-        // Создаем спрайт из графики для лучшей производительности рендеринга
-        const texture = PIXI.RenderTexture.create({
-            width: radius * 2,
-            height: radius * 2
-        });
-
-        // Примечание: здесь предполагается наличие доступа к app.renderer у вызывающей стороны
-        // В реальном сценарии передача renderer должна быть инкапсулирована лучше.
-        // Пока оставляем так для демонстрации логики пула.
-
-        const sprite = new PIXI.Sprite(texture);
-        return sprite;
+        const texture = renderer.generateTexture(graphics);
+        return new PIXI.Sprite(texture);
     }
 
-    static createDefaultToken() {
-        return this.createColoredCircle('gray');
+    static createDefaultToken(renderer) {
+        return this.createColoredCircle(renderer, 'gray');
     }
 }

@@ -6,14 +6,13 @@
     "dev": "vite",
     "build": "vite build && node rename-script.js",
     "preview": "vite preview",
-    "lint": "eslint \"src/**/*.{js,ts}\" --fix"
+    "lint": "eslint \"frontend/static/js/**/*.js\" --fix"
   },
   "dependencies": {
     "alpinejs": "^3.14.3",
     "htmx.org": "^2.0.4"
   },
   "devDependencies": {
-    "@pixi/constants": "^7.4.3",
     "autoprefixer": "^10.4.20",
     "pixi.js": "^8.20.1",
     "postcss": "^8.4.35",

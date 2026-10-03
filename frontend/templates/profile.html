@@ -20,7 +20,7 @@
 			<div class="">
 				<!-- Аватар -->
 				<label class="relative">
-					<img src="{{ user.avatar_url or '/frontend/static/images/default-avatar.jpg' }}"
+					<img src="{{ user.avatar_url or static_url('images/default-avatar.jpg') }}"
 					     alt="Аватар"
 					     class="">
 					<input type="file" name="avatar" accept="images/*" class="hidden" onchange="previewAvatar(event)">

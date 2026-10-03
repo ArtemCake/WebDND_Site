@@ -32,10 +32,6 @@ export class DisplayObjectPool {
             obj.clear();
         }
 
-        if (obj.texture) {
-            obj.texture = null;
-        }
-
         this._pool.push(obj);
     }
 
