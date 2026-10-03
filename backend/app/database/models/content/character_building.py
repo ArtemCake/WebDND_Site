@@ -3,7 +3,7 @@
 """Модели билдинга персонажа: расы, классы, предыстории."""
 
 from Config.imports import (DateTime, String, Text, Integer, Boolean, ForeignKey, Table, List,
-	Mapped, mapped_column, relationship, JSONB, text, PG_UUID, ARRAY, datetime, uuid4, Column)
+	Mapped, mapped_column, relationship, JSONB, text, PG_UUID, ARRAY, datetime, uuid4, Column, backref)
 from backend.app.database.database import Base
 
 
