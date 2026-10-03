@@ -13,7 +13,7 @@ function initStickyNavigation() {
     // предотвращая скачок контента.
     const observer = new IntersectionObserver(
         ([entry]) => {
-            nav.classList.toggle('--scrolled', entry.intersectionRatio < 1 || entry.boundingClientRect.top < 0);
+           nav.classList.toggle('navbar-main--scrolled', entry.intersectionRatio < 1 || entry.boundingClientRect.top < 0);
         },
         { threshold: [1], rootMargin: '0px 0px -1px 0px' }
     );

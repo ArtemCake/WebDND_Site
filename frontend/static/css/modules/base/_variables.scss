@@ -1,6 +1,17 @@
 /* frontend/static/css/modules/base/_variables.scss */
 
 // Базовые цвета фона (строго тёмные, отсутствие светлых областей)
+:root {
+    --color-bg-page: #0a0b10;
+    --color-bg-panel: #1e1f29;
+    --color-text-primary: #e8e6e3;
+    --color-text-secondary: #a8a29e;
+    --color-text-accent: #ffd700;
+    --color-border-accent: #ffd700;
+    --color-border-subtle: rgba(255, 255, 255, 0.08);
+    --color-text-error: #ef4444;
+}
+
 // --- Алиасы для имён переменных, которые используют другие модули ---
 :root {
     --text-primary: var(--color-text-primary);
@@ -31,6 +42,9 @@
     --color-error-text-dark: #fca5a5;
     --color-error-bg-dark: #450a0a;
     --color-border-error-dark: #ef4444;
+
+    // Базовый шрифт — используется в _reset.scss
+    --font-family-base: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 .theme-light {
@@ -44,6 +58,6 @@
     --color-bg-page: #000000;
     --color-bg-panel: #000000;
     --color-text-primary: #ffffff;
-    --color-text-accent: #00ffff; // Циановый вместо золотого
+    --color-text-accent: #00ffff;
     --color-border-accent: #00ffff;
 }
