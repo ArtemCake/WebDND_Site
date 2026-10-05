@@ -122,15 +122,18 @@ class MailService:
 
 	async def send_verification_email(self, user_email: str, verification_token: str) -> bool:
 		"""Отправка письма для подтверждения регистрации."""
+		verification_url = f"{settings.FRONTEND_URL}/auth/verify-email?token={verification_token}"
+
 		context = {
 			"user_email": user_email,
 			"frontend_url": settings.FRONTEND_URL,
 			"verification_token": verification_token,
+			"verification_url": verification_url,
 			"support_email": settings.MAIL_SUPPORT_EMAIL
 		}
 
 		html = self._render_template("verification_email.html", context)
-		text = f"Для подтверждения регистрации перейдите по ссылке: {settings.FRONTEND_URL}/verify-email?token={verification_token}"
+		text = f"Для подтверждения регистрации перейдите по ссылке: {verification_url}"
 
 		subject = "Подтвердите регистрацию в WebDND"
 		return await self.send_email(to_email=user_email, subject=subject, html_content=html, text_content=text)

@@ -4,7 +4,7 @@ from Config.logger import setup_logging
 from backend.app.Services.security_service import (create_verification_token, verify_token)
 from backend.app.Services.user_service import (soft_delete_user, get_current_user)
 from Config.Config import settings
-from Config.imports import (JSONResponse, datetime, AsyncSession, update, UUID,
+from Config.imports import (JSONResponse, datetime, AsyncSession, update, UUID, RedirectResponse,
                             APIRouter, Depends, HTTPException, status, timedelta, CryptContext,
                             Form, secrets, Request, CsrfProtect)
 from backend.app.database.database import get_async_session
@@ -166,15 +166,18 @@ async def verify_email(token: str, session: AsyncSession = Depends(get_async_ses
 
 	if not user_id:
 		log.warning("[AUTH][VERIFY] Invalid or expired token provided.")
-		raise HTTPException(status_code=400, detail="Неверный или просроченный токен.")
+		# Было: raise HTTPException(status_code=400, ...) — пользователь видел голый JSON.
+		# Теперь отправляем на страницу входа с пометкой об ошибке в query-параметре.
+		return RedirectResponse(url="/login?verify=invalid", status_code=status.HTTP_303_SEE_OTHER)
 
 	success = await user_service.verify_email(session, user_id)
 	if not success:
 		log.error(f"[AUTH][VERIFY] User ID {user_id} not found in DB.")
-		raise HTTPException(status_code=404, detail="Пользователь не найден.")
+		return RedirectResponse(url="/login?verify=notfound", status_code=status.HTTP_303_SEE_OTHER)
 
 	log.info(f"[AUTH][VERIFY] Email verified for user ID {user_id}.")
-	return JSONResponse(content={"message": "Email успешно подтвержден."}, status_code=200)
+	# Было: JSONResponse({"message": "Email успешно подтвержден."}) — теперь переход на вход.
+	return RedirectResponse(url="/login?verify=success", status_code=status.HTTP_303_SEE_OTHER)
 
 @router.post("/resend-verification/{user_id}", response_model=dict)
 async def resend_verification_email(

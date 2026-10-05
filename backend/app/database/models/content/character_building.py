@@ -216,6 +216,7 @@ class Origin(Base):
 	background: Mapped["Background"] = relationship("Background")
 	lang_objects: Mapped[list["Language"]] = relationship("Language", secondary="origin_languages", back_populates="origins")
 	languages: Mapped[List["Language"]] = relationship(back_populates="origins", secondary="origin_languages", overlaps="lang_objects")
+	origin_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("origins.id", ondelete="CASCADE"), nullable=False)
 	subraces: Mapped[list["Origin"]] = relationship("Origin", backref=backref("parent_origin", remote_side=[id]))
 
 	def __repr__(self) -> str:
