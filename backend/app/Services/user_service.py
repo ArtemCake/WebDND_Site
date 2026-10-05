@@ -6,6 +6,7 @@ from Config.imports import (Optional, AsyncSession, select, Depends, HTTPExcepti
                             jwt, JWTError, datetime, ValidationError, Dict, Any, UploadFile, update, CryptContext,
                             Request)
 from backend.app.database.database import get_async_session
+from backend.app.enums.enums_BD import SystemRole
 
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
@@ -14,17 +15,40 @@ async def get_user_by_email(session: AsyncSession, email: str) -> Optional[User]
 	result = await session.execute(select(User).where(User.email == email))
 	return result.scalar_one_or_none()
 
-async def create_user(session: AsyncSession, nickname: str, email: str, password: str) -> User:
+async def create_user(
+		session: AsyncSession,
+		nickname: str,
+		email: str,
+		password: str,
+		roles: list[SystemRole] | None = None
+) -> User:
 	hashed_pw = pwd_context.hash(password)
 	user = User(
 		email=email,
 		nickname=nickname,
 		password_hash=hashed_pw,
-		is_email_verified=False
+		is_email_verified=False,
+		roles=roles or [SystemRole.PLAYER],
 	)
 	session.add(user)
 	await session.commit()
 	await session.refresh(user)
+	return user
+
+async def add_role(session: AsyncSession, user: User, role: SystemRole) -> User:
+	"""Добавляет роль, не трогая остальные уже имеющиеся."""
+	if role not in (user.roles or []):
+		user.roles = [*(user.roles or []), role]
+		await session.commit()
+		await session.refresh(user)
+	return user
+
+async def remove_role(session: AsyncSession, user: User, role: SystemRole) -> User:
+	"""Убирает одну роль, остальные остаются."""
+	if user.roles and role in user.roles:
+		user.roles = [r for r in user.roles if r != role]
+		await session.commit()
+		await session.refresh(user)
 	return user
 
 async def authenticate_user(session: AsyncSession, email: str, password: str) -> Optional[User]:

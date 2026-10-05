@@ -2,9 +2,10 @@
 
 """Модели ядра системы: пользователи, аутентификация и социальные связи."""
 
-from Config.imports import (Mapped, mapped_column, relationship, PG_UUID, datetime, uuid4, ForeignKey,
+from Config.imports import (Mapped, mapped_column, relationship, PG_UUID, datetime, uuid4, ForeignKey, text, ARRAY,
                             JSONB, func, CheckConstraint, String, Boolean, DateTime, Text,  UniqueConstraint)
 from backend.app.database.database import Base
+from backend.app.enums.enums_BD import SystemRole
 
 
 class User(Base):
@@ -29,7 +30,7 @@ class User(Base):
 	# Для принудительного инвалида всех активных JWT/WebSocket сессий при смене пароля или блокировке
 	active_session_token: Mapped[str | None] = mapped_column(String(512), index=True, nullable=True)
 	# Отношения
-	roles: Mapped[list["UserRole"]] = relationship(	"UserRole", back_populates="user", cascade="all, delete-orphan", lazy="selectin")
+	roles: Mapped[list[SystemRole]] = mapped_column(ARRAY(SystemRole.pg_enum_type()), nullable=False,server_default=text("'{player}'::system_role_type[]"))
 	friends_from: Mapped[list["Friendship"]] = relationship("Friendship", back_populates="user", foreign_keys="[Friendship.user_id]", cascade="all, delete-orphan", lazy="selectin")
 	friends_to: Mapped[list["Friendship"]] = relationship("Friendship", back_populates="friend", foreign_keys="[Friendship.friend_user_id]", cascade="all, delete-orphan", lazy="selectin")
 	oauth_providers: Mapped[list["OAuthProvider"]] = relationship("OAuthProvider", back_populates="user", cascade="all, delete-orphan")
