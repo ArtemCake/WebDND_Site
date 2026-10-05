@@ -1,6 +1,6 @@
 /* frontend/static/css/modules/base/_variables.scss */
 
-// Базовые цвета фона (строго тёмные, отсутствие светлых областей)
+// Базовые цвета фона (строго тёмные, тема dark-fantasy — по умолчанию)
 :root {
     --color-bg-page: #0a0b10;
     --color-bg-panel: #1e1f29;
@@ -58,6 +58,6 @@
     --color-bg-page: #000000;
     --color-bg-panel: #000000;
     --color-text-primary: #ffffff;
-    --color-text-accent: #00ffff;
+    --color-text-accent: #00ffff; // Циановый вместо золотого
     --color-border-accent: #00ffff;
 }

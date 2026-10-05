@@ -15,7 +15,9 @@
 import { initGlobalUI } from './modules/ui.js';
 
 /**
- * Настройка обработчиков форм авторизации, защиты маршрутов и показ сообщений.
+ * Настройка обработчиков форм авторизации, защиты маршрутов
+ * и показа сообщений (showMessage/scrollToMessageBox нужны обработчикам
+ * сетевых ошибок ниже — раньше не импортировались, из-за чего падал ReferenceError).
  * @module modules/auth
  */
 import { setupAuthHandlers, protectPrivateRoutes, showMessage, scrollToMessageBox } from './modules/auth.js';
@@ -34,6 +36,13 @@ import { Dnd5eSystem } from './modules/systems/Dnd5eSystem.js';
 document.addEventListener('DOMContentLoaded', () => {
     console.log('[WEB-DND] Frontend initialized with modular architecture.');
 
+    // ===================================================================
+    // БЛОК ИНИЦИАЛИЗАЦИИ АКТИВНОЙ ИГРОВОЙ СИСТЕМЫ (исправление MAS-009)
+    // ===================================================================
+    /**
+     * Интерфейс активной игровой системы.
+     * @type {import('./modules/systems/ISystem.js').ISystem}
+     */
     let gameSystem;
 
     try {
@@ -49,9 +58,14 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('[SYSTEM][FATAL]', err);
         gameSystem = new Dnd5eSystem();
     }
+    // ===================================================================
 
+    // 1. Инициализация глобальных настроек UI и библиотек (HTMX)
     initGlobalUI();
 
+    // ===================================================================
+    // БЛОК ГЛОБАЛЬНОЙ ОБРАБОТКИ ОШИБОК СЕТИ (FIX FOR FUNC-005)
+    // ===================================================================
     function registerNetworkErrorHandlers() {
         const extractErrorMessage = (xhr) => {
             let msg = 'Неизвестная ошибка сети.';
@@ -93,16 +107,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     registerNetworkErrorHandlers();
+    // ===================================================================
 
+    // 2. Навешивание обработчиков для форм авторизации (регистрация/вход)
     setupAuthHandlers();
     protectPrivateRoutes();
 
+    // 3. Инициализация игровой карты (Canvas + PixiJS)
     const canvasRoot = document.getElementById('game-canvas-root');
     if (canvasRoot) {
         const gameMap = new GameMap('game-canvas-root');
-        gameMap.drawHexGrid(AppConfig.map.hexSize, AppConfig.map.gridCols, AppConfig.map.gridRows);
+        gameMap.drawHexGrid(
+            AppConfig.map.hexSize,
+            AppConfig.map.gridCols,
+            AppConfig.map.gridRows
+        );
     }
 
+    // ===================================================================
+    // БЛОК ДЕЛЕГИРОВАНИЯ СОБЫТИЙ ДЛЯ БРОСКОВ КУБИКОВ (MAS-009)
+    // ===================================================================
     document.body.addEventListener('click', (e) => {
         if (e.target.matches('[data-dice-roll]')) {
             e.preventDefault();
@@ -126,4 +150,5 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => resultBox.remove(), AppConfig.ui.toastDuration);
         }
     });
+    // ===================================================================
 });

@@ -2,18 +2,17 @@
 
 /**
  * Инициализирует IntersectionObserver для фиксации навигационной панели.
- * Функция вынесена на верхний уровень модуля для доступности при импорте.
  */
 function initStickyNavigation() {
     const nav = document.getElementById('main-nav');
-
     if (!nav) return;
 
-    // Используем rootMargin, чтобы меню "прилипало" чуть раньше визуальной границы,
-    // предотвращая скачок контента.
     const observer = new IntersectionObserver(
         ([entry]) => {
-           nav.classList.toggle('navbar-main--scrolled', entry.intersectionRatio < 1 || entry.boundingClientRect.top < 0);
+            // Исправлено: класс совпадает с модификатором в _navbar.scss (.navbar-main--scrolled).
+            // Раньше навешивался отдельный класс '--scrolled', который никогда не матчился с CSS,
+            // поэтому тень при скролле шапки не появлялась.
+            nav.classList.toggle('navbar-main--scrolled', entry.intersectionRatio < 1 || entry.boundingClientRect.top < 0);
         },
         { threshold: [1], rootMargin: '0px 0px -1px 0px' }
     );
@@ -25,18 +24,16 @@ function initStickyNavigation() {
  * Применяет настройки HTMX и запускает фиксатор меню.
  */
 export function initGlobalUI() {
-    // Настройка HTMX: отключаем автопрокрутку к низу чата при каждом сообщении
     if (window.htmx) {
         htmx.config.scrollIntoViewOnBoost = false;
     }
 
-    // Запуск наблюдателя за шапкой сайта
     initStickyNavigation();
 
     console.log('[UI] Global UI initialized.');
 }
 
-/* --- Блок управления темами (из предыдущего задания) --- */
+/* --- Блок управления темами --- */
 export function applyTheme(themeName) {
     const root = document.documentElement;
     root.classList.remove('theme-dark-fantasy', 'theme-light', 'theme-high-contrast');
@@ -77,7 +74,18 @@ export function previewAvatar(event) {
     if (!img) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => { img.src = e.target.result; };
+
+    reader.onload = (e) => {
+        img.src = e.target.result;
+    };
+
+    // Исправлено: раньше onerror отсутствовал, и сбой чтения файла (повреждённый
+    // файл, нехватка памяти и т.п.) проходил молча, без лога — в нарушение
+    // правила 1.4 ТЗ о логировании точек отказа.
+    reader.onerror = () => {
+        console.error('[UI][AVATAR] Не удалось прочитать файл для превью.', reader.error);
+    };
+
     reader.readAsDataURL(file);
 }
 
