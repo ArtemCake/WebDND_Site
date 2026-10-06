@@ -55,6 +55,42 @@
 		</form>
 	</div>
 	
+	<!-- Блок управления ролями -->
+	<div id="roles-form-section" hx-target="this" hx-swap="outerHTML">
+		<h3 class="">Роли</h3>
+		
+		<form
+				hx-patch="/profile/roles"
+				hx-target="#message-box-roles"
+				hx-swap="innerHTML"
+				hx-trigger="submit"
+				class="">
+			
+			<div class="grid gap-2">
+				{% for role in editable_roles %}
+				<label class="flex items-center gap-2">
+					<input type="checkbox" name="roles" value="{{ role.value }}"
+					       {% if role in user.roles %}checked{% endif %}>
+					{{ role_labels[role] }}
+				</label>
+				{% endfor %}
+			</div>
+			
+			{% if locked_roles %}
+			<p class="text-sm text-text-secondary">
+				Закреплено администратором:
+				{% for role in locked_roles %}{{ role_labels[role] }}{% if not loop.last %}, {% endif %}{% endfor %}
+			</p>
+			{% endif %}
+			
+			<div id="message-box-roles" class="min-h-6"></div>
+			
+			<div class="pt-4 border-t border-border-subtle flex justify-end">
+				<button type="submit" class="">Сохранить роли</button>
+			</div>
+		</form>
+	</div>
+	
 	<!-- Блок смены пароля -->
 	<div class="">
 		<h3 class="">Безопасность</h3>

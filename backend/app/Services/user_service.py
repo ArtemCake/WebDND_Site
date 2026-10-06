@@ -10,6 +10,8 @@ from backend.app.enums.enums_BD import SystemRole
 
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+_SELF_EDITABLE_DEFAULT = {SystemRole.PLAYER, SystemRole.MASTER}
+_SELF_EDITABLE_FULL = {SystemRole.PLAYER, SystemRole.MASTER, SystemRole.EDITOR, SystemRole.ADMIN}
 
 async def get_user_by_email(session: AsyncSession, email: str) -> Optional[User]:
 	result = await session.execute(select(User).where(User.email == email))
@@ -31,6 +33,40 @@ async def create_user(
 		roles=roles or [SystemRole.PLAYER],
 	)
 	session.add(user)
+	await session.commit()
+	await session.refresh(user)
+	return user
+
+def _editable_scope(current_roles: list[SystemRole]) -> set[SystemRole]:
+	if SystemRole.ADMIN in (current_roles or []):
+		return _SELF_EDITABLE_FULL
+	return _SELF_EDITABLE_DEFAULT
+
+async def update_own_roles(
+		session: AsyncSession,
+		user: User,
+		requested_roles: list[SystemRole]
+) -> User:
+	"""
+	Обновляет роли пользователя САМОМУ СЕБЕ. Роли вне разрешённой зоны
+	(editor/admin для не-админа) игнорируются из запроса и берутся из
+	текущего состояния — так подменить их через форму нельзя, даже
+	если в теле запроса придёт чужое значение.
+	"""
+	scope = _editable_scope(user.roles or [])
+
+	# Роли, которые пользователю не разрешено трогать самому — остаются как были.
+	protected = [r for r in (user.roles or []) if r not in scope]
+	# Из присланного пользователем набора берём только то, что реально входит в его зону.
+	chosen = [r for r in (requested_roles or []) if r in scope]
+
+	final_roles = list(dict.fromkeys(protected + chosen))  # без дублей, порядок сохранён
+
+	if not final_roles:
+		raise ValueError("У пользователя должна остаться хотя бы одна роль")
+
+	user.roles = final_roles
+	user.updated_at = datetime.utcnow()
 	await session.commit()
 	await session.refresh(user)
 	return user

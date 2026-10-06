@@ -8,13 +8,21 @@ from Config.imports import (JSONResponse, HTMLResponse, APIRouter, Depends, HTTP
 from backend.app.Services.security_service import create_verification_token
 from backend.app.Services.mail_service import mail_service
 from backend.app.database.models.core.user import User
-from backend.app.Services.user_service import (update_user_profile, change_password, get_current_user)
+from backend.app.Services.user_service import (update_user_profile, change_password, get_current_user, update_own_roles)
+from backend.app.enums.enums_BD import SystemRole
 
 
 router = APIRouter(
 	prefix="/profile",
 	tags=["profile"],
 )
+
+ROLE_LABELS: dict[SystemRole, str] = {
+	SystemRole.PLAYER: "Игрок",
+	SystemRole.MASTER: "Мастер (ведущий)",
+	SystemRole.EDITOR: "Редактор контента",
+	SystemRole.ADMIN: "Администратор",
+}
 
 class ProfileSettingsDTO(BaseModel):
 	theme_color: str | None = Field(default="#a855f7", description="Основной цвет темы")
@@ -31,15 +39,43 @@ class ProfileResponseDTO(BaseModel):
 @router.get("/", response_class=HTMLResponse, name="profile_page_get")
 async def get_profile_page(request: Request, user: User = Depends(get_current_user), csrf_protect: CsrfProtect = Depends()):
 	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+
+	# Какие роли показывать как редактируемые чекбоксы — зависит от текущих ролей пользователя.
+	editable_roles = list(SystemRole) if SystemRole.ADMIN in user.roles else [SystemRole.PLAYER, SystemRole.MASTER]
+	locked_roles = [r for r in user.roles if r not in editable_roles]
+
 	context = {
 		"user": user,
 		"project_name": settings.PROJECT_NAME,
-		"csrf_token": csrf_token
+		"csrf_token": csrf_token,
+		"editable_roles": editable_roles,
+		"locked_roles": locked_roles,
+		"role_labels": ROLE_LABELS,
 	}
 	templates = request.app.state.templates
 	response = templates.TemplateResponse(request, "profile.html", context)
 	csrf_protect.set_csrf_cookie(signed_token, response)
 	return response
+
+@router.patch("/roles", response_class=JSONResponse, status_code=status.HTTP_200_OK, operation_id="updateUserRoles")
+async def api_update_roles(
+		request: Request,
+		roles: list[SystemRole] = Form([]),
+		session: AsyncSession = Depends(get_async_session),
+		user: User = Depends(get_current_user),
+		csrf_protect: CsrfProtect = Depends()
+):
+	await csrf_protect.validate_csrf(request)
+
+	try:
+		updated_user = await update_own_roles(session=session, user=user, requested_roles=roles)
+	except ValueError as e:
+		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+	return {
+		"message": "Роли обновлены.",
+		"roles": [r.value for r in updated_user.roles]
+	}
 
 @router.get("/data", response_model=ProfileResponseDTO, operation_id="getCurrentUserProfile")
 async def get_profile_data(user: User = Depends(get_current_user)):

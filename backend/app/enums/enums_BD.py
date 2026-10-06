@@ -15,9 +15,9 @@ class SystemRole(StrEnum):
 		# *[role.value for role in SystemRole] — распаковываем список в аргументы,
 		# чтобы избежать ошибки "unhashable type: 'list'" во внутренних структурах SQLAlchemy.
 		return PG_ENUM(
-			"system_role",
-			*[role.value for role in SystemRole],
+			SystemRole,
 			name="system_role_type",
 			create_type=True,
-			validate_strings=True
+			validate_strings=True,
+			values_callable=lambda enum_cls: [member.value for member in enum_cls],
 		)

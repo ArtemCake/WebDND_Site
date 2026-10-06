@@ -128,7 +128,7 @@ export function setupAuthHandlers() {
     // === БЛОК CSRF ЗАЩИТЫ ===
     // Автоматически добавляем заголовок X-CSRF-Token во все запросы модификации данных
     document.body.addEventListener('htmx:configRequest', (event) => {
-        if (['post', 'put', 'delete'].includes(event.detail.verb.toLowerCase())) {
+        if (['post', 'put', 'patch', 'delete'].includes(event.detail.verb.toLowerCase())) {
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
             if (csrfToken) {
                 event.detail.headers['X-CSRF-Token'] = csrfToken;
