@@ -52,6 +52,7 @@ async def get_login_page(request: Request,
 		raise HTTPException(status_code=404, detail="Страница login.html не найдена")
 
 	csrf_protect.set_csrf_cookie(signed_token, response)
+	response.headers["X-CSRF-Token"] = csrf_token
 	return response
 
 @router.get("/register", response_class=HTMLResponse, name="register_page_get")
@@ -76,6 +77,7 @@ async def get_register_page(request: Request,
 		raise HTTPException(status_code=404, detail="Страница register.html не найдена")
 
 	csrf_protect.set_csrf_cookie(signed_token, response)
+	response.headers["X-CSRF-Token"] = csrf_token
 	return response
 
 @router.get("/dashboard", response_class=HTMLResponse, name="dashboard_page_get")
@@ -98,4 +100,5 @@ async def get_dashboard_page(request: Request, user: User | None = Depends(get_o
 		raise HTTPException(status_code=404, detail="Шаблон dashboard.html не найден")
 
 	csrf_protect.set_csrf_cookie(signed_token, response)
+	response.headers["X-CSRF-Token"] = csrf_token
 	return response

@@ -125,16 +125,15 @@ async function attemptTokenRefresh(requestConfig, targetForm) {
  */
 export function setupAuthHandlers() {
 
-    // === БЛОК CSRF ЗАЩИТЫ ===
-    // Автоматически добавляем заголовок X-CSRF-Token во все запросы модификации данных
-    document.body.addEventListener('htmx:configRequest', (event) => {
-        if (['post', 'put', 'patch', 'delete'].includes(event.detail.verb.toLowerCase())) {
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-            if (csrfToken) {
-                event.detail.headers['X-CSRF-Token'] = csrfToken;
-            }
-        }
-    });
+	// === БЛОК CSRF ЗАЩИТЫ ===
+	document.body.addEventListener('htmx:configRequest', (event) => {
+	    if (['post', 'put', 'patch', 'delete'].includes(event.detail.verb.toLowerCase())) {
+	        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+	        if (csrfToken) {
+	            event.detail.headers['X-CSRF-Token'] = csrfToken;
+	        }
+	    }
+	});
 
     // === БЛОК ОБРАБОТКИ ОТВЕТОВ СЕРВЕРА ===
     document.body.addEventListener('htmx:beforeOnLoad', function (evt) {
@@ -142,7 +141,10 @@ export function setupAuthHandlers() {
         const isAuthPath = path && path.startsWith('/auth/');
         const isProfilePath = path && path.startsWith('/profile/');
         const isLogoutPath = path === '/auth/logout';
-
+		const freshToken = evt.detail.xhr?.getResponseHeader('X-CSRF-Token');
+        if (freshToken) {
+           document.querySelector('meta[name="csrf-token"]')?.setAttribute('content', freshToken);
+        }
         if (!isAuthPath && !isProfilePath) return;
 
         evt.preventDefault();
