@@ -115,3 +115,53 @@
     background-color: var(--color-bg-panel); // Использование переменных из _variables.scss
     backdrop-filter: saturate(180%) blur(10px); // Эффект матового стекла (актуально для 2026 года)
 }
+
+.nav-list {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-item > a,
+.dropdown-toggle {
+  color: var(--color-text-primary);
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  transition: color 0.2s ease;
+}
+
+.nav-item > a:hover,
+.dropdown-toggle:hover {
+  color: var(--color-text-accent);
+}
+
+.nav-nickname {
+  color: var(--color-text-accent);
+  font-weight: 600;
+}
+
+.avatar-sm img {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border-accent);
+  object-fit: cover;
+}
+
+.theme-switcher {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+#accent-picker {
+  border: 1px solid var(--color-border-accent);
+  border-radius: 4px;
+  cursor: pointer;
+}

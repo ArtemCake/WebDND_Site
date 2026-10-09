@@ -36,3 +36,33 @@
         pointer-events: none;
     }
 }
+
+.btn {
+  padding: 0.4rem 0.9rem;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-outline-primary {
+  background: transparent;
+  color: var(--color-text-accent);
+  border-color: var(--color-border-accent);
+}
+.btn-outline-primary:hover {
+  background: var(--color-border-accent);
+  color: var(--color-bg-page);
+}
+
+.btn-success {
+  background: var(--color-border-accent);
+  color: var(--color-bg-page);
+}
+
+.btn-danger {
+  background: transparent;
+  color: var(--color-text-error);
+  border-color: var(--color-text-error);
+}
