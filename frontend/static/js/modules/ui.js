@@ -71,31 +71,17 @@ const PRESET_THEMES = ['dark-fantasy', 'light', 'high-contrast'];
 export function applyTheme(themeName) {
     const root = document.documentElement;
     root.classList.remove('theme-dark-fantasy', 'theme-light', 'theme-high-contrast');
-    // Было: класс добавлялся для любого themeName, включая 'custom' — а класса
-    // .theme-custom в стилях нет, и это было не страшно, но концептуально неверно.
-    // Теперь: "custom" не добавляет тематический класс — используются базовые
-    // переменные dark-fantasy из :root, а акцентный цвет поверх них выставляет
-    // setAccentColor().
     if (PRESET_THEMES.includes(themeName)) {
         root.classList.add(`theme-${themeName}`);
     }
 }
 
 export function setAccentColor(color) {
-    const root = document.documentElement;
-    root.style.setProperty('--color-text-accent', color);
-    root.style.setProperty('--color-border-accent', color);
+    document.documentElement.style.setProperty('--color-bg-page', color);
 }
 
-/**
- * Убирает инлайн-переопределение акцента, чтобы вернуть цвета именно
- * той темы, что выбрана в select (--color-text-accent/--color-border-accent
- * из :root или .theme-light/.theme-high-contrast).
- */
 function clearAccentOverride() {
-    const root = document.documentElement;
-    root.style.removeProperty('--color-text-accent');
-    root.style.removeProperty('--color-border-accent');
+    document.documentElement.style.removeProperty('--color-bg-page');
 }
 
 export function loadUserTheme() {
@@ -106,9 +92,6 @@ export function loadUserTheme() {
 
     const accentPicker = document.getElementById('accent-picker');
 
-    // Было: setAccentColor(savedAccent) вызывался всегда, независимо от темы —
-    // поэтому цвет пикера подменял акцент даже для "Светлой"/"Контрастной".
-    // Теперь: цвет из пикера применяется и пикер активен ТОЛЬКО при теме "custom".
     if (savedTheme === 'custom') {
         setAccentColor(savedAccent);
         if (accentPicker) accentPicker.disabled = false;
@@ -151,9 +134,6 @@ function bindThemeControls() {
     if (accentPicker && !accentPicker.dataset.themeBound) {
         accentPicker.dataset.themeBound = 'true';
         accentPicker.addEventListener('input', (e) => {
-            // Пикер физически disabled при выбранной preset-теме, но проверка
-            // themeSelect.value на всякий случай исключает любое влияние цвета,
-            // если состояние disabled почему-то не применилось.
             if (themeSelect && themeSelect.value === 'custom') {
                 setAccentColor(e.target.value);
                 localStorage.setItem('user-accent', e.target.value);
