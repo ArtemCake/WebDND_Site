@@ -9,9 +9,6 @@ function initStickyNavigation() {
 
     const observer = new IntersectionObserver(
         ([entry]) => {
-            // Исправлено: класс совпадает с модификатором в _navbar.scss (.navbar-main--scrolled).
-            // Раньше навешивался отдельный класс '--scrolled', который никогда не матчился с CSS,
-            // поэтому тень при скролле шапки не появлялась.
             nav.classList.toggle('navbar-main--scrolled', entry.intersectionRatio < 1 || entry.boundingClientRect.top < 0);
         },
         { threshold: [1], rootMargin: '0px 0px -1px 0px' }
@@ -58,6 +55,11 @@ export function initGlobalUI() {
 
     initStickyNavigation();
     initPasswordToggles();
+    initThemeSwitcher();
+
+    document.body.addEventListener('htmx:afterSwap', () => {
+        initThemeSwitcher();
+    });
 
     console.log('[UI] Global UI initialized.');
 }
@@ -90,6 +92,32 @@ export function loadUserTheme() {
     }
 }
 
+function bindThemeControls() {
+    const themeSelect = document.getElementById('theme-select');
+    const accentPicker = document.getElementById('accent-picker');
+
+    if (themeSelect && !themeSelect.dataset.themeBound) {
+        themeSelect.dataset.themeBound = 'true';
+        themeSelect.addEventListener('change', (e) => {
+            applyTheme(e.target.value);
+            localStorage.setItem('user-theme', e.target.value);
+        });
+    }
+
+    if (accentPicker && !accentPicker.dataset.themeBound) {
+        accentPicker.dataset.themeBound = 'true';
+        accentPicker.addEventListener('input', (e) => {
+            setAccentColor(e.target.value);
+            localStorage.setItem('user-accent', e.target.value);
+        });
+    }
+}
+
+export function initThemeSwitcher() {
+    loadUserTheme();
+    bindThemeControls();
+}
+
 /**
  * Показывает превью выбранного файла аватара прямо в форме профиля,
  * до отправки на сервер. Вызывается из атрибута onchange в profile.html.
@@ -108,9 +136,6 @@ export function previewAvatar(event) {
         img.src = e.target.result;
     };
 
-    // Исправлено: раньше onerror отсутствовал, и сбой чтения файла (повреждённый
-    // файл, нехватка памяти и т.п.) проходил молча, без лога — в нарушение
-    // правила 1.4 ТЗ о логировании точек отказа.
     reader.onerror = () => {
         console.error('[UI][AVATAR] Не удалось прочитать файл для превью.', reader.error);
     };
