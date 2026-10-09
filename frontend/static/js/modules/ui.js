@@ -65,10 +65,20 @@ export function initGlobalUI() {
 }
 
 /* --- Блок управления темами --- */
+
+const PRESET_THEMES = ['dark-fantasy', 'light', 'high-contrast'];
+
 export function applyTheme(themeName) {
     const root = document.documentElement;
     root.classList.remove('theme-dark-fantasy', 'theme-light', 'theme-high-contrast');
-    root.classList.add(`theme-${themeName}`);
+    // Было: класс добавлялся для любого themeName, включая 'custom' — а класса
+    // .theme-custom в стилях нет, и это было не страшно, но концептуально неверно.
+    // Теперь: "custom" не добавляет тематический класс — используются базовые
+    // переменные dark-fantasy из :root, а акцентный цвет поверх них выставляет
+    // setAccentColor().
+    if (PRESET_THEMES.includes(themeName)) {
+        root.classList.add(`theme-${themeName}`);
+    }
 }
 
 export function setAccentColor(color) {
@@ -77,16 +87,39 @@ export function setAccentColor(color) {
     root.style.setProperty('--color-border-accent', color);
 }
 
+/**
+ * Убирает инлайн-переопределение акцента, чтобы вернуть цвета именно
+ * той темы, что выбрана в select (--color-text-accent/--color-border-accent
+ * из :root или .theme-light/.theme-high-contrast).
+ */
+function clearAccentOverride() {
+    const root = document.documentElement;
+    root.style.removeProperty('--color-text-accent');
+    root.style.removeProperty('--color-border-accent');
+}
+
 export function loadUserTheme() {
     const savedTheme = localStorage.getItem('user-theme') || 'dark-fantasy';
     const savedAccent = localStorage.getItem('user-accent') || '#ffd700';
 
     applyTheme(savedTheme);
-    setAccentColor(savedAccent);
+
+    const accentPicker = document.getElementById('accent-picker');
+
+    // Было: setAccentColor(savedAccent) вызывался всегда, независимо от темы —
+    // поэтому цвет пикера подменял акцент даже для "Светлой"/"Контрастной".
+    // Теперь: цвет из пикера применяется и пикер активен ТОЛЬКО при теме "custom".
+    if (savedTheme === 'custom') {
+        setAccentColor(savedAccent);
+        if (accentPicker) accentPicker.disabled = false;
+    } else {
+        clearAccentOverride();
+        if (accentPicker) accentPicker.disabled = true;
+    }
 
     try {
         document.getElementById('theme-select').value = savedTheme;
-        document.getElementById('accent-picker').value = savedAccent;
+        if (accentPicker) accentPicker.value = savedAccent;
     } catch (e) {
         // Элементы формы могут отсутствовать на страницах авторизации
     }
@@ -99,16 +132,32 @@ function bindThemeControls() {
     if (themeSelect && !themeSelect.dataset.themeBound) {
         themeSelect.dataset.themeBound = 'true';
         themeSelect.addEventListener('change', (e) => {
-            applyTheme(e.target.value);
-            localStorage.setItem('user-theme', e.target.value);
+            const themeName = e.target.value;
+            applyTheme(themeName);
+            localStorage.setItem('user-theme', themeName);
+
+            if (themeName === 'custom') {
+                if (accentPicker) {
+                    accentPicker.disabled = false;
+                    setAccentColor(accentPicker.value);
+                }
+            } else {
+                clearAccentOverride();
+                if (accentPicker) accentPicker.disabled = true;
+            }
         });
     }
 
     if (accentPicker && !accentPicker.dataset.themeBound) {
         accentPicker.dataset.themeBound = 'true';
         accentPicker.addEventListener('input', (e) => {
-            setAccentColor(e.target.value);
-            localStorage.setItem('user-accent', e.target.value);
+            // Пикер физически disabled при выбранной preset-теме, но проверка
+            // themeSelect.value на всякий случай исключает любое влияние цвета,
+            // если состояние disabled почему-то не применилось.
+            if (themeSelect && themeSelect.value === 'custom') {
+                setAccentColor(e.target.value);
+                localStorage.setItem('user-accent', e.target.value);
+            }
         });
     }
 }
