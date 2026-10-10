@@ -9,7 +9,7 @@ form {
 input {
   width: 100%;
   padding: 12px 16px;
-  background: #12121a;
+  background: var(--color-bg-panel);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
   color: var(--text-primary);
