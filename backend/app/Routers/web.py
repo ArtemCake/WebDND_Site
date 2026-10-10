@@ -13,14 +13,19 @@ secret_key = os.environ.get("SECRET_KEY", settings.SECRET_KEY)
 serializer = URLSafeTimedSerializer(secret_key)
 
 @router.get("/", response_class=HTMLResponse, name="main_page_get")
-async def get_main_page(request: Request, user: User | None = Depends(get_optional_user)):
+async def get_main_page(request: Request, user: User | None = Depends(get_optional_user),
+                        csrf_protect: CsrfProtect = Depends()):
 	"""
 	Главная заглушка сайта.
 	"""
 	templates = request.app.state.templates
-	context={"user": user}
+	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+	context = {"user": user, "csrf_token": csrf_token}
 	try:
-		return templates.TemplateResponse(request=request,name="index.html", context=context)
+		response = templates.TemplateResponse(request=request, name="index.html", context=context)
+		csrf_protect.set_csrf_cookie(signed_token, response)
+		response.headers["X-CSRF-Token"] = csrf_token
+		return response
 	except TemplateNotFound:
 		# Fallback-заглушка, если шаблон еще не создан
 		return """
@@ -41,7 +46,7 @@ async def get_login_page(request: Request,
                          csrf_protect: CsrfProtect = Depends()
                          ):
 	if user:
-		return RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
+		return RedirectResponse(url="/profile", status_code=status.HTTP_302_FOUND)
 
 	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
 	context = {"project_name": settings.PROJECT_NAME, "csrf_token": csrf_token}
@@ -65,7 +70,7 @@ async def get_register_page(request: Request,
 	Если пользователь уже авторизован — перенаправляем в лобби.
 	"""
 	if user:
-		return RedirectResponse(url="/dashboard", status_code=status.HTTP_302_FOUND)
+		return RedirectResponse(url="/profile", status_code=status.HTTP_302_FOUND)
 
 	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
 	context = {"project_name": settings.PROJECT_NAME, "csrf_token": csrf_token}
