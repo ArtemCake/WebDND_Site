@@ -2,7 +2,7 @@
 
 from Config.Config import settings
 from backend.app.database.models.core.user import User
-from Config.imports import (Optional, AsyncSession, select, Depends, HTTPException, status, Path, uuid4,
+from Config.imports import (Optional, AsyncSession, select, Depends, HTTPException, status, Path, uuid4, re,
                             jwt, JWTError, datetime, ValidationError, Dict, Any, UploadFile, update, CryptContext,
                             Request)
 from backend.app.database.database import get_async_session
@@ -13,6 +13,11 @@ pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 _SELF_EDITABLE_DEFAULT = {SystemRole.PLAYER, SystemRole.MASTER}
 _SELF_EDITABLE_FULL = {SystemRole.PLAYER, SystemRole.MASTER, SystemRole.EDITOR, SystemRole.ADMIN}
 AVATARS_DIR = Path(settings.BASE_DIR) / "frontend" / "static" / "avatars"
+
+def _safe_folder_name(nickname: str) -> str:
+	"""Превращает никнейм в безопасное имя папки: только буквы/цифры/дефис/подчёркивание."""
+	cleaned = re.sub(r"[^\w\-]", "_", nickname, flags=re.UNICODE)
+	return cleaned.strip("_") or "user"
 
 async def get_user_by_email(session: AsyncSession, email: str) -> Optional[User]:
 	result = await session.execute(select(User).where(User.email == email))
@@ -214,6 +219,8 @@ async def update_user_profile(
 		avatar_file: UploadFile | None = None
 ) -> User:
 	needs_commit = False
+	old_nickname = target_user.nickname
+	nickname_changed = False
 
 	new_nickname = data.get("nickname")
 	new_email = data.get("email")
@@ -223,6 +230,7 @@ async def update_user_profile(
 		if existing_nick.scalar_one_or_none():
 			raise ValueError("Nickname already exists")
 		target_user.nickname = new_nickname
+		nickname_changed = True
 		needs_commit = True
 
 
@@ -235,22 +243,41 @@ async def update_user_profile(
 		target_user.is_email_verified = False
 		needs_commit = True
 
+	old_folder = AVATARS_DIR / _safe_folder_name(old_nickname)
+	new_folder = AVATARS_DIR / _safe_folder_name(target_user.nickname)
+
 	if avatar_file and avatar_file.filename:
 		contents = await avatar_file.read()
 		if contents:
+			# старый файл аватара больше не нужен — удаляем перед записью нового
+			if target_user.avatar_url:
+				old_avatar_path = Path(settings.BASE_DIR) / target_user.avatar_url.lstrip("/")
+				old_avatar_path.unlink(missing_ok=True)
+
 			ext = Path(avatar_file.filename).suffix or ".png"
 			safe_name = f"{uuid4().hex}{ext}"
-			user_dir = AVATARS_DIR / str(target_user.id)
-			user_dir.mkdir(parents=True, exist_ok=True)
-			(user_dir / safe_name).write_bytes(contents)
+			new_folder.mkdir(parents=True, exist_ok=True)
+			(new_folder / safe_name).write_bytes(contents)
 
-			target_user.avatar_url = f"/frontend/static/avatars/{target_user.id}/{safe_name}"
+			target_user.avatar_url = f"/frontend/static/avatars/{_safe_folder_name(target_user.nickname)}/{safe_name}"
 			needs_commit = True
 
 	if needs_commit:
 		target_user.updated_at = datetime.utcnow()
 		await session.commit()
 		await session.refresh(target_user)
+
+		# никнейм сменился, а новый аватар в этом запросе не грузился —
+		# переносим папку со старым именем на новое
+		if nickname_changed and old_folder != new_folder and old_folder.exists() and not new_folder.exists():
+			old_folder.rename(new_folder)
+			old_slug = _safe_folder_name(old_nickname)
+			new_slug = _safe_folder_name(target_user.nickname)
+			if target_user.avatar_url and f"/avatars/{old_slug}/" in target_user.avatar_url:
+				target_user.avatar_url = target_user.avatar_url.replace(
+					f"/avatars/{old_slug}/", f"/avatars/{new_slug}/"
+				)
+				await session.commit()
 
 	return target_user
 
