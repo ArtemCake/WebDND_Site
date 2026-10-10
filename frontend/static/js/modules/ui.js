@@ -102,31 +102,28 @@ export function applyTheme(themeName, forceRerollBackground = false) {
     applyThemeBackground(themeName, forceRerollBackground);
  }
 
-function applyThemeBackground(themeName, forceReroll) {
+ function applyThemeBackground(themeName, forceReroll) {
      const body = document.body;
-    const list = THEME_BACKGROUNDS[themeName];
+     const list = THEME_BACKGROUNDS[themeName];
 
-    if (!list) {
-        // Кастомная тема — без фоновой картинки
-         body.style.backgroundImage = '';
+     if (!list) {
+         // Кастомная тема — без фоновой картинки
+         body.style.removeProperty('--bg-image-url');
          body.classList.remove('has-bg-image');
-        return;
+         return;
      }
 
-    // Храним выбор на сессию вкладки — отдельно для каждой темы,
-    // чтобы фон не прыгал при обычной навигации по сайту (htmx-переходы).
-    // forceReroll сбрасывает кэш именно в момент смены темы пользователем.
-    const storageKey = `theme-bg-${themeName}`;
-    let chosen = forceReroll ? null : sessionStorage.getItem(storageKey);
+     const storageKey = `theme-bg-${themeName}`;
+     let chosen = forceReroll ? null : sessionStorage.getItem(storageKey);
 
-    if (!chosen || !list.includes(chosen)) {
-        chosen = list[Math.floor(Math.random() * list.length)];
-        sessionStorage.setItem(storageKey, chosen);
-    }
+     if (!chosen || !list.includes(chosen)) {
+         chosen = list[Math.floor(Math.random() * list.length)];
+         sessionStorage.setItem(storageKey, chosen);
+     }
 
-    body.style.backgroundImage = `url('${chosen}')`;
-    body.classList.add('has-bg-image');
-}
+     body.style.setProperty('--bg-image-url', `url('${chosen}')`);
+     body.classList.add('has-bg-image');
+ }
 
 export function setAccentColor(color) {
     document.documentElement.style.setProperty('--color-bg-page', color);
