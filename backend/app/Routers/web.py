@@ -13,14 +13,14 @@ secret_key = os.environ.get("SECRET_KEY", settings.SECRET_KEY)
 serializer = URLSafeTimedSerializer(secret_key)
 
 @router.get("/", response_class=HTMLResponse, name="main_page_get")
-async def get_main_page(request: Request):
+async def get_main_page(request: Request, user: User | None = Depends(get_optional_user)):
 	"""
 	Главная заглушка сайта.
 	"""
 	templates = request.app.state.templates
-
+	context={"user": user}
 	try:
-		return templates.TemplateResponse(request=request,name="index.html")
+		return templates.TemplateResponse(request=request,name="index.html", context=context)
 	except TemplateNotFound:
 		# Fallback-заглушка, если шаблон еще не создан
 		return """
