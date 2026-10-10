@@ -1,96 +1,91 @@
 /* frontend/static/css/modules/base/_variables.scss */
 
-// Базовые цвета фона (строго тёмные, тема dark-fantasy — по умолчанию)
- :root {
-    // Тёмное фэнтези: кровавая луна, руины, вино и ржавый металл
-     --color-bg-page: #120b14;
-     --color-bg-panel: #231520;
-     --color-bg-panel-alt: #160d14;
-     --color-text-primary: #f1e6e6;
-     --color-text-secondary: #b99aa0;
-     --color-text-accent: #c23b56;
-     --color-border-accent: #c23b56;
-     --color-border-subtle: rgba(255, 255, 255, 0.14);
-     --color-text-error: #ef4444;
-     --color-text-success: #4ade80;
-     --btn-primary-text: #f5f3f7;
-     --color-hover-overlay: rgba(255, 255, 255, 0.06);
-     --bg-scrim: rgba(18, 10, 14, 0.58);
-     --color-panel-glass: rgba(50, 20, 30, 0.28);
-     --color-panel-glass-alt: rgba(22, 12, 18, 0.38);
- }
+// Нейтральная база по умолчанию: работает до применения JS-темы
+// и как основа для кастомной темы с цветовым пикером — здесь
+// принципиально нет "фэнтезийного" акцента, только серая нейтральность
+:root {
+    --color-bg-page: #16161a;
+    --color-bg-panel: #202024;
+    --color-bg-panel-alt: #1a1a1e;
+    --color-text-primary: #e8e8ea;
+    --color-text-secondary: #a0a0a6;
+    --color-text-accent: #9ca3af;
+    --color-border-accent: #9ca3af;
+    --color-border-subtle: rgba(255, 255, 255, 0.14);
+    --color-text-error: #ef4444;
+    --color-text-success: #22c55e;
+    --btn-primary-text: #f5f3f7;
+    --color-hover-overlay: rgba(255, 255, 255, 0.06);
+    --bg-scrim: rgba(20, 20, 24, 0.5);
+    --color-panel-glass: rgba(40, 40, 46, 0.28);
+    --color-panel-glass-alt: rgba(24, 24, 28, 0.38);
+}
 
- // --- Алиасы для имён переменных, которые используют другие модули ---
- :root {
-     --text-primary: var(--color-text-primary);
-     --text-secondary: var(--color-text-secondary);
-     --accent-magic: #a855f7;
-     --accent-dmg: var(--color-text-error);
-     --bg-card: var(--color-bg-panel);
-     --border-subtle: var(--color-border-subtle);
-     --radius-md: 8px;
-     --radius-xl: 20px;
+:root {
+    --text-primary: var(--color-text-primary);
+    --text-secondary: var(--color-text-secondary);
+    --accent-magic: #a855f7;
+    --clr-accent-hover: #8b8f99;
+    --border-subtle: var(--color-border-subtle);
+    --bg-card: var(--color-bg-panel);
+}
 
-     --clr-bg-primary: var(--color-bg-page);
-     --clr-text-primary: var(--color-text-primary);
-     --clr-text-secondary: var(--color-text-secondary);
-     --clr-accent: var(--color-text-accent);
-     --clr-accent-hover: #e2536f;
-     --clr-border-light: var(--color-border-subtle);
-     --gap-lg: 2rem;
+// Тёмное фэнтези: кровавая луна, руины, вино и ржавый металл
+.theme-dark-fantasy {
+    --color-bg-page: #120b14;
+    --color-bg-panel: #231520;
+    --color-bg-panel-alt: #160d14;
+    --color-text-primary: #f1e6e6;
+    --color-text-secondary: #b99aa0;
+    --color-text-accent: #c23b56;
+    --color-border-accent: #c23b56;
+    --color-border-subtle: rgba(255, 255, 255, 0.14);
+    --color-text-error: #ef4444;
+    --color-text-success: #4ade80;
+    --color-hover-overlay: rgba(255, 255, 255, 0.06);
+    --accent-magic: #a855f7;
+    --clr-accent-hover: #e2536f;
+    --bg-scrim: rgba(18, 10, 14, 0.58);
+    --color-panel-glass: rgba(50, 20, 30, 0.28);
+    --color-panel-glass-alt: rgba(22, 12, 18, 0.38);
+}
 
-     --space-sm: 0.5rem;
-     --space-md: 1rem;
-     --space-lg: 1.5rem;
-     --space-xl: 2rem;
+// Светлое фэнтези: солнечный свет, золотой замок, изумрудный лес
+.theme-light-fantasy {
+    --color-bg-page: #fffdf7;
+    --color-bg-panel: #fbf6ec;
+    --color-bg-panel-alt: #eef3e2;
+    --color-text-primary: #2b2410;
+    --color-text-secondary: #6b5d3f;
+    --color-border-accent: #c9862c;
+    --color-text-accent: #c9862c;
+    --color-border-subtle: rgba(60, 45, 10, 0.18);
+    --color-text-error: #c62828;
+    --color-text-success: #2e7d32;
+    --color-hover-overlay: rgba(60, 45, 10, 0.07);
+    --accent-magic: #b5541f;
+    --clr-accent-hover: #a66a1e;
+    --bg-scrim: rgba(255, 253, 245, 0.4);
+    --color-panel-glass: rgba(255, 251, 240, 0.3);
+    --color-panel-glass-alt: rgba(224, 238, 205, 0.36);
+}
 
-     --color-error-text-light: #991b1b;
-     --color-error-bg-light: #fee2e2;
-     --color-border-error-light: #ef4444;
-     --color-error-text-dark: #fca5a5;
-     --color-error-bg-dark: #450a0a;
-     --color-border-error-dark: #ef4444;
-
-     // Базовый шрифт — используется в _reset.scss
-     --font-family-base: 'Inter', system-ui, -apple-system, sans-serif;
- }
-
- .theme-light-fantasy {
-    // Светлое фэнтези: солнечный свет, золотой замок, изумрудный лес
-     --color-bg-page: #fffdf7;
-     --color-bg-panel: #fbf6ec;
-     --color-bg-panel-alt: #eef3e2;
-     --color-text-primary: #2b2410;
-     --color-text-secondary: #6b5d3f;
-     --color-border-accent: #c9862c;
-     --color-text-accent: #c9862c;
-     --color-border-subtle: rgba(60, 45, 10, 0.18);
-     --color-text-error: #c62828;
-     --color-text-success: #2e7d32;
-     --color-hover-overlay: rgba(60, 45, 10, 0.07);
-     --accent-magic: #b5541f;
-     --clr-accent-hover: #a66a1e;
-     --bg-scrim: rgba(255, 253, 245, 0.4);
-     --color-panel-glass: rgba(255, 251, 240, 0.3);
-     --color-panel-glass-alt: rgba(224, 238, 205, 0.36);
- }
-
- .theme-fantasy {
-    // Просто фэнтези: кристаллы, лёд, магия пустыни — общий арканный тон
-     --color-bg-page: #060814;
-     --color-bg-panel: #0c0f1c;
-     --color-bg-panel-alt: #05070e;
-     --color-text-primary: #eef3ff;
-     --color-text-secondary: #aeb9d6;
-     --color-text-accent: #67e8f9;
-     --color-border-accent: #67e8f9;
-     --color-border-subtle: rgba(180, 200, 255, 0.3);
-     --color-text-error: #fb7185;
-     --color-text-success: #4ade80;
-     --color-hover-overlay: rgba(180, 200, 255, 0.15);
-     --accent-magic: #c4b5fd;
-     --clr-accent-hover: #38bdf8;
-     --bg-scrim: rgba(5, 7, 15, 0.5);
-     --color-panel-glass: rgba(10, 14, 28, 0.3);
-     --color-panel-glass-alt: rgba(4, 6, 14, 0.38);
- }
+// Просто фэнтези: кристаллы, лёд, магия пустыни — общий арканный тон
+.theme-fantasy {
+    --color-bg-page: #060814;
+    --color-bg-panel: #0c0f1c;
+    --color-bg-panel-alt: #05070e;
+    --color-text-primary: #eef3ff;
+    --color-text-secondary: #aeb9d6;
+    --color-text-accent: #67e8f9;
+    --color-border-accent: #67e8f9;
+    --color-border-subtle: rgba(180, 200, 255, 0.3);
+    --color-text-error: #fb7185;
+    --color-text-success: #4ade80;
+    --color-hover-overlay: rgba(180, 200, 255, 0.15);
+    --accent-magic: #c4b5fd;
+    --clr-accent-hover: #38bdf8;
+    --bg-scrim: rgba(5, 7, 15, 0.5);
+    --color-panel-glass: rgba(10, 14, 28, 0.3);
+    --color-panel-glass-alt: rgba(4, 6, 14, 0.38);
+}
