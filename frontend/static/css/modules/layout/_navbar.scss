@@ -11,14 +11,17 @@
     -webkit-backdrop-filter: saturate(180%) blur(10px);
 }
 
-.main-header__inner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-lg);
-    height: 64px;
-    padding: 0 var(--space-xl);
-}
+ .main-header__inner {
+   display: flex;
+   align-items: center;
+   justify-content: space-between;
+   gap: var(--space-lg);
+   height: 64px;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 var(--space-xl);
+  box-sizing: border-box;
+ }
 
 .main-header__logo {
     font-size: 1.25rem;
