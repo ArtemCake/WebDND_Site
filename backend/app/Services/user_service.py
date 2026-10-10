@@ -2,7 +2,7 @@
 
 from Config.Config import settings
 from backend.app.database.models.core.user import User
-from Config.imports import (Optional, AsyncSession, select, Depends, HTTPException, status,
+from Config.imports import (Optional, AsyncSession, select, Depends, HTTPException, status, Path, uuid4,
                             jwt, JWTError, datetime, ValidationError, Dict, Any, UploadFile, update, CryptContext,
                             Request)
 from backend.app.database.database import get_async_session
@@ -12,6 +12,7 @@ from backend.app.enums.enums_BD import SystemRole
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 _SELF_EDITABLE_DEFAULT = {SystemRole.PLAYER, SystemRole.MASTER}
 _SELF_EDITABLE_FULL = {SystemRole.PLAYER, SystemRole.MASTER, SystemRole.EDITOR, SystemRole.ADMIN}
+AVATARS_DIR = Path(settings.BASE_DIR) / "frontend" / "static" / "avatars"
 
 async def get_user_by_email(session: AsyncSession, email: str) -> Optional[User]:
 	result = await session.execute(select(User).where(User.email == email))
@@ -234,9 +235,17 @@ async def update_user_profile(
 		target_user.is_email_verified = False
 		needs_commit = True
 
-	if avatar_file:
-		target_user.avatar_url = f"/data/avatars/{target_user.id}/{avatar_file.filename}"
-		needs_commit = True
+	if avatar_file and avatar_file.filename:
+		contents = await avatar_file.read()
+		if contents:
+			ext = Path(avatar_file.filename).suffix or ".png"
+			safe_name = f"{uuid4.uuid4().hex}{ext}"
+			user_dir = AVATARS_DIR / str(target_user.id)
+			user_dir.mkdir(parents=True, exist_ok=True)
+			(user_dir / safe_name).write_bytes(contents)
+
+			target_user.avatar_url = f"/frontend/static/avatars/{target_user.id}/{safe_name}"
+			needs_commit = True
 
 	if needs_commit:
 		target_user.updated_at = datetime.utcnow()

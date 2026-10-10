@@ -22,9 +22,10 @@
 				<label class="profile-avatar-wrap">
 					<img src="{{ user.avatar_url or static_url('images/default-avatar.jpg') }}"
 					     alt="Аватар"
-					     class="profile-avatar-wrap">
-					<input type="file" name="avatar" accept="images/*" class="hidden" onchange="previewAvatar(event)">
-					<button type="button" class="btn btn-outline-primary profile-avatar-edit-btn">
+					     class="profile-avatar-img">
+					<input type="file" id="avatar-input" name="avatar" accept="image/*" class="hidden" onchange="previewAvatar(event)">
+					<button type="button" class="btn btn-outline-primary profile-avatar-edit-btn"
+					        onclick="document.getElementById('avatar-input').click()">
 						Изменить
 					</button>
 				</label>
