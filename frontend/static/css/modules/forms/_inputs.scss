@@ -40,7 +40,7 @@ input:focus {
 }
 
 .message-box .success {
-  color: #22c55e;
+  color: var(--color-text-success);
 }
 
 .form-error-message {

@@ -1,16 +1,20 @@
 /* frontend/static/css/modules/base/_variables.scss */
 
 // Базовые цвета фона (строго тёмные, тема dark-fantasy — по умолчанию)
-:root {
-    --color-bg-page: #0a0b10;
-    --color-bg-panel: #1e1f29;
-    --color-text-primary: #e8e6e3;
-    --color-text-secondary: #a8a29e;
-    --color-text-accent: #ffd700;
-    --color-border-accent: #ffd700;
-    --color-border-subtle: rgba(255, 255, 255, 0.08);
-    --color-text-error: #ef4444;
-}
+ :root {
+     --color-bg-page: #0a0b10;
+     --color-bg-panel: #1e1f29;
+     --color-bg-panel-alt: #12121a;
+     --color-text-primary: #e8e6e3;
+     --color-text-secondary: #a8a29e;
+     --color-text-accent: #ffd700;
+     --color-border-accent: #ffd700;
+     --color-border-subtle: rgba(255, 255, 255, 0.08);
+     --color-text-error: #ef4444;
+     --color-text-success: #22c55e;
+     --btn-primary-text: #f5f3f7;
+     --color-hover-overlay: rgba(255, 255, 255, 0.06);
+ }
 
 // --- Алиасы для имён переменных, которые используют другие модули ---
 :root {
@@ -47,18 +51,32 @@
     --font-family-base: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-.theme-light {
-    --color-bg-page: #ffffff;
-    --color-bg-panel: #f8f9fa;
-    --color-text-primary: #1a1a1a;
-    --color-border-accent: #44aa44;
-    --color-text-accent: #44aa44;
-}
+ .theme-light {
+     --color-bg-page: #ffffff;
+     --color-bg-panel: #f8f9fa;
+     --color-bg-panel-alt: #eef0f2;
+     --color-text-primary: #1a1a1a;
+     --color-text-secondary: #595754;
+     --color-border-accent: #2e7d32;
+     --color-text-accent: #2e7d32;
+     --color-border-subtle: rgba(0, 0, 0, 0.14);
+     --color-text-error: #c62828;
+     --color-text-success: #1b7a3d;
+     --color-hover-overlay: rgba(0, 0, 0, 0.06);
+     --accent-magic: #6d28d9;
+ }
 
-.theme-high-contrast {
-    --color-bg-page: #000000;
-    --color-bg-panel: #000000;
-    --color-text-primary: #ffffff;
-    --color-text-accent: #00ffff; // Циановый вместо золотого
-    --color-border-accent: #00ffff;
-}
+ .theme-high-contrast {
+     --color-bg-page: #000000;
+     --color-bg-panel: #000000;
+     --color-bg-panel-alt: #000000;
+     --color-text-primary: #ffffff;
+     --color-text-secondary: #d9d9d9;
+     --color-text-accent: #00ffff; // Циановый вместо золотого
+     --color-border-accent: #00ffff;
+     --color-border-subtle: rgba(255, 255, 255, 0.4);
+     --color-text-error: #ff5252;
+     --color-text-success: #39ff14;
+     --color-hover-overlay: rgba(255, 255, 255, 0.18);
+     --accent-magic: #d9b8ff;
+ }
