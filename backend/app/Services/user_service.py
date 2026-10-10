@@ -239,7 +239,7 @@ async def update_user_profile(
 		contents = await avatar_file.read()
 		if contents:
 			ext = Path(avatar_file.filename).suffix or ".png"
-			safe_name = f"{uuid4.uuid4().hex}{ext}"
+			safe_name = f"{uuid4().hex}{ext}"
 			user_dir = AVATARS_DIR / str(target_user.id)
 			user_dir.mkdir(parents=True, exist_ok=True)
 			(user_dir / safe_name).write_bytes(contents)
