@@ -105,15 +105,25 @@ WebDND_Site/ (102 файла)
 │   │   ├── images/
 │   │   │   ├── default-avatar.jpg
 │   │   │   ├── favicon.ico
-│   │   │   ├── backgrounds/                    # Фоны темы «Тёмная фэнтези» (случайный выбор)
+│   │   │   ├── backgrounds/                    # Фоны тем «Тёмное фэнтези» «светлое фэнтези» «Фэнтези» (случайный выбор)
 │   │   │   │   ├── general_fantasy/
+│   │   │   │   │   ├── fantasy-1.webp
+│   │   │   │   │   ├── fantasy-2.webp
+│   │   │   │   │   ├── fantasy-3.webp
+│   │   │   │   │   ├── fantasy-4.webp
 │   │   │   │   │   └── fantasy-5.webp
 │   │   │   │   ├── dark_fantasy/
 │   │   │   │   │   ├── fantasy-1.webp
+│   │   │   │   │   ├── fantasy-2.webp
 │   │   │   │   │   ├── fantasy-3.webp
-│   │   │   │   │   └── fantasy-4.webp
+│   │   │   │   │   ├── fantasy-4.webp
+│   │   │   │   │   └── fantasy-5.webp
 │   │   │   │   └── light_fantasy/
-│   │   │   │       └── fantasy-2.webp
+│   │   │   │   │   ├── fantasy-1.webp
+│   │   │   │   │   ├── fantasy-2.webp
+│   │   │   │   │   ├── fantasy-3.webp
+│   │   │   │   │   ├── fantasy-4.webp
+│   │   │   │   │   └── fantasy-5.webp
 │   │   │   ├── borders/
 │   │   │   │   └── parchment_corner.png
 │   │   │   └── textures/

@@ -66,7 +66,7 @@ export function initGlobalUI() {
 
 /* --- Блок управления темами --- */
 
-const PRESET_THEMES = ['dark-fantasy', 'light', 'high-contrast'];
+const PRESET_THEMES = ['dark-fantasy', 'light-fantasy', 'fantasy'];
 
 const DARK_FANTASY_BACKGROUNDS = [
     '/frontend/static/images/backgrounds/dark_fantasy/fantasy-1.webp',
@@ -78,7 +78,7 @@ const DARK_FANTASY_BACKGROUNDS = [
 
 export function applyTheme(themeName) {
     const root = document.documentElement;
-    root.classList.remove('theme-dark-fantasy', 'theme-light', 'theme-high-contrast');
+    root.classList.remove('theme-dark-fantasy', 'theme-light-fantasy', 'theme-fantasy');
     if (PRESET_THEMES.includes(themeName)) {
         root.classList.add(`theme-${themeName}`);
     }
