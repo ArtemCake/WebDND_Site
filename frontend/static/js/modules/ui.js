@@ -68,11 +68,40 @@ export function initGlobalUI() {
 
 const PRESET_THEMES = ['dark-fantasy', 'light', 'high-contrast'];
 
+const DARK_FANTASY_BACKGROUNDS = [
+    '/frontend/static/images/backgrounds/dark_fantasy/fantasy-1.webp',
+    '/frontend/static/images/backgrounds/dark_fantasy/fantasy-2.webp',
+    '/frontend/static/images/backgrounds/dark_fantasy/fantasy-3.webp',
+    '/frontend/static/images/backgrounds/dark_fantasy/fantasy-4.webp',
+    '/frontend/static/images/backgrounds/dark_fantasy/fantasy-5.webp',
+];
+
 export function applyTheme(themeName) {
     const root = document.documentElement;
     root.classList.remove('theme-dark-fantasy', 'theme-light', 'theme-high-contrast');
     if (PRESET_THEMES.includes(themeName)) {
         root.classList.add(`theme-${themeName}`);
+    }
+    applyThemeBackground(themeName);
+}
+
+function applyThemeBackground(themeName) {
+    const body = document.body;
+    if (themeName === 'dark-fantasy') {
+        // Храним выбор на сессию вкладки, чтобы фон не прыгал
+        // при каждом htmx-переходе между страницами одного визита
+        let chosen = sessionStorage.getItem('dark-fantasy-bg');
+        if (!chosen || !DARK_FANTASY_BACKGROUNDS.includes(chosen)) {
+            chosen = DARK_FANTASY_BACKGROUNDS[
+                Math.floor(Math.random() * DARK_FANTASY_BACKGROUNDS.length)
+            ];
+            sessionStorage.setItem('dark-fantasy-bg', chosen);
+        }
+        body.style.backgroundImage = `url('${chosen}')`;
+        body.classList.add('has-bg-image');
+    } else {
+        body.style.backgroundImage = '';
+        body.classList.remove('has-bg-image');
     }
 }
 

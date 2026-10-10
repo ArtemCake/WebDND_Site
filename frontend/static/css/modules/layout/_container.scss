@@ -8,6 +8,24 @@
    flex-direction: column;
  }
 
+ // Применяется только в теме «Тёмная фэнтези» — фоновая картинка мира,
+ // случайно выбранная JS-ом, плюс тёмная плёнка сверху для читаемости текста
+ .has-bg-image {
+   background-size: cover;
+   background-position: center;
+   background-attachment: fixed;
+   background-repeat: no-repeat;
+   position: relative;
+ }
+
+ .has-bg-image::before {
+   content: '';
+   position: fixed;
+   inset: 0;
+   background: rgba(10, 11, 16, 0.72);
+   z-index: -1;
+   pointer-events: none;
+ }
 
 // Общая ширина контентной зоны — совпадает с шириной шапки,
 // чтобы блок с контентом не "гулял" относительно меню

@@ -4,121 +4,123 @@
 {% block title %}Профиль{% endblock %}
 
 {% block content %}
-<div class="profile-container">
-	<h2 class="profile-heading">Настройки профиля</h2>
-	
-	<!-- Блок персональных данных -->
-	<div class="profile-section">
-		<h3 class="profile-subheading">Личные данные</h3>
+<div class="auth-container">
+	<div class="profile-container">
+		<h2 class="profile-heading">Настройки профиля</h2>
 		
-		<div id="profile-form-section" hx-target="this" hx-swap="outerHTML">
-			<form
-					hx-put="/profile/update"
-					hx-target="#message-box-profile"
-					hx-swap="innerHTML"
-					hx-trigger="submit"
-					enctype="multipart/form-data">
-				
-				<div class="profile-avatar-row">
-					<!-- Аватар -->
-					<label class="profile-avatar-wrap">
-						<img src="{{ user.avatar_url or static_url('images/default-avatar.jpg') }}"
-						     alt="Аватар"
-						     class="profile-avatar-img">
-						<input type="file" id="avatar-input" name="avatar" accept="image/*" class="hidden" onchange="previewAvatar(event)">
-						<button type="button" class="btn btn-outline-primary profile-avatar-edit-btn"
-						        onclick="document.getElementById('avatar-input').click()">
-							Изменить
-						</button>
-					</label>
+		<!-- Блок персональных данных -->
+		<div class="profile-section">
+			<h3 class="profile-subheading">Личные данные</h3>
+			
+			<div id="profile-form-section" hx-target="this" hx-swap="outerHTML">
+				<form
+						hx-put="/profile/update"
+						hx-target="#message-box-profile"
+						hx-swap="innerHTML"
+						hx-trigger="submit"
+						enctype="multipart/form-data">
 					
-					<!-- Текстовые поля -->
-					<div class="profile-fields-grid">
-						<div>
-							<label for="nickname" class="form-label">Никнейм</label>
-							<input type="text" id="nickname" name="nickname" value="{{ user.nickname }}" required>
-						</div>
-						<div>
-							<label for="email" class="form-label">Email</label>
-							<input type="email" id="email" name="email" value="{{ user.email }}" required>
+					<div class="profile-avatar-row">
+						<!-- Аватар -->
+						<label class="profile-avatar-wrap">
+							<img src="{{ user.avatar_url or static_url('images/default-avatar.jpg') }}"
+							     alt="Аватар"
+							     class="profile-avatar-img">
+							<input type="file" id="avatar-input" name="avatar" accept="image/*" class="hidden" onchange="previewAvatar(event)">
+							<button type="button" class="btn btn-outline-primary profile-avatar-edit-btn"
+							        onclick="document.getElementById('avatar-input').click()">
+								Изменить
+							</button>
+						</label>
+						
+						<!-- Текстовые поля -->
+						<div class="profile-fields-grid">
+							<div>
+								<label for="nickname" class="form-label">Никнейм</label>
+								<input type="text" id="nickname" name="nickname" value="{{ user.nickname }}" required>
+							</div>
+							<div>
+								<label for="email" class="form-label">Email</label>
+								<input type="email" id="email" name="email" value="{{ user.email }}" required>
+							</div>
 						</div>
 					</div>
-				</div>
-				
-				<div id="message-box-profile" class="message-box"></div>
-				
-				<div class="profile-actions">
-					<button type="submit" class="btn btn-primary">
-						Сохранить изменения
-					</button>
-				</div>
-			</form>
+					
+					<div id="message-box-profile" class="message-box"></div>
+					
+					<div class="profile-actions">
+						<button type="submit" class="btn btn-primary">
+							Сохранить изменения
+						</button>
+					</div>
+				</form>
+			</div>
 		</div>
-	</div>
-	
-	<!-- Блок управления ролями -->
-	<div class="profile-section">
-		<h3 class="profile-subheading">Роли</h3>
 		
-		<div id="roles-form-section" hx-target="this" hx-swap="outerHTML">
-			<form
-					hx-patch="/profile/roles"
-					hx-target="#message-box-roles"
-					hx-swap="innerHTML"
-					hx-trigger="submit">
-				
-				<div class="profile-roles-grid">
-					{% for role in editable_roles %}
-					<label class="role-option">
-						<input type="checkbox" name="roles" value="{{ role.value }}"
-						       {% if role in user.roles %}checked{% endif %}>
-						{{ role_labels[role] }}
-					</label>
-					{% endfor %}
-				</div>
-				
-				{% if locked_roles %}
-				<p class="profile-note">
-					Закреплено администратором:
-					{% for role in locked_roles %}{{ role_labels[role] }}{% if not loop.last %}, {% endif %}{% endfor %}
-				</p>
-				{% endif %}
-				
-				<div id="message-box-roles" class="message-box"></div>
-				
-				<div class="profile-actions">
-					<button type="submit" class="btn btn-primary">Сохранить роли</button>
-				</div>
-			</form>
+		<!-- Блок управления ролями -->
+		<div class="profile-section">
+			<h3 class="profile-subheading">Роли</h3>
+			
+			<div id="roles-form-section" hx-target="this" hx-swap="outerHTML">
+				<form
+						hx-patch="/profile/roles"
+						hx-target="#message-box-roles"
+						hx-swap="innerHTML"
+						hx-trigger="submit">
+					
+					<div class="profile-roles-grid">
+						{% for role in editable_roles %}
+						<label class="role-option">
+							<input type="checkbox" name="roles" value="{{ role.value }}"
+							       {% if role in user.roles %}checked{% endif %}>
+							{{ role_labels[role] }}
+						</label>
+						{% endfor %}
+					</div>
+					
+					{% if locked_roles %}
+					<p class="profile-note">
+						Закреплено администратором:
+						{% for role in locked_roles %}{{ role_labels[role] }}{% if not loop.last %}, {% endif %}{% endfor %}
+					</p>
+					{% endif %}
+					
+					<div id="message-box-roles" class="message-box"></div>
+					
+					<div class="profile-actions">
+						<button type="submit" class="btn btn-primary">Сохранить роли</button>
+					</div>
+				</form>
+			</div>
 		</div>
-	</div>
-	
-	<!-- Блок смены пароля -->
-	<div class="profile-section">
-		<h3 class="profile-subheading">Безопасность</h3>
 		
-		<div id="password-form-section" hx-target="this" hx-swap="outerHTML">
-			<form
-					hx-post="/profile/change-password"
-					hx-target="#message-box-password"
-					hx-swap="innerHTML"
-					hx-trigger="submit">
-				
-				<div>
-					<label for="current_pass" class="form-label">Текущий пароль</label>
-					<input type="password" id="current_pass" name="current_password" required minlength="8">
-				</div>
-				<div>
-					<label for="new_pass" class="form-label">Новый пароль</label>
-					<input type="password" id="new_pass" name="new_password" required minlength="8">
-				</div>
-				
-				<div id="message-box-password" class="message-box"></div>
-				
-				<div class="profile-actions">
-					<button type="submit" class="btn btn-primary">Изменить пароль</button>
-				</div>
-			</form>
+		<!-- Блок смены пароля -->
+		<div class="profile-section">
+			<h3 class="profile-subheading">Безопасность</h3>
+			
+			<div id="password-form-section" hx-target="this" hx-swap="outerHTML">
+				<form
+						hx-post="/profile/change-password"
+						hx-target="#message-box-password"
+						hx-swap="innerHTML"
+						hx-trigger="submit">
+					
+					<div>
+						<label for="current_pass" class="form-label">Текущий пароль</label>
+						<input type="password" id="current_pass" name="current_password" required minlength="8">
+					</div>
+					<div>
+						<label for="new_pass" class="form-label">Новый пароль</label>
+						<input type="password" id="new_pass" name="new_password" required minlength="8">
+					</div>
+					
+					<div id="message-box-password" class="message-box"></div>
+					
+					<div class="profile-actions">
+						<button type="submit" class="btn btn-primary">Изменить пароль</button>
+					</div>
+				</form>
+			</div>
 		</div>
 	</div>
 </div>
