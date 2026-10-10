@@ -75,13 +75,18 @@
 				<option value="custom">Кастомная</option>
 			</select>
 			<input type="color" id="accent-picker" class="accent-picker" value="#8a5cf6">
-			
-			{% if current_user %}
-			<a href="/profile" class="main-header__avatar-link">
-				<img src="{{ current_user.avatar_url or static_url('images/default-avatar.jpg') }}" alt="Аватар" class="main-header__avatar">
+		</div>
+		<div class="nav-user">
+			{% if user %}
+			<span class="nav-nickname">{{ user.nickname }}</span>
+			<a href="/profile" hx-get="/profile" hx-target="body" hx-push-url="true" class="avatar-sm">
+				<img alt="Аватар" src="{{ user.avatar_url or static_url('images/default-avatar.jpg') }}">
 			</a>
-			<button hx-post="/auth/logout" hx-target="body" hx-push-url="true" class="btn btn-ghost">Выход</button>
+			<form action="/logout" method="post" hx-post="/auth/logout" hx-target="body" hx-push-url="true" hx-swap="outerHTML">
+				<button type="submit" class="btn btn-danger btn-sm">Выйти</button>
+			</form>
 			{% else %}
+			<!-- Кнопки для неавторизованных пользователей -->
 			<a href="/login" hx-get="/login" hx-target="body" hx-push-url="true" class="btn btn-outline-primary btn-sm me-2">Войти</a>
 			<a href="/register" hx-get="/register" hx-target="body" hx-push-url="true" class="btn btn-outline-primary btn-sm me-2">Регистрация</a>
 			{% endif %}
