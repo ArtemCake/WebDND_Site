@@ -65,44 +65,67 @@ export function initGlobalUI() {
 }
 
 /* --- Блок управления темами --- */
-
 const PRESET_THEMES = ['dark-fantasy', 'light-fantasy', 'fantasy'];
 
-const DARK_FANTASY_BACKGROUNDS = [
-    '/frontend/static/images/backgrounds/dark_fantasy/fantasy-1.webp',
-    '/frontend/static/images/backgrounds/dark_fantasy/fantasy-2.webp',
-    '/frontend/static/images/backgrounds/dark_fantasy/fantasy-3.webp',
-    '/frontend/static/images/backgrounds/dark_fantasy/fantasy-4.webp',
-    '/frontend/static/images/backgrounds/dark_fantasy/fantasy-5.webp',
-];
+// Фон для каждой пресетной темы — своя пятёрка картинок.
+// У кастомной темы фона нет (там цветовой пикер), поэтому её в карте не держим.
+const THEME_BACKGROUNDS = {
+    'dark-fantasy': [
+        '/frontend/static/images/backgrounds/dark_fantasy/fantasy-1.webp',
+        '/frontend/static/images/backgrounds/dark_fantasy/fantasy-2.webp',
+        '/frontend/static/images/backgrounds/dark_fantasy/fantasy-3.webp',
+        '/frontend/static/images/backgrounds/dark_fantasy/fantasy-4.webp',
+        '/frontend/static/images/backgrounds/dark_fantasy/fantasy-5.webp',
+    ],
+    'light-fantasy': [
+        '/frontend/static/images/backgrounds/light_fantasy/fantasy-1.webp',
+        '/frontend/static/images/backgrounds/light_fantasy/fantasy-2.webp',
+        '/frontend/static/images/backgrounds/light_fantasy/fantasy-3.webp',
+        '/frontend/static/images/backgrounds/light_fantasy/fantasy-4.webp',
+        '/frontend/static/images/backgrounds/light_fantasy/fantasy-5.webp',
+    ],
+    'fantasy': [
+        '/frontend/static/images/backgrounds/general_fantasy/fantasy-1.webp',
+        '/frontend/static/images/backgrounds/general_fantasy/fantasy-2.webp',
+        '/frontend/static/images/backgrounds/general_fantasy/fantasy-3.webp',
+        '/frontend/static/images/backgrounds/general_fantasy/fantasy-4.webp',
+        '/frontend/static/images/backgrounds/general_fantasy/fantasy-5.webp',
+    ],
+};
 
-export function applyTheme(themeName) {
-    const root = document.documentElement;
-    root.classList.remove('theme-dark-fantasy', 'theme-light-fantasy', 'theme-fantasy');
-    if (PRESET_THEMES.includes(themeName)) {
-        root.classList.add(`theme-${themeName}`);
-    }
-    applyThemeBackground(themeName);
-}
+export function applyTheme(themeName, forceRerollBackground = false) {
+     const root = document.documentElement;
+     root.classList.remove('theme-dark-fantasy', 'theme-light-fantasy', 'theme-fantasy');
+     if (PRESET_THEMES.includes(themeName)) {
+         root.classList.add(`theme-${themeName}`);
+     }
+    applyThemeBackground(themeName, forceRerollBackground);
+ }
 
-function applyThemeBackground(themeName) {
-    const body = document.body;
-    if (themeName === 'dark-fantasy') {
-        // Храним выбор на сессию вкладки, чтобы фон не прыгал
-        // при каждом htmx-переходе между страницами одного визита
-        let chosen = sessionStorage.getItem('dark-fantasy-bg');
-        if (!chosen || !DARK_FANTASY_BACKGROUNDS.includes(chosen)) {
-            chosen = DARK_FANTASY_BACKGROUNDS[
-                Math.floor(Math.random() * DARK_FANTASY_BACKGROUNDS.length)
-            ];
-            sessionStorage.setItem('dark-fantasy-bg', chosen);
-        }
-        body.style.backgroundImage = `url('${chosen}')`;
-        body.classList.add('has-bg-image');
-    } else {
-        body.style.backgroundImage = '';
-        body.classList.remove('has-bg-image');
+function applyThemeBackground(themeName, forceReroll) {
+     const body = document.body;
+    const list = THEME_BACKGROUNDS[themeName];
+
+    if (!list) {
+        // Кастомная тема — без фоновой картинки
+         body.style.backgroundImage = '';
+         body.classList.remove('has-bg-image');
+        return;
+     }
+
+    // Храним выбор на сессию вкладки — отдельно для каждой темы,
+    // чтобы фон не прыгал при обычной навигации по сайту (htmx-переходы).
+    // forceReroll сбрасывает кэш именно в момент смены темы пользователем.
+    const storageKey = `theme-bg-${themeName}`;
+    let chosen = forceReroll ? null : sessionStorage.getItem(storageKey);
+
+    if (!chosen || !list.includes(chosen)) {
+        chosen = list[Math.floor(Math.random() * list.length)];
+        sessionStorage.setItem(storageKey, chosen);
     }
+
+    body.style.backgroundImage = `url('${chosen}')`;
+    body.classList.add('has-bg-image');
 }
 
 export function setAccentColor(color) {
@@ -145,7 +168,7 @@ function bindThemeControls() {
         themeSelect.dataset.themeBound = 'true';
         themeSelect.addEventListener('change', (e) => {
             const themeName = e.target.value;
-            applyTheme(themeName);
+            applyTheme(themeName, true);
             localStorage.setItem('user-theme', themeName);
 
             if (themeName === 'custom') {
