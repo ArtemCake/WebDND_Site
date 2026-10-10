@@ -32,6 +32,7 @@
   position: relative;
   flex-shrink: 0;
   width: 96px;
+  margin-bottom: 1.75rem;
 }
 
 .profile-avatar-img {
@@ -45,7 +46,8 @@
 
 .profile-avatar-edit-btn {
   position: absolute;
-  bottom: -6px;
+  top: 100%;
+  margin-top: 0.5rem;
   left: 50%;
   transform: translateX(-50%);
   font-size: 0.75rem;
