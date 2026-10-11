@@ -7,6 +7,7 @@ from Config.imports import (Optional, AsyncSession, select, Depends, HTTPExcepti
                             Request)
 from backend.app.database.database import get_async_session
 from backend.app.enums.enums_BD import SystemRole
+from Config.logger import setup_logging
 
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
@@ -103,7 +104,6 @@ async def authenticate_user(session: AsyncSession, email: str, password: str) ->
 			return None
 		return user
 	except (ValueError, TypeError) as e:
-		from Config.logger import setup_logging
 		log = setup_logging(app_name="WebDND_Site")
 		log.error(f"[AUTH][CRYPTO_ERROR] Argon2 verification failed for {email}: {str(e)}")
 		return None

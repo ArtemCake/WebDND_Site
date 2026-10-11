@@ -129,14 +129,19 @@ async def api_update_profile(
 			if not mail_sent:
 				print(f"[PROFILE UPDATE] Verification email failed for ID: {user.id}")
 
-		message = (
-			"Профиль обновлён. На новый адрес отправлено письмо для подтверждения — "
-			"до его подтверждения вход будет недоступен."
-			if email_changed else
-			"Профиль успешно обновлен."
-		)
+		if email_changed:
+			message = (
+				"Профиль обновлён. На новый адрес отправлено письмо для подтверждения — "
+				"до его подтверждения вход будет недоступен."
+				if mail_sent else
+				"Профиль обновлён, но письмо с подтверждением сейчас не отправилось — "
+				"почтовый сервис временно недоступен. Профиль сохранён, попробуйте запросить "
+				"подтверждение позже из настроек аккаунта."
+			)
+		else:
+			message = "Профиль успешно обновлен."
 
-		return {"message": message, "avatar_url": updated_user.avatar_url}
+		return {"message": message, "avatar_url": updated_user.avatar_url, "mail_sent": mail_sent if email_changed else None}
 
 	except ValueError as e:
 		msg = str(e).lower()

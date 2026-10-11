@@ -18,9 +18,18 @@ class WebAppSettings(BaseSettings):
 	SMTP_PORT: int          # 465 для SSL, 587 для STARTTLS
 	SMTP_USE_TLS: bool      # false для порта 465 (SSL), true для порта 587
 	SMTP_USE_SSL: bool      # true для порта 465, false для порта 587
-
 	SMTP_USER: str          # Логин почтового ящика
 	SMTP_PASSWORD: str      # Пароль приложения (ВАЖНО: не основной пароль от почты)
+
+	# --- Резервный почтовый провайдер (опционально) ---
+	# Если SMTP_FALLBACK_HOST не задан в .env — резерв не используется,
+	# поведение полностью как раньше: один провайдер.
+	SMTP_FALLBACK_HOST: str | None = None
+	SMTP_FALLBACK_PORT: int | None = None
+	SMTP_FALLBACK_USE_TLS: bool = True
+	SMTP_FALLBACK_USE_SSL: bool = False
+	SMTP_FALLBACK_USER: str | None = None
+	SMTP_FALLBACK_PASSWORD: str | None = None
 
 	MAIL_SENDER_NAME: str
 	MAIL_SENDER_EMAIL: str
