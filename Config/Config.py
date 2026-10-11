@@ -37,8 +37,8 @@ class WebAppSettings(BaseSettings):
 
 	# --- Основные настройки API ---
 	API_V1_STR: str = "/api/v1"
-	PROJECT_NAME: str = "WorldLoom API"
-	DESCRIPTION: str = "Веб-API для управления сайтом по ДНД"
+	PROJECT_NAME: str = "WorldLoom"
+	DESCRIPTION: str = "Сайт для игры в НРИ онлайн"
 	VERSION: str = "1.0.0"
 
 	_base_dir: Path = Path(__file__).resolve().parent.parent
