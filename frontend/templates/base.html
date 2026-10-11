@@ -12,7 +12,12 @@
 	<link rel="stylesheet" href="{{ static_url('css/style.min.css') }}">
 	<link rel="icon" href="{{ static_url('images/favicon.ico') }}" type="image/x-icon">
 </head>
-<body class="auth-body">
+<body class="auth-body"
+{% if user %}
+	data-user-theme="{{ user.profile_settings.theme if user.profile_settings and user.profile_settings.theme else 'dark-fantasy' }}"
+	data-user-accent="{{ user.profile_settings.theme_color if user.profile_settings and user.profile_settings.theme_color else '' }}"
+{% endif %}
+>
 <header class="site-header">
 	<!-- Подключение меню навигации -->
 	{% include "menu.html" %}
