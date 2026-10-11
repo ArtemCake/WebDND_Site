@@ -46,6 +46,15 @@ async def register_user_action(
 			password=data.password
 		)
 
+		new_user.profile_settings = {
+			**(new_user.profile_settings or {}),
+			"terms_accepted_at": datetime.utcnow().isoformat(),
+			"terms_version": "1.0"
+		}
+		session.add(new_user)
+		await session.commit()
+		await session.refresh(new_user)
+
 		verification_token = create_verification_token(new_user.id)
 		success = await mail_service.send_verification_email(
 			user_name=new_user.nickname,

@@ -95,3 +95,23 @@ input:focus {
   outline: 2px solid var(--accent-magic);
   outline-offset: 2px;
 }
+
+.form-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin: 0.75rem 0;
+  color: var(--color-text-primary);
+  font-size: 0.9rem;
+
+  input[type="checkbox"] {
+    margin-top: 0.2rem;
+    width: auto;
+    accent-color: var(--accent-magic);
+  }
+
+  a {
+    color: var(--accent-magic);
+    text-decoration: underline;
+  }
+}

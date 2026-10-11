@@ -16,6 +16,14 @@
 		<input type="text" name="nickname" placeholder="Никнейм" required>
 		<input type="email" name="email" placeholder="Email" required>
 		<input type="password" name="password" placeholder="Пароль" required autocomplete="current-password">
+		<label class="form-check">
+			<input type="checkbox" name="accepted_terms" required id="accept-terms">
+			<span>Я согласен с
+				<a href="/terms" target="_blank">пользовательским соглашением</a>
+				и
+				<a href="/privacy-policy" target="_blank">политикой конфиденциальности</a>
+			</span>
+		</label>
 		<button type="submit">Зарегистрироваться</button>
 	</form>
 	

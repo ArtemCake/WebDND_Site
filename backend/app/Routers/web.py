@@ -93,11 +93,29 @@ async def get_cookie_policy_page(request: Request, user: User | None = Depends(g
 	context = {"user": user, "project_name": settings.PROJECT_NAME, "csrf_token": csrf_token}
 	templates = request.app.state.templates
 	try:
-		response = templates.TemplateResponse(request=request, name="cookie_policy.html", context=context)
+		response = templates.TemplateResponse(request=request, name="docs/cookie_policy.html", context=context)
 	except TemplateNotFound:
 		raise HTTPException(status_code=404, detail="Страница cookie_policy.html не найдена")
 	csrf_protect.set_csrf_cookie(signed_token, response)
 	response.headers["X-CSRF-Token"] = csrf_token
+	return response
+
+@router.get("/terms", response_class=HTMLResponse, name="terms_page_get")
+async def get_terms_page(request: Request, user: User | None = Depends(get_optional_user),
+                         csrf_protect: CsrfProtect = Depends()):
+	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+	context = {"user": user, "project_name": settings.PROJECT_NAME, "csrf_token": csrf_token}
+	response = request.app.state.templates.TemplateResponse(request=request, name="docs/terms.html", context=context)
+	csrf_protect.set_csrf_cookie(signed_token, response)
+	return response
+
+@router.get("/privacy-policy", response_class=HTMLResponse, name="privacy_policy_page_get")
+async def get_privacy_policy_page(request: Request, user: User | None = Depends(get_optional_user),
+                                  csrf_protect: CsrfProtect = Depends()):
+	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+	context = {"user": user, "project_name": settings.PROJECT_NAME, "csrf_token": csrf_token}
+	response = request.app.state.templates.TemplateResponse(request=request, name="docs/privacy_policy.html", context=context)
+	csrf_protect.set_csrf_cookie(signed_token, response)
 	return response
 
 @router.get("/dashboard", response_class=HTMLResponse, name="dashboard_page_get")

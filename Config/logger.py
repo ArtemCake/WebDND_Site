@@ -96,7 +96,7 @@ def setup_logging(app_name: str = "WorldLoom"):
 
 	# Баннер только при первой инициализации
 	logger.info("=====================================")
-	logger.info("===   ЗАПУСК ПРИЛОЖЕНИЯ WEB-DND   ===")
+	logger.info("==== ЗАПУСК ПРИЛОЖЕНИЯ WorldLoom ====")
 	logger.info("=====================================")
 
 	return logger
