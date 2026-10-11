@@ -20,20 +20,37 @@ p {
   color: var(--text-secondary);
 }
 
+ @font-face {
+     font-family: 'FantasyHeader';
+     src: url(asset('fonts/Cinzel-Bold.woff2')) format('woff2'),
+          url(asset('fonts/Cinzel-Bold.woff')) format('woff');
+     font-weight: 700;
+     font-style: normal;
+ }
+
 @font-face {
     font-family: 'FantasyHeader';
-    /* Поднимаемся до корня static и спускаемся в статик еще раз */
-    src: url(asset('fonts/Cinzel-Bold.woff2')) format('woff2'),
-         url(asset('fonts/Cinzel-Bold.woff')) format('woff');
-    font-weight: 700;
+    src: url(asset('fonts/Cinzel-Regular.woff2')) format('woff2'),
+        url(asset('fonts/Cinzel-Regular.woff')) format('woff');
+    font-weight: 400;
     font-style: normal;
 }
 
-body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+@font-face {
+    font-family: 'FantasyHeader';
+    src: url(asset('fonts/Cinzel-Black.woff2')) format('woff2'),
+        url(asset('fonts/Cinzel-Black.woff')) format('woff');
+    font-weight: 900;
+    font-style: normal;
+}
+
+ body {
+   font-family: var(--font-family-base);
 }
 
 h1, h2, h3, .section-title {
     font-family: 'FantasyHeader', serif;
+    font-weight: var(--font-weight-heading);
+    letter-spacing: var(--letter-spacing-heading);
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 0 10px var(--heading-glow);
 }

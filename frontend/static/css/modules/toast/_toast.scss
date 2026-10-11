@@ -16,6 +16,9 @@
     max-width: 400px;
     padding: 1rem 1.25rem;
     border-radius: var(--radius-md);
+    background: var(--color-bg-panel);
+    border: 1px solid var(--border-subtle);
+    color: var(--color-text-primary);
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
     pointer-events: auto;
     animation: slideIn 0.3s ease-out;
@@ -31,10 +34,10 @@
 }
 
 /* Контрастный текст через oklch */
-.toast-success { background-color: #d1fae5; color: oklch(20% 0 0); border-left: 4px solid #10b981; }
-.toast-error { background-color: #fee2e2; color: oklch(30% 0.1 20); border-left: 4px solid #ef4444; }
-.toast-warning { background-color: #fef3c7; color: oklch(20% 0 0); border-left: 4px solid #f59e0b; }
-.toast-info { background-color: #dbeafe; color: oklch(15% 0 0); border-left: 4px solid #3b82f6; }
+.toast-success { border-left: 4px solid var(--color-text-success); }
+.toast-error { border-left: 4px solid var(--color-text-error); }
+.toast-warning { border-left: 4px solid var(--toast-warning); }
+.toast-info { border-left: 4px solid var(--toast-info); }
 
 .toast-close {
     background: none;
@@ -46,3 +49,20 @@
     padding: 0;
     margin-left: auto;
 }
+
+// Флеш-сообщения (<div class="alert alert-...">), сейчас совсем без стилей —
+// визуально та же плашка, что и тост, но статичная, без анимации появления
+.alert {
+  display: block;
+  margin: 1rem auto;
+  max-width: 1280px;
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-panel);
+  border: 1px solid var(--border-subtle);
+  color: var(--color-text-primary);
+}
+.alert-success { border-left: 4px solid var(--color-text-success); }
+.alert-error { border-left: 4px solid var(--color-text-error); }
+.alert-warning { border-left: 4px solid var(--toast-warning); }
+.alert-info { border-left: 4px solid var(--toast-info); }
