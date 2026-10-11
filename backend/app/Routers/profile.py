@@ -123,7 +123,7 @@ async def api_update_profile(
 		if email_changed:
 			verification_token = create_verification_token(updated_user.id)
 			mail_sent = await mail_service.send_verification_email(
-				user_email=updated_user.email,
+				user_name=updated_user.username,
 				verification_token=verification_token
 			)
 			if not mail_sent:
