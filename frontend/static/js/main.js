@@ -28,6 +28,12 @@ import { setupAuthHandlers, protectPrivateRoutes, showMessage, scrollToMessageBo
  */
 import { GameMap } from './modules/map.js';
 
+/**
+ * Баннер-уведомление об использовании cookie.
+ * @module modules/cookie-banner
+ */
+import { initCookieBanner } from './modules/cookie-banner.js';
+
 // --- ИМПОРТ КОНФИГУРАЦИИ И СИСТЕМЫ ---
 import { AppConfig } from './config/appConfig.js';
 import { Dnd5eSystem } from './modules/systems/Dnd5eSystem.js';
@@ -62,6 +68,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 1. Инициализация глобальных настроек UI и библиотек (HTMX)
     initGlobalUI();
+    // Уведомление об использовании cookie
+    initCookieBanner();
 
     // ===================================================================
     // БЛОК ГЛОБАЛЬНОЙ ОБРАБОТКИ ОШИБОК СЕТИ (FIX FOR FUNC-005)

@@ -35,6 +35,10 @@
   border-radius: var(--radius-xl);
 }
 
+.btn-sm {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.85rem;
+}
 
 // Карточки персонажей или заклинаний (_dashboard.scss / _map.scss)
 .card-fantasy {
