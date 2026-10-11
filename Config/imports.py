@@ -19,6 +19,7 @@ import logging
 import secrets
 import uvicorn
 import atexit
+import markdown
 from queue import Queue
 from typing import Literal
 from sqlalchemy.future import select

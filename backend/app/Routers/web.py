@@ -5,6 +5,7 @@ from Config.imports import (os, URLSafeTimedSerializer, HTTPException, TemplateN
                             Request, APIRouter, HTMLResponse, status, RedirectResponse, Depends)
 from backend.app.Services.user_service import get_optional_user
 from backend.app.database.models.core.user import User
+from backend.app.Services.legal_service import render_legal_markdown
 
 
 router = APIRouter()
@@ -90,7 +91,10 @@ async def get_cookie_policy_page(request: Request, user: User | None = Depends(g
                                  csrf_protect: CsrfProtect = Depends()):
 	"""Статичная страница политики использования cookie."""
 	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
-	context = {"user": user, "project_name": settings.PROJECT_NAME, "csrf_token": csrf_token}
+	context = {
+	"user": user, "project_name": settings.PROJECT_NAME, "csrf_token": csrf_token,
+	"legal_content": render_legal_markdown("cookie_policy.md")
+	}
 	templates = request.app.state.templates
 	try:
 		response = templates.TemplateResponse(request=request, name="docs/cookie_policy.html", context=context)
@@ -104,7 +108,10 @@ async def get_cookie_policy_page(request: Request, user: User | None = Depends(g
 async def get_terms_page(request: Request, user: User | None = Depends(get_optional_user),
                          csrf_protect: CsrfProtect = Depends()):
 	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
-	context = {"user": user, "project_name": settings.PROJECT_NAME, "csrf_token": csrf_token}
+	context = {
+		"user": user, "project_name": settings.PROJECT_NAME, "csrf_token": csrf_token,
+		"legal_content": render_legal_markdown("terms_of_service.md")
+	}
 	response = request.app.state.templates.TemplateResponse(request=request, name="docs/terms.html", context=context)
 	csrf_protect.set_csrf_cookie(signed_token, response)
 	return response
@@ -113,7 +120,10 @@ async def get_terms_page(request: Request, user: User | None = Depends(get_optio
 async def get_privacy_policy_page(request: Request, user: User | None = Depends(get_optional_user),
                                   csrf_protect: CsrfProtect = Depends()):
 	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
-	context = {"user": user, "project_name": settings.PROJECT_NAME, "csrf_token": csrf_token}
+	context = {
+		"user": user, "project_name": settings.PROJECT_NAME, "csrf_token": csrf_token,
+		"legal_content": render_legal_markdown("privacy_policy.md")
+	}
 	response = request.app.state.templates.TemplateResponse(request=request, name="docs/privacy_policy.html", context=context)
 	csrf_protect.set_csrf_cookie(signed_token, response)
 	return response
