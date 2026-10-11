@@ -20,6 +20,22 @@
     }
 }
 
+ .btn {
+   padding: 0.4rem 0.9rem;
+   border-radius: var(--radius-md);
+   border: 1px solid transparent;
+   cursor: pointer;
+   font-weight: 500;
+   transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+ }
+
+.btn-lg {
+  padding: 0.8rem 1.8rem;
+  font-size: 1.05rem;
+  border-radius: var(--radius-xl);
+}
+
+
 // Карточки персонажей или заклинаний (_dashboard.scss / _map.scss)
 .card-fantasy {
     background: radial-gradient(circle at top left, var(--color-bg-panel), var(--color-bg-panel-alt));
