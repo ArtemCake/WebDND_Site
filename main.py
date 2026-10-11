@@ -7,7 +7,10 @@ import backend.app.Routers.api as api_module
 import backend.app.Routers.web as web_module
 import backend.app.Routers.profile as profile_module
 from Config.logger import setup_logging
-from Config.imports import (FastAPI, asynccontextmanager, CORSMiddleware, Path, StaticFiles, Jinja2Templates, SessionMiddleware, CsrfProtectError,
+from backend.app.database.database import AsyncSessionLocal
+from backend.app.Services.user_service import get_optional_user
+from Config.imports import (FastAPI, asynccontextmanager, CORSMiddleware, Path, StaticFiles,
+                            Jinja2Templates, SessionMiddleware, CsrfProtectError, CsrfProtect,
                             base64, RequestValidationError, Request, asyncio, JSONResponse, HTMLResponse, uvicorn, os, command, Config)
 
 
@@ -188,7 +191,27 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 async def not_found_exception_handler(request: Request, exc):
 	if request.url.path.startswith("/api"):
 		return JSONResponse(status_code=404, content={"detail": "Not found"})
-	return HTMLResponse(content="<h1>404 - Страница не найдена</h1>", status_code=404)
+
+	user = None
+	try:
+		async with AsyncSessionLocal() as session:
+			user = await get_optional_user(request, session)
+	except Exception as e:
+		log.error(f"[404] Не удалось определить пользователя для страницы-заглушки: {e}", exc_info=True)
+		user = None
+
+	try:
+		csrf_protect = CsrfProtect()
+		csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+		context = {"project_name": settings.PROJECT_NAME, "csrf_token": csrf_token, "user": user}
+		response = app.state.templates.TemplateResponse(
+			request=request, name="not_found.html", context=context, status_code=404
+		)
+		csrf_protect.set_csrf_cookie(signed_token, response)
+		return response
+	except Exception as e:
+		log.error(f"[404] Не удалось отрендерить страницу-заглушку: {e}", exc_info=True)
+		return HTMLResponse(content="<h1>404 - Страница не найдена</h1>", status_code=404)
 
 @app.exception_handler(CsrfProtectError)
 async def csrf_protect_exception_handler(request: Request, exc: CsrfProtectError):

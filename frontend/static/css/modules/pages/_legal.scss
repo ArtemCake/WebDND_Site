@@ -43,3 +43,18 @@
     text-decoration: underline;
   }
 }
+
+.not-found-page {
+  text-align: center;
+
+  &__code {
+    font-size: 4rem;
+    font-family: var(--font-heading, inherit);
+    color: var(--color-text-accent);
+    margin-bottom: 0.5rem;
+  }
+
+  &__text {
+    margin-bottom: 1.5rem;
+  }
+}
