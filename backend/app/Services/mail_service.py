@@ -165,12 +165,13 @@ class MailService:
 
 	# --- ВЫСОКОУРОВНЕВЫЕ МЕТОДЫ ДЛЯ БИЗНЕС-ЛОГИКИ ---
 
-	async def send_verification_email(self, user_name: str, verification_token: str) -> bool:
+	async def send_verification_email(self, user_name: str, user_email: str, verification_token: str) -> bool:
 		"""Отправка письма для подтверждения регистрации."""
 		verification_url = f"{settings.FRONTEND_URL}/auth/verify-email?token={verification_token}"
 
 		context = {
 			"user_name": user_name,
+			"user_email":user_email,
 			"frontend_url": settings.FRONTEND_URL,
 			"verification_token": verification_token,
 			"verification_url": verification_url,

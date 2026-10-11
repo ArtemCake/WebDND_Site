@@ -49,6 +49,7 @@ async def register_user_action(
 		verification_token = create_verification_token(new_user.id)
 		success = await mail_service.send_verification_email(
 			user_name=new_user.username,
+			user_email=new_user.email,
 			verification_token=verification_token
 		)
 
@@ -201,6 +202,7 @@ async def resend_verification_email(
 	try:
 		await mail_service.send_verification_email(
 			user_name=target_user.username,
+			user_email=target_user.email,
 			verification_token=verification_token
 		)
 	except Exception as e:
