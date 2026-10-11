@@ -42,6 +42,7 @@ class MailService:
 
 		self.sender_name = settings.MAIL_SENDER_NAME
 		self.sender_email = settings.MAIL_SENDER_EMAIL
+		self.fallback_sender_email = getattr(settings, "MAIL_FALLBACK_SENDER_EMAIL", self.fallback_user)
 
 	async def _get_smtp_connection(self, use_fallback: bool = False) -> SMTP:
 		"""
@@ -84,6 +85,11 @@ class MailService:
 		password = self.fallback_password if use_fallback else self.smtp_password
 		use_tls = self.fallback_use_tls if use_fallback else self.use_tls
 		use_ssl = self.fallback_use_ssl if use_fallback else self.use_ssl
+		sender = self.fallback_sender_email if use_fallback else self.sender_email
+
+		# Подменяем From на адрес, соответствующий реально используемому провайдеру
+		del msg["From"]
+		msg["From"] = f"{self.sender_name} <{sender}>"
 
 		try:
 			smtp = await self._get_smtp_connection(use_fallback=use_fallback)
@@ -95,7 +101,7 @@ class MailService:
 			if user and password:
 				await smtp.login(user, password)
 
-			await smtp.send_message(msg, sender=self.sender_email, recipients=recipients)
+			await smtp.send_message(msg, sender=sender, recipients=recipients)
 			return True
 		finally:
 			if smtp:
