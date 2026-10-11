@@ -66,7 +66,10 @@ async def register_user_action(
 		log.info(f"[AUTH][REGISTER] Success for {data.email} (ID: {new_user.id})")
 		return JSONResponse(
 			status_code=201,
-			content={"message": "Регистрация успешна! Письмо отправлено."}
+			content={
+			"message": "Регистрация успешна! Письмо отправлено.",
+			"resend_url": f"{settings.API_V1_STR}/auth/resend-verification/{new_user.id}"
+			}
 		)
 
 	except Exception as e:
@@ -99,13 +102,6 @@ async def login_for_access_token(
 		if not user or not user.is_active:
 			log.warning(f"[AUTH][FAILED] Invalid credentials or inactive account for {email}")
 			return JSONResponse(status_code=401, content={"error": "Неверный пароль."})
-
-		if not user.is_email_verified:
-			log.warning(f"[AUTH][FORBIDDEN] Unverified email attempt for {email}")
-			return JSONResponse(status_code=401, content={
-				"error": "Необходимо подтвердить адрес электронной почты.",
-				"action": "verify_email"
-			})
 
 		new_session_token = secrets.token_urlsafe(64)
 
@@ -183,9 +179,12 @@ async def verify_email(token: str, session: AsyncSession = Depends(get_async_ses
 @router.post("/resend-verification/{user_id}", response_model=dict)
 async def resend_verification_email(
 		user_id: UUID,
-		session: AsyncSession = Depends(get_async_session)
+		request: Request,
+		session: AsyncSession = Depends(get_async_session),
+		csrf_protect: CsrfProtect = Depends()
 ):
 	"""Повторная отправка письма подтверждения почты."""
+	await csrf_protect.validate_csrf(request)
 	target_user = await user_service.get_user_by_id(session, user_id)
 
 	if not target_user:

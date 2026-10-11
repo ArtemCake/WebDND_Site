@@ -221,7 +221,11 @@ export function setupAuthHandlers() {
         switch (status) {
             case 201: // Регистрация успешна
                 targetForm.reset();
-                messageText = 'Аккаунт создан! Проверьте почту.';
+                messageText = data.message || 'Аккаунт создан! Проверьте почту.';
+                isError = false;
+                if (data.resend_url) {
+                    renderResendVerification(document.getElementById('resend-section'), data.resend_url);
+                }
                 isError = false;
                 break;
 
@@ -267,6 +271,36 @@ export function setupAuthHandlers() {
 
         showMessage(targetForm, isError ? 'danger' : 'success', messageText);
         scrollToMessageBox();
+    });
+}
+
+export function renderResendVerification(container, resendUrl) {
+    if (!container || !resendUrl) return;
+    container.classList.remove('hidden');
+    container.innerHTML = `
+        <p class="resend-section__text">Письмо не пришло?</p>
+        <button type="button" class="btn btn-outline-primary" id="resend-verification-btn">Отправить письмо повторно</button>
+    `;
+    const btn = container.querySelector('#resend-verification-btn');
+    btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        btn.textContent = 'Отправляем...';
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+            const resp = await fetch(resendUrl, {
+                method: 'POST',
+                headers: csrfToken ? { 'X-CSRF-Token': csrfToken } : {},
+                credentials: 'include'
+            });
+            const data = await resp.json().catch(() => ({}));
+            showMessage(null, resp.ok ? 'success' : 'danger',
+                data.message || data.detail || data.error || (resp.ok ? 'Письмо отправлено повторно.' : 'Не удалось отправить письмо.'));
+        } catch (e) {
+            showMessage(null, 'danger', 'Сетевая ошибка. Попробуйте позже.');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Отправить письмо повторно';
+        }
     });
 }
 

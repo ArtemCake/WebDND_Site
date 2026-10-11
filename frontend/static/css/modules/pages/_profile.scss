@@ -138,3 +138,12 @@
   margin-top: 0.25rem;
   border-top: 1px solid var(--border-subtle);
 }
+
+.profile-section--warning {
+  border-left: 4px solid var(--toast-warning);
+}
+
+.profile-warning-text {
+  color: var(--color-text-primary);
+  margin: 0 0 0.9rem 0;
+}

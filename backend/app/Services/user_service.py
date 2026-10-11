@@ -305,3 +305,17 @@ async def change_password(
 	await session.commit()
 
 	return True
+
+async def require_verified_user(user: User = Depends(get_current_user)) -> User:
+	"""
+	То же, что get_current_user, но дополнительно требует подтверждённый email.
+	Использовать на маршрутах, которые создают игровой контент (игры,
+	бестиарий, заклинания, персонажи и т.п.) — профиль при этом остаётся
+	доступен без подтверждения, ограничение только на эти действия.
+	"""
+	if not user.is_email_verified:
+		raise HTTPException(
+			status_code=status.HTTP_403_FORBIDDEN,
+			detail="Подтвердите email, чтобы получить доступ к играм и созданию контента."
+		)
+	return user

@@ -58,6 +58,7 @@ async def get_profile_page(request: Request, user: User = Depends(get_current_us
 		"editable_roles": editable_roles,
 		"locked_roles": locked_roles,
 		"role_labels": ROLE_LABELS,
+		"verification_required_notice": request.query_params.get("verify") == "required",
 	}
 	templates = request.app.state.templates
 	response = templates.TemplateResponse(request, "profile.html", context)
@@ -206,3 +207,29 @@ async def api_change_password(
 		"security_note": "На всякий случай мы завершили ваши сессии на других устройствах — просто войдите снова с новым паролем.",
 		"redirect_url": "/login"
 	}
+
+@router.post("/resend-verification", response_class=JSONResponse, status_code=status.HTTP_200_OK, operation_id="resendOwnVerificationEmail")
+async def api_resend_verification(
+		request: Request,
+		user: User = Depends(get_current_user),
+		csrf_protect: CsrfProtect = Depends()
+):
+	await csrf_protect.validate_csrf(request)
+
+	if user.is_email_verified:
+		return JSONResponse(status_code=200, content={"message": "Почта уже подтверждена."})
+
+	verification_token = create_verification_token(user.id)
+	mail_sent = await mail_service.send_verification_email(
+		user_name=user.nickname,
+		user_email=user.email,
+		verification_token=verification_token
+	)
+
+	if not mail_sent:
+		raise HTTPException(
+			status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+			detail="Не удалось отправить письмо. Попробуйте позже."
+		)
+
+	return JSONResponse(status_code=200, content={"message": "Письмо с подтверждением отправлено повторно."})

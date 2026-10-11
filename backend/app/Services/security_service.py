@@ -44,8 +44,6 @@ async def create_jwt_pair(user_obj_or_id, expires_delta: timedelta = None, sessi
 
 		if not user_obj_or_id.is_active:
 			raise PermissionError("Cannot generate tokens for inactive user.")
-		if not user_obj_or_id.is_email_verified:
-			raise PermissionError("Cannot generate tokens for unverified user.")
 
 		user_id_str = str(user_obj_or_id.id)
 	else:

@@ -7,6 +7,24 @@
 <div class="auth-container">
 	<div class="profile-container">
 		<h2 class="profile-heading">Настройки профиля</h2>
+		{% if not user.is_email_verified %}
+		<div class="profile-section profile-section--warning">
+			<p class="profile-warning-text">
+				{% if verification_required_notice %}
+				Чтобы войти в игры и создавать контент, подтвердите почту <strong>{{ user.email }}</strong>.
+				{% else %}
+				Email не подтверждён — доступ к играм и созданию контента ограничен до подтверждения адреса <strong>{{ user.email }}</strong>.
+				{% endif %}
+			</p>
+			<button type="button" class="btn btn-outline-primary"
+			        hx-post="/profile/resend-verification"
+			        hx-target="#profile-resend-section"
+			        hx-swap="innerHTML">
+				Отправить письмо повторно
+			</button>
+			<div id="profile-resend-section" class="message-box"></div>
+		</div>
+		{% endif %}
 		
 		<!-- Блок персональных данных -->
 		<div class="profile-section">
