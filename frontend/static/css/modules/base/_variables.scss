@@ -21,6 +21,8 @@
      --radius-md: 14px;
      --radius-xl: 28px;
      --radius-sm: 10px;
+	--btn-primary-start: #4a2c5a;
+	--btn-primary-end: #2a1435;
 }
 
 :root {
@@ -57,6 +59,8 @@
     --color-panel-glass-alt: rgba(20, 10, 16, 0.4);
     --glow-color-1: rgba(177, 50, 74, 0.08); // кровавая дымка
     --glow-color-2: rgba(109, 90, 140, 0.05); // призрачная дымка
+	--btn-primary-start: #6d2338; // кровавый багрянец
+	--btn-primary-end: #1a0e13;
      --radius-md: 14px;
      --radius-xl: 28px;
      --radius-sm: 10px;
@@ -86,6 +90,8 @@
     --color-panel-glass-alt: rgba(220, 238, 205, 0.38);
     --glow-color-1: rgba(217, 154, 43, 0.06); // золотая дымка
     --glow-color-2: rgba(63, 145, 66, 0.05); // лиственная дымка
+    --btn-primary-start: #d99a2b; // солнечное золото
+    --btn-primary-end: #8a5e18;
      --radius-md: 14px;
      --radius-xl: 28px;
      --radius-sm: 10px;
@@ -116,6 +122,8 @@
      --color-panel-glass-alt: rgba(6, 8, 17, 0.4);
      --glow-color-1: rgba(127, 168, 184, 0.06);// кристальная дымка
      --glow-color-2: rgba(159, 122, 240, 0.06); // арканная дымка
+     --btn-primary-start: #9f7af0; // арканный аметист
+     --btn-primary-end: #262c55;
      --radius-md: 14px;
      --radius-xl: 28px;
      --radius-sm: 10px;

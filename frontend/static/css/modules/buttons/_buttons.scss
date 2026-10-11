@@ -1,7 +1,7 @@
 /* --- frontend/static/css/modules/buttons/_buttons.scss --- */
 
 .btn-primary {
-    background: linear-gradient(145deg, #4a2c5a, #2a1435);
+    background: linear-gradient(145deg, var(--btn-primary-start), var(--btn-primary-end));
     color: var(--btn-primary-text);
     border: 1px solid var(--color-border-accent);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1),
@@ -22,7 +22,7 @@
 
 // Карточки персонажей или заклинаний (_dashboard.scss / _map.scss)
 .card-fantasy {
-    background: radial-gradient(circle at top left, #1e1f29, #0a0b10);
+    background: radial-gradient(circle at top left, var(--color-bg-panel), var(--color-bg-panel-alt));
     border-image-source: url('/frontend/static/images/borders/parchment_corner.png');
     border-image-slice: 30 fill;
     border-width: 4px;
