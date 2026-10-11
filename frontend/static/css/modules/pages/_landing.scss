@@ -83,10 +83,11 @@
   margin: 0 auto;
 }
 
-.steps__item {
+ .steps__item {
+   color: var(--color-text-primary);
 
-    &::marker {
-      color: var(--accent-magic);
-      font-weight: 700;
-    }
-}
+   &::marker {
+     color: var(--accent-magic);
+     font-weight: 700;
+   }
+ }
