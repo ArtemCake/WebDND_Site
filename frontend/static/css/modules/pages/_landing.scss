@@ -74,7 +74,8 @@
 }
 
 .steps {
-  list-style: none;
+  list-style: decimal;
+  padding-left: 1.4rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -83,21 +84,9 @@
 }
 
 .steps__item {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  color: var(--color-text-primary);
-}
 
-.steps__num {
-  flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: var(--accent-magic);
-  color: var(--color-bg-page);
-  font-weight: 700;
+    &::marker {
+      color: var(--accent-magic);
+      font-weight: 700;
+    }
 }
