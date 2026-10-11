@@ -2,7 +2,7 @@
 
 from backend.app.database.database import get_async_session
 from Config.Config import settings
-from Config.imports import (JSONResponse, HTMLResponse, APIRouter, Depends, HTTPException,
+from Config.imports import (JSONResponse, HTMLResponse, APIRouter, Depends, HTTPException, Literal,
                             status, UploadFile, File, Request, EmailStr, BaseModel, Field, AsyncSession, UUID,
                             Form, CsrfProtect)
 from backend.app.Services.security_service import create_verification_token
@@ -25,8 +25,15 @@ ROLE_LABELS: dict[SystemRole, str] = {
 }
 
 class ProfileSettingsDTO(BaseModel):
+	theme: Literal["dark-fantasy", "light-fantasy", "fantasy", "custom"] = Field(
+			default="dark-fantasy", description="Выбранная тема оформления"
+                                                 )
 	theme_color: str | None = Field(default="#a855f7", description="Основной цвет темы")
 	background_url: str | None = Field(default=None, description="Ссылка на фоновое изображение")
+
+class UpdateThemeDTO(BaseModel):
+	theme: Literal["dark-fantasy", "light-fantasy", "fantasy", "custom"]
+	theme_color: str | None = None
 
 class ProfileResponseDTO(BaseModel):
 	id: UUID
@@ -144,6 +151,26 @@ async def api_update_profile(
 			status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
 			detail="Ошибка сервера при сохранении профиля."
 		)
+
+@router.patch("/theme", response_class=JSONResponse, status_code=status.HTTP_200_OK, operation_id="updateUserTheme")
+async def api_update_theme(
+				request: Request,
+				payload: UpdateThemeDTO,
+				session: AsyncSession = Depends(get_async_session),
+		user: User = Depends(get_current_user),
+		csrf_protect: CsrfProtect = Depends()):
+	await csrf_protect.validate_csrf(request)
+
+	current_settings = dict(user.profile_settings or {})
+	current_settings["theme"] = payload.theme
+	if payload.theme_color is not None:
+			current_settings["theme_color"] = payload.theme_color
+
+	user.profile_settings = current_settings
+	session.add(user)
+	await session.commit()
+
+	return {"message": "Тема сохранена.", "theme": payload.theme}
 
 @router.post("/change-password", response_class=JSONResponse, status_code=status.HTTP_200_OK, operation_id="changeUserPassword")
 async def api_change_password(

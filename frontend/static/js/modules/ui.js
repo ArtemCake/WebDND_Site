@@ -29,7 +29,7 @@ export function initPasswordToggles(root = document) {
 		wrapper.appendChild(input);
 
 		const toggleBtn = document.createElement('button');
-		toggleBtn.type = 'button'; // не submit — чтобы Enter в поле не срабатывал на эту кнопку
+		toggleBtn.type = 'button';
 		toggleBtn.className = 'password-toggle';
 		toggleBtn.setAttribute('aria-label', 'Показать пароль');
 		toggleBtn.textContent = '👁';
@@ -45,9 +45,6 @@ export function initPasswordToggles(root = document) {
 	});
 }
 
-/**
- * Применяет настройки HTMX и запускает фиксатор меню.
- */
 export function initGlobalUI() {
     if (window.htmx) {
         htmx.config.scrollIntoViewOnBoost = false;
@@ -64,11 +61,8 @@ export function initGlobalUI() {
     console.log('[UI] Global UI initialized.');
 }
 
-/* --- Блок управления темами --- */
 const PRESET_THEMES = ['dark-fantasy', 'light-fantasy', 'fantasy'];
 
-// Фон для каждой пресетной темы — своя пятёрка картинок.
-// У кастомной темы фона нет (там цветовой пикер), поэтому её в карте не держим.
 const THEME_BACKGROUNDS = {
     'dark-fantasy': [
         '/frontend/static/images/backgrounds/dark_fantasy/fantasy-1.webp',
@@ -107,7 +101,6 @@ export function applyTheme(themeName, forceRerollBackground = false) {
      const list = THEME_BACKGROUNDS[themeName];
 
      if (!list) {
-         // Кастомная тема — без фоновой картинки
          body.style.removeProperty('--bg-image-url');
          body.classList.remove('has-bg-image');
          return;
@@ -134,8 +127,16 @@ function clearAccentOverride() {
 }
 
 export function loadUserTheme() {
-    const savedTheme = localStorage.getItem('user-theme') || 'dark-fantasy';
-    const savedAccent = localStorage.getItem('user-accent') || '#ffd700';
+    const serverTheme = document.body.dataset.userTheme || '';
+    const savedTheme = serverTheme || localStorage.getItem('user-theme') || 'dark-fantasy';
+    const savedAccent = document.body.dataset.userAccent || localStorage.getItem('user-accent') || '#ffd700';
+
+    if (serverTheme) {
+        localStorage.setItem('user-theme', serverTheme);
+        if (document.body.dataset.userAccent) {
+            localStorage.setItem('user-accent', document.body.dataset.userAccent);
+        }
+    }
 
     applyTheme(savedTheme);
 
@@ -157,6 +158,28 @@ export function loadUserTheme() {
     }
 }
 
+async function persistThemeToServer(themeName, themeColor) {
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    const isAuthenticated = document.body.dataset.userTheme !== undefined;
+    if (!csrfMeta || !isAuthenticated) return;
+
+    try {
+        const response = await fetch('/profile/theme', {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfMeta.content,
+            },
+            body: JSON.stringify({ theme: themeName, theme_color: themeColor ?? null }),
+        });
+        if (!response.ok) {
+            console.error('[UI][THEME] save failed', response.status);
+        }
+    } catch (e) {
+        console.error('[UI][THEME] network error', e);
+    }
+}
+
 function bindThemeControls() {
     const themeSelect = document.getElementById('theme-select');
     const accentPicker = document.getElementById('accent-picker');
@@ -167,6 +190,7 @@ function bindThemeControls() {
             const themeName = e.target.value;
             applyTheme(themeName, true);
             localStorage.setItem('user-theme', themeName);
+            persistThemeToServer(themeName, themeName === 'custom' ? (accentPicker?.value ?? null) : null);
 
             if (themeName === 'custom') {
                 if (accentPicker) {
@@ -186,6 +210,7 @@ function bindThemeControls() {
             if (themeSelect && themeSelect.value === 'custom') {
                 setAccentColor(e.target.value);
                 localStorage.setItem('user-accent', e.target.value);
+                persistThemeToServer('custom', e.target.value);
             }
         });
     }
@@ -196,10 +221,6 @@ export function initThemeSwitcher() {
     bindThemeControls();
 }
 
-/**
- * Показывает превью выбранного файла аватара прямо в форме профиля,
- * до отправки на сервер. Вызывается из атрибута onchange в profile.html.
- */
 export function previewAvatar(event) {
     const input = event.target;
     const file = input.files && input.files[0];
@@ -215,7 +236,7 @@ export function previewAvatar(event) {
     };
 
     reader.onerror = () => {
-        console.error('[UI][AVATAR] Не удалось прочитать файл для превью.', reader.error);
+        console.error('[UI][AVATAR] read failed', reader.error);
     };
 
     reader.readAsDataURL(file);
