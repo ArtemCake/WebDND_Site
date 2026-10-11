@@ -5,7 +5,7 @@ from Config.imports import (Queue, Path, logging, sys, atexit,
 from Config.Config import settings
 
 
-def setup_logging(app_name: str = "WebDND"):
+def setup_logging(app_name: str = "WorldLoom"):
 	"""
 	Настройка логгера с использованием Queue для работы в async среде (FastAPI + run_in_executor).
 	Это предотвращает зависания при записи логов из разных потоков.

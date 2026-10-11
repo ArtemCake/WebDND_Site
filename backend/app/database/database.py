@@ -12,7 +12,7 @@ from Config.logger import setup_logging
 
 
 ASYNC_SQLALCHEMY_DATABASE_URL = settings.DATABASE_URL
-log = setup_logging(app_name="WebDND_Site")
+log = setup_logging(app_name="WorldLoom")
 # --- ПАРАМЕТРЫ ПУЛА ПОДКЛЮЧЕНИЙ (вынесены из магических чисел) ---
 POOL_SIZE = 10
 MAX_OVERFLOW = 20

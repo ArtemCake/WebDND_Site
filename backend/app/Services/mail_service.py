@@ -12,7 +12,7 @@ from Config.imports import (MIMEText, MIMEMultipart, Environment, FileSystemLoad
                             select_autoescape, List, Optional, ssl, SMTP)
 
 
-log = setup_logging(app_name="WebDND_Site")
+log = setup_logging(app_name="WorldLoom")
 
 class MailService:
 	def __init__(self):
@@ -181,7 +181,7 @@ class MailService:
 		html = self._render_template("verification_email.html", context)
 		text = f"Для подтверждения регистрации перейдите по ссылке: {verification_url}"
 
-		subject = "Подтвердите регистрацию в WebDND"
+		subject = "Подтвердите регистрацию в WorldLoom"
 		return await self.send_email(to_email=user_email, subject=subject, html_content=html, text_content=text)
 
 	async def send_password_reset(self, user_email: str, reset_token: str) -> bool:
@@ -196,7 +196,7 @@ class MailService:
 		html = self._render_template("password_reset.html", context)
 		text = f"Для сброса пароля перейдите по ссылке: {settings.FRONTEND_URL}/reset-password?token={reset_token}"
 
-		subject = "Сброс пароля WebDND"
+		subject = "Сброс пароля WorldLoom"
 		return await self.send_email(to_email=user_email, subject=subject, html_content=html, text_content=text)
 
 	async def send_invite_to_game(self, to_email: str, master_nickname: str, game_title: str, invite_token: str) -> bool:

@@ -1,4 +1,4 @@
-WebDND_Site/ (102 файла)
+WorldLoom/ (102 файла)
 │
 ├── Config/
 │   ├── __init__.py

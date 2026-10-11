@@ -17,7 +17,7 @@ ALEMBIC_CONFIG_PATH = str(BASE_DIR / "alembic.ini")
 SCRIPT_LOCATION = str(BASE_DIR / "backend" / "db_migrations")
 
 # --- ИНИЦИАЛИЗАЦИЯ ЛОГГЕРА ---
-log = setup_logging(app_name="WebDND_Site")
+log = setup_logging(app_name="WorldLoom")
 
 async def apply_migrations():
 	"""
@@ -107,7 +107,7 @@ app.add_middleware(
 app.add_middleware(
 	SessionMiddleware,
 	secret_key=settings.SECRET_KEY,
-	session_cookie="webdnd_session",
+	session_cookie="WorldLoom_session",
 	max_age=604800,  # 7 дней
 	same_site="lax"
 )

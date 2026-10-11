@@ -31,7 +31,7 @@ async def get_main_page(request: Request, user: User | None = Depends(get_option
 		return """
         <!DOCTYPE html>
         <html lang="ru">
-        <head><meta charset="UTF-8"><title>WebDND</title></head>
+        <head><meta charset="UTF-8"><title>WorldLoom</title></head>
         <body style="font-family: sans-serif; text-align: center; padding-top: 50px;">
             <h1>D&D Онлайн стол</h1>
             <p>Главная страница.</p>

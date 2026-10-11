@@ -104,7 +104,7 @@ async def authenticate_user(session: AsyncSession, email: str, password: str) ->
 			return None
 		return user
 	except (ValueError, TypeError) as e:
-		log = setup_logging(app_name="WebDND_Site")
+		log = setup_logging(app_name="WorldLoom")
 		log.error(f"[AUTH][CRYPTO_ERROR] Argon2 verification failed for {email}: {str(e)}")
 		return None
 

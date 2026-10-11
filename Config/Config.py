@@ -37,7 +37,7 @@ class WebAppSettings(BaseSettings):
 
 	# --- Основные настройки API ---
 	API_V1_STR: str = "/api/v1"
-	PROJECT_NAME: str = "WebDND_Site API"
+	PROJECT_NAME: str = "WorldLoom API"
 	DESCRIPTION: str = "Веб-API для управления сайтом по ДНД"
 	VERSION: str = "1.0.0"
 

@@ -18,7 +18,7 @@ router = APIRouter(
 	tags=["auth"],
 )
 
-log = setup_logging(app_name="WebDND_Site")
+log = setup_logging(app_name="WorldLoom")
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 @router.post("/register", response_model=dict, status_code=status.HTTP_201_CREATED)
