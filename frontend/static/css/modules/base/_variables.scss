@@ -1,8 +1,5 @@
-/* frontend/static/css/modules/base/_variables.scss */
-
-// Нейтральная база по умолчанию: работает до применения JS-темы
-// и как основа для кастомной темы с цветовым пикером — здесь
-// принципиально нет "фэнтезийного" акцента, только серая нейтральность
+// Нейтральная база по умолчанию — до применения JS-темы
+// и основа для кастомной темы с цветовым пикером
 :root {
     --color-bg-page: #16161a;
     --color-bg-panel: #202024;
@@ -19,6 +16,8 @@
     --bg-scrim: rgba(20, 20, 24, 0.5);
     --color-panel-glass: rgba(40, 40, 46, 0.28);
     --color-panel-glass-alt: rgba(24, 24, 28, 0.38);
+    --glow-color-1: rgba(156, 163, 175, 0.05);
+    --glow-color-2: rgba(156, 163, 175, 0.03);
      --radius-md: 14px;
      --radius-xl: 28px;
      --radius-sm: 10px;
@@ -33,70 +32,90 @@
     --bg-card: var(--color-bg-panel);
 }
 
-// Тёмное фэнтези: кровавая луна, руины, вино и ржавый металл
+// ═══════════════════════════════════════════════════════════
+// ТЁМНОЕ ФЭНТЕЗИ — руины, кровавая луна, некромантия, проклятый лес
+// Гнилостный баклажан как база, кровавый багрянец как сила,
+// приглушённый "призрачный" фиолет как магия — отдельно от акцента,
+// чтобы не слипались в один "фиолетово-красный" на глаз
+// ═══════════════════════════════════════════════════════════
 .theme-dark-fantasy {
-    --color-bg-page: #120b14;
-    --color-bg-panel: #231520;
-    --color-bg-panel-alt: #160d14;
-    --color-text-primary: #f1e6e6;
-    --color-text-secondary: #b99aa0;
-    --color-text-accent: #c23b56;
-    --color-border-accent: #c23b56;
+    --color-bg-page: #150f14;
+    --color-bg-panel: #241620;
+    --color-bg-panel-alt: #190f16;
+    --color-text-primary: #ede3e2;
+    --color-text-secondary: #ad8e95;
+    --color-text-accent: #b1324a;
+    --color-border-accent: #b1324a;
     --color-border-subtle: rgba(255, 255, 255, 0.14);
     --color-text-error: #ef4444;
-    --color-text-success: #4ade80;
+    --color-text-success: #6fae55; // приглушённая мшисто-кладбищенская зелень
     --color-hover-overlay: rgba(255, 255, 255, 0.06);
-    --accent-magic: #a855f7;
-    --clr-accent-hover: #e2536f;
+    --accent-magic: #6d5a8c; // блуждающий призрачный свет, не спорит с багрянцем
+    --clr-accent-hover: #d65271;
     --bg-scrim: rgba(18, 10, 14, 0.58);
-    --color-panel-glass: rgba(50, 20, 30, 0.28);
-    --color-panel-glass-alt: rgba(22, 12, 18, 0.38);
+    --color-panel-glass: rgba(45, 18, 26, 0.3);
+    --color-panel-glass-alt: rgba(20, 10, 16, 0.4);
+    --glow-color-1: rgba(177, 50, 74, 0.08); // кровавая дымка
+    --glow-color-2: rgba(109, 90, 140, 0.05); // призрачная дымка
      --radius-md: 14px;
      --radius-xl: 28px;
      --radius-sm: 10px;
 }
 
-// Светлое фэнтези: солнечный свет, золотой замок, изумрудный лес
+// ═══════════════════════════════════════════════════════════
+// СВЕТЛОЕ ФЭНТЕЗИ — золотой замок, изумрудный лес, феи и подсолнухи
+// Тёплые сливки как база, солнечное золото как акцент, изумрудная
+// зелень леса, фейский розово-лавандовый — отдельно от золота
+// ═══════════════════════════════════════════════════════════
 .theme-light-fantasy {
-    --color-bg-page: #fffdf7;
-    --color-bg-panel: #fbf6ec;
-    --color-bg-panel-alt: #eef3e2;
+    --color-bg-page: #fffbf2;
+    --color-bg-panel: #fcf3e3;
+    --color-bg-panel-alt: #eef5e4;
     --color-text-primary: #2b2410;
-    --color-text-secondary: #6b5d3f;
-    --color-border-accent: #c9862c;
-    --color-text-accent: #c9862c;
+    --color-text-secondary: #6b6140;
+    --color-border-accent: #d99a2b;
+    --color-text-accent: #d99a2b;
     --color-border-subtle: rgba(60, 45, 10, 0.18);
     --color-text-error: #c62828;
-    --color-text-success: #2e7d32;
+    --color-text-success: #3f9142; // изумрудный лес
     --color-hover-overlay: rgba(60, 45, 10, 0.07);
-    --accent-magic: #b5541f;
-    --clr-accent-hover: #a66a1e;
+    --accent-magic: #c97fc9; // фейская магия, лиловато-розовая
+    --clr-accent-hover: #b5791f;
     --bg-scrim: rgba(255, 253, 245, 0.4);
-    --color-panel-glass: rgba(255, 251, 240, 0.3);
-    --color-panel-glass-alt: rgba(224, 238, 205, 0.36);
+    --color-panel-glass: rgba(255, 248, 230, 0.32);
+    --color-panel-glass-alt: rgba(220, 238, 205, 0.38);
+    --glow-color-1: rgba(217, 154, 43, 0.06); // золотая дымка
+    --glow-color-2: rgba(63, 145, 66, 0.05); // лиственная дымка
      --radius-md: 14px;
      --radius-xl: 28px;
      --radius-sm: 10px;
 }
 
-// Просто фэнтези: кристаллы, лёд, магия пустыни — общий арканный тон
+// ═══════════════════════════════════════════════════════════
+// ПРОСТО ФЭНТЕЗИ — кристальный город, лёд, пустыня с драконом, парящий остров
+// Космический индиго как база, ледяная бирюза как акцент,
+// электрический аметист как магия — холодная и разнородная
+// палитра, объединяющая самые разные по сюжету фоны
+// ═══════════════════════════════════════════════════════════
 .theme-fantasy {
-    --color-bg-page: #060814;
-    --color-bg-panel: #0c0f1c;
-    --color-bg-panel-alt: #05070e;
-    --color-text-primary: #eef3ff;
-    --color-text-secondary: #aeb9d6;
-    --color-text-accent: #67e8f9;
-    --color-border-accent: #67e8f9;
-    --color-border-subtle: rgba(180, 200, 255, 0.3);
-    --color-text-error: #fb7185;
-    --color-text-success: #4ade80;
-    --color-hover-overlay: rgba(180, 200, 255, 0.15);
-    --accent-magic: #c4b5fd;
-    --clr-accent-hover: #38bdf8;
-    --bg-scrim: rgba(5, 7, 15, 0.5);
-    --color-panel-glass: rgba(10, 14, 28, 0.3);
-    --color-panel-glass-alt: rgba(4, 6, 14, 0.38);
+     --color-bg-page: #070a16;
+     --color-bg-panel: #0e1224;
+     --color-bg-panel-alt: #060811;
+     --color-text-primary: #eef3ff;
+     --color-text-secondary: #a9b4d6;
+     --color-text-accent: #7fa8b8;
+     --color-border-accent: #7fa8b8;
+     --color-border-subtle: rgba(180, 200, 255, 0.3);
+     --color-text-error: #fb7185;
+     --color-text-success: #4fd68a;
+     --color-hover-overlay: rgba(180, 200, 255, 0.15);
+     --accent-magic: #9f7af0;
+     --clr-accent-hover: #6a93a3;
+     --bg-scrim: rgba(5, 7, 15, 0.5);
+     --color-panel-glass: rgba(14, 18, 36, 0.3);
+     --color-panel-glass-alt: rgba(6, 8, 17, 0.4);
+     --glow-color-1: rgba(127, 168, 184, 0.06);// кристальная дымка
+     --glow-color-2: rgba(159, 122, 240, 0.06); // арканная дымка
      --radius-md: 14px;
      --radius-xl: 28px;
      --radius-sm: 10px;
