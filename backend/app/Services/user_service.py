@@ -348,11 +348,13 @@ async def ensure_initial_admin(session: AsyncSession) -> User | None:
 		email=settings.ADMIN_EMAIL,
 		password=settings.ADMIN_PASSWORD,
 		roles=[SystemRole.ADMIN],
-		admin_permissions=list(AdminPermission),
 	)
 	# Почту администратору подтверждаем сразу — иначе он не сможет войти,
 	# пока не настроен SMTP, а на первом запуске это как раз частый случай.
 	admin_user.is_email_verified = True
+	# admin_permissions не передаётся внутрь create_user (она ничего не знает
+	# про гранулярные права) — выставляем отдельным шагом сразу после создания.
+	admin_user.admin_permissions = list(AdminPermission)
 	await session.commit()
 	await session.refresh(admin_user)
 	return admin_user
