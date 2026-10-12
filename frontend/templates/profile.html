@@ -140,6 +140,57 @@
 				</form>
 			</div>
 		</div>
+		<!-- Блок опасной зоны -->
+		<div class="profile-section profile-section--danger">
+			<h3 class="profile-subheading">Опасная зона</h3>
+			<p class="profile-warning-text">
+				Удаление аккаунта прекратит доступ ко всем вашим играм, персонажам и данным профиля.
+			</p>
+			<button type="button" class="btn btn-danger" data-delete-action="open-step1">
+				Удалить аккаунт
+			</button>
+		</div>
+		
+		<!-- Модалка, шаг 1: общее подтверждение -->
+		<div id="delete-modal-step1" class="modal-overlay hidden">
+			<div class="modal-box">
+				<h3>Удалить аккаунт?</h3>
+				<p>Это действие затронет все ваши игры, персонажей и данные профиля. Продолжить?</p>
+				<div class="modal-actions">
+					<button type="button" class="btn btn-outline-primary" data-delete-action="close">Отмена</button>
+					<button type="button" class="btn btn-danger" data-delete-action="open-step2">Продолжить</button>
+				</div>
+			</div>
+		</div>
+		
+		<!-- Модалка, шаг 2: выбор типа удаления + пароль -->
+		<div id="delete-modal-step2" class="modal-overlay hidden">
+			<div class="modal-box">
+				<h3>Выберите тип удаления</h3>
+				
+				<div class="delete-option">
+					<strong>Удалить с возможностью восстановления</strong>
+					<p class="profile-note">Аккаунт деактивируется. Если решите вернуться — восстановление доступно по вашей текущей логике на сервере.</p>
+				</div>
+				<div class="delete-option delete-option--danger">
+					<strong>Удалить навсегда</strong>
+					<p class="profile-note">Полное удаление без возможности восстановления. Это нельзя отменить.</p>
+				</div>
+				
+				<div>
+					<label for="delete-password" class="form-label">Подтвердите паролем</label>
+					<input type="password" id="delete-password" required minlength="8">
+				</div>
+				
+				<div id="message-box-delete" class="message-box"></div>
+				
+				<div class="modal-actions">
+					<button type="button" class="btn btn-outline-primary" data-delete-action="close">Отмена</button>
+					<button type="button" class="btn btn-secondary" data-delete-action="confirm-soft">Удалить (восстановимо)</button>
+					<button type="button" class="btn btn-danger" data-delete-action="confirm-permanent">Удалить навсегда</button>
+				</div>
+			</div>
+		</div>
 	</div>
 </div>
 {% endblock %}

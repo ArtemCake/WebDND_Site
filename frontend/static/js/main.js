@@ -34,6 +34,13 @@ import { GameMap } from './modules/map.js';
  */
 import { initCookieBanner } from './modules/cookie-banner.js';
 
+
+/**
+ * Модальное окно удаления аккаунта (страница профиля).
+ * @module modules/delete-account
+ */
+import { initDeleteAccountModal } from './modules/delete-account.js';
+
 // --- ИМПОРТ КОНФИГУРАЦИИ И СИСТЕМЫ ---
 import { AppConfig } from './config/appConfig.js';
 import { Dnd5eSystem } from './modules/systems/Dnd5eSystem.js';
@@ -70,6 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initGlobalUI();
     // Уведомление об использовании cookie
     initCookieBanner();
+    // Модалка удаления аккаунта (страница профиля)
+    initDeleteAccountModal();
 
     // ===================================================================
     // БЛОК ГЛОБАЛЬНОЙ ОБРАБОТКИ ОШИБОК СЕТИ (FIX FOR FUNC-005)
