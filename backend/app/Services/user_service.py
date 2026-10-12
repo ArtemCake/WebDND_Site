@@ -6,7 +6,7 @@ from Config.imports import (Optional, AsyncSession, select, Depends, HTTPExcepti
                             jwt, JWTError, datetime, ValidationError, Dict, Any, UploadFile, update, CryptContext,
                             Request)
 from backend.app.database.database import get_async_session
-from backend.app.enums.enums_BD import SystemRole
+from backend.app.enums.enums_BD import SystemRole, AdminPermission
 from Config.logger import setup_logging
 
 
@@ -336,7 +336,11 @@ async def ensure_initial_admin(session: AsyncSession) -> User | None:
 	# не плодим дубликат, а просто выдаём ему роль администратора.
 	existing_by_email = await get_user_by_email(session, settings.ADMIN_EMAIL)
 	if existing_by_email:
-			return await add_role(session, existing_by_email, SystemRole.ADMIN)
+		admin = await add_role(session, existing_by_email, SystemRole.ADMIN)
+		admin.admin_permissions = list(AdminPermission)
+		await session.commit()
+		await session.refresh(admin)
+		return admin
 
 	admin_user = await create_user(
 			session=session,
@@ -344,6 +348,7 @@ async def ensure_initial_admin(session: AsyncSession) -> User | None:
 		email=settings.ADMIN_EMAIL,
 		password=settings.ADMIN_PASSWORD,
 		roles=[SystemRole.ADMIN],
+		admin_permissions=list(AdminPermission),
 	)
 	# Почту администратору подтверждаем сразу — иначе он не сможет войти,
 	# пока не настроен SMTP, а на первом запуске это как раз частый случай.

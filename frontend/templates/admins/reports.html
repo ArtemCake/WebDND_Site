@@ -1,0 +1,40 @@
+<!-- frontend/templates/admin/reports.html -->
+
+{% extends "base.html" %}
+{% block content %}
+<div class="admin-page">
+	<h2 class="profile-heading">Жалобы на контент</h2>
+	
+	<form class="admin-search" method="get" hx-get="/admin/reports" hx-target="body" hx-push-url="true">
+		<select name="status_filter">
+			<option value="" {% if not status_filter %}selected{% endif %}>Все статусы</option>
+			<option value="new" {% if status_filter == 'new' %}selected{% endif %}>Новые</option>
+			<option value="in_review" {% if status_filter == 'in_review' %}selected{% endif %}>На рассмотрении</option>
+			<option value="resolved" {% if status_filter == 'resolved' %}selected{% endif %}>Решены</option>
+			<option value="dismissed" {% if status_filter == 'dismissed' %}selected{% endif %}>Отклонены</option>
+		</select>
+		<button type="submit" class="btn btn-outline-primary btn-sm">Фильтровать</button>
+	</form>
+	
+	<table class="admin-table">
+		<thead><tr><th>Таблица</th><th>Причина</th><th>Статус</th><th>Создано</th><th></th></tr></thead>
+		<tbody>
+		{% for r in reports %}
+		<tr>
+			<td>{{ r.target_table }}</td>
+			<td>{{ r.reason }}{% if r.description %} — {{ r.description }}{% endif %}</td>
+			<td>{{ r.status }}</td>
+			<td>{{ r.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+			<td>
+				<button type="button" class="btn btn-secondary btn-sm" data-report-action="resolve" data-report-id="{{ r.id }}">Решено</button>
+				<button type="button" class="btn btn-outline-primary btn-sm" data-report-action="dismiss" data-report-id="{{ r.id }}">Отклонить</button>
+			</td>
+		</tr>
+		{% else %}
+		<tr><td colspan="5" class="profile-note">Жалоб пока нет.</td></tr>
+		{% endfor %}
+		</tbody>
+	</table>
+	<p class="profile-note">Всего: {{ total }}</p>
+</div>
+{% endblock %}

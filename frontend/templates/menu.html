@@ -66,6 +66,10 @@
 				</div>
 			</div>
 			{% endif %}
+			
+			{% if user and 'admin' in user.roles %}
+			<a href="/admin" hx-get="/admin" hx-target="body" hx-push-url="true" class="nav-link">Админ-панель</a>
+			{% endif %}
 		</nav>
 		
 		<div class="main-header__controls">

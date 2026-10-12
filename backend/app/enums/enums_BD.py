@@ -21,3 +21,26 @@ class SystemRole(StrEnum):
 			validate_strings=True,
 			values_callable=lambda enum_cls: [member.value for member in enum_cls],
 		)
+
+class AdminPermission(StrEnum):
+	"""
+	Гранулярные права внутри роли admin. Роль ADMIN сама по себе
+	даёт только вход в /admin — конкретные разделы (пользователи,
+	контент, жалобы, аудит-лог, система) открываются только тем,
+	кому явно выдано соответствующее право.
+	"""
+	USERS = "users"       # управление пользователями: роли, права, удаление
+	CONTENT = "content"   # модерация справочников контента
+	REPORTS = "reports"   # жалобы на контент и профили
+	AUDIT = "audit"       # журнал критических действий
+	SYSTEM = "system"     # системные события, настройки сервера
+
+	@staticmethod
+	def pg_enum_type():
+		return PG_ENUM(
+			AdminPermission,
+			name="admin_permission_type",
+			create_type=True,
+			validate_strings=True,
+			values_callable=lambda enum_cls: [member.value for member in enum_cls],
+		)

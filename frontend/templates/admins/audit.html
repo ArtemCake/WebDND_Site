@@ -1,0 +1,25 @@
+<!-- frontend/templates/admin/audit.html -->
+
+{% extends "base.html" %}
+{% block content %}
+<div class="admin-page">
+	<h2 class="profile-heading">Аудит-лог</h2>
+	<table class="admin-table">
+		<thead><tr><th>Действие</th><th>Таблица</th><th>Уровень</th><th>IP</th><th>Когда</th></tr></thead>
+		<tbody>
+		{% for log in logs %}
+		<tr>
+			<td>{{ log.action_type }}</td>
+			<td>{{ log.table_name or "—" }}</td>
+			<td>{{ log.severity_level }}</td>
+			<td>{{ log.ip_address or "—" }}</td>
+			<td>{{ log.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+		</tr>
+		{% else %}
+		<tr><td colspan="5" class="profile-note">Записей пока нет — ни один из текущих обработчиков ещё не пишет в аудит-лог.</td></tr>
+		{% endfor %}
+		</tbody>
+	</table>
+	<p class="profile-note">Всего: {{ total }}</p>
+</div>
+{% endblock %}

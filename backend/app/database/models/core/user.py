@@ -5,7 +5,7 @@
 from Config.imports import (Mapped, mapped_column, relationship, PG_UUID, datetime, uuid4, ForeignKey, text, ARRAY,
                             JSONB, func, CheckConstraint, String, Boolean, DateTime, Text,  UniqueConstraint)
 from backend.app.database.database import Base
-from backend.app.enums.enums_BD import SystemRole
+from backend.app.enums.enums_BD import SystemRole, AdminPermission
 
 
 class User(Base):
@@ -31,6 +31,11 @@ class User(Base):
 	active_session_token: Mapped[str | None] = mapped_column(String(512), index=True, nullable=True)
 	# Отношения
 	roles: Mapped[list[SystemRole]] = mapped_column(ARRAY(SystemRole.pg_enum_type()), nullable=False,server_default=text("'{player}'::system_role_type[]"))
+	# Гранулярные права внутри роли admin — что именно видно и доступно
+	# этому конкретному администратору в /admin. Не используется, пока
+	# роль ADMIN не выдана: обычным игрокам/мастерам/редакторам поле
+	# просто остаётся пустым массивом.
+	admin_permissions: Mapped[list[AdminPermission]] = mapped_column(ARRAY(AdminPermission.pg_enum_type()), nullable=False,	server_default=text("'{}'::admin_permission_type[]"))
 	friends_from: Mapped[list["Friendship"]] = relationship("Friendship", back_populates="user", foreign_keys="[Friendship.user_id]", cascade="all, delete-orphan", lazy="selectin")
 	friends_to: Mapped[list["Friendship"]] = relationship("Friendship", back_populates="friend", foreign_keys="[Friendship.friend_user_id]", cascade="all, delete-orphan", lazy="selectin")
 	oauth_providers: Mapped[list["OAuthProvider"]] = relationship("OAuthProvider", back_populates="user", cascade="all, delete-orphan")

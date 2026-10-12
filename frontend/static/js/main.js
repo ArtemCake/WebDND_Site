@@ -40,6 +40,7 @@ import { initCookieBanner } from './modules/cookie-banner.js';
  * @module modules/delete-account
  */
 import { initDeleteAccountModal } from './modules/delete-account.js';
+import { initAdminPanel } from './modules/admin.js';
 
 // --- ИМПОРТ КОНФИГУРАЦИИ И СИСТЕМЫ ---
 import { AppConfig } from './config/appConfig.js';
@@ -79,6 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initCookieBanner();
     // Модалка удаления аккаунта (страница профиля)
     initDeleteAccountModal();
+    initAdminPanel();
 
     // ===================================================================
     // БЛОК ГЛОБАЛЬНОЙ ОБРАБОТКИ ОШИБОК СЕТИ (FIX FOR FUNC-005)

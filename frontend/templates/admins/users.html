@@ -1,0 +1,72 @@
+<!-- frontend/templates/admin/dashboard.html -->
+
+{% extends "base.html" %}
+{% block content %}
+<div class="admin-page">
+	<h2 class="profile-heading">Пользователи</h2>
+	
+	<form class="admin-search" method="get" hx-get="/admin/users" hx-target="body" hx-push-url="true">
+		<input type="text" name="search" value="{{ search }}" placeholder="Никнейм или email">
+		<button type="submit" class="btn btn-outline-primary btn-sm">Найти</button>
+	</form>
+	
+	<table class="admin-table">
+		<thead><tr><th>Никнейм</th><th>Email</th><th>Роли</th><th>Права разделов</th><th>Статус</th><th></th></tr></thead>
+		<tbody>
+		{% for u in users %}
+		<tr>
+			<td>{{ u.nickname }}</td>
+			<td>{{ u.email }}</td>
+			<td>{% for r in u.roles %}{{ role_labels[r] }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+			<td>
+				{% if 'admin' in u.roles %}
+				{% for p in u.admin_permissions %}{{ permission_labels[p] }}{% if not loop.last %}, {% endif %}{% endfor %}
+				{% if not u.admin_permissions %}<span class="profile-note">нет прав</span>{% endif %}
+				{% else %}<span class="profile-note">—</span>{% endif %}
+			</td>
+			<td>{{ "Активен" if u.is_active else "Деактивирован" }}</td>
+			<td>
+				<button type="button" class="btn btn-outline-primary btn-sm" data-admin-action="manage"
+				        data-user-id="{{ u.id }}" data-user-nickname="{{ u.nickname }}"
+				        data-user-roles="{{ u.roles | map('string') | join(',') }}"
+				        data-user-permissions="{{ u.admin_permissions | map('string') | join(',') }}">
+					Управлять
+				</button>
+			</td>
+		</tr>
+		{% endfor %}
+		</tbody>
+	</table>
+	<p class="profile-note">Всего найдено: {{ total }}</p>
+	
+	<div id="admin-manage-modal" class="modal-overlay hidden">
+		<div class="modal-box">
+			<h3>Управление: <span id="admin-manage-nickname"></span></h3>
+			
+			<p class="form-label">Роли</p>
+			<div id="admin-manage-roles">
+				{% for r in all_roles %}
+				<label class="admin-checkbox"><input type="checkbox" value="{{ r.value }}" data-role-checkbox> {{ role_labels[r] }}</label>
+				{% endfor %}
+			</div>
+			
+			<p class="form-label">Права административных разделов (только при роли «Администратор»)</p>
+			<div id="admin-manage-permissions">
+				{% for p in all_permissions %}
+				<label class="admin-checkbox"><input type="checkbox" value="{{ p.value }}" data-permission-checkbox> {{ permission_labels[p] }}</label>
+				{% endfor %}
+			</div>
+			
+			<div id="message-box-admin" class="message-box"></div>
+			
+			<div class="modal-actions">
+				<button type="button" class="btn btn-outline-primary" data-admin-action="close">Закрыть</button>
+				<button type="button" class="btn btn-secondary" data-admin-action="save-roles">Сохранить роли</button>
+				<button type="button" class="btn btn-secondary" data-admin-action="save-permissions">Сохранить права</button>
+				<button type="button" class="btn btn-danger" data-admin-action="deactivate">Деактивировать</button>
+				<button type="button" class="btn btn-danger" data-admin-action="delete-permanent">Удалить навсегда</button>
+			</div>
+		</div>
+	</div>
+</div>
+{% endblock %}
