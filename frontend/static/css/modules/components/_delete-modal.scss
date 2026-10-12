@@ -20,14 +20,15 @@
 }
 
 .modal-box {
-  background: var(--color-surface);
-  color: var(--color-text);
-  border-radius: 0.5rem;
+  background: var(--color-bg-panel);
+  color: var(--color-text-primary);
+  border-radius: var(--radius-md);
   padding: 1.5rem;
   max-width: 420px;
   width: 100%;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   margin: auto;
+  border: 1px solid var(--border-subtle);
 }
 
 .modal-actions {
@@ -44,6 +45,6 @@
   margin: 0.75rem 0;
 
   &--danger {
-    border-left-color: var(--color-danger, #c0392b);
+    border-left-color: var(--color-text-error);
   }
 }

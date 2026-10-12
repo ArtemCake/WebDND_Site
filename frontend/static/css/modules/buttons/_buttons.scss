@@ -87,3 +87,16 @@
   color: var(--color-text-error);
   border-color: var(--color-text-error);
 }
+
+// Нейтральное действие внутри модалок (например «Сохранить») — отличается
+// от primary/outline/danger тоном, но не требует лишнего внимания
+.btn-secondary {
+  background: var(--color-bg-panel-alt);
+  color: var(--color-text-primary);
+  border-color: var(--border-subtle);
+
+  &:hover {
+    background: var(--color-hover-overlay);
+    border-color: var(--color-border-accent);
+  }
+}
