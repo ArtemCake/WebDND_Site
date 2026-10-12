@@ -36,24 +36,27 @@ async function confirmDelete(permanent) {
     }
 
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+    const formData = new URLSearchParams();
+    formData.append('password', password);
+    formData.append('permanent', permanent);
 
-    try {
-        const resp = await fetch('/auth/delete-account', {
-            method: 'POST',
-            credentials: 'include',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken || ''
-            },
-            body: JSON.stringify({ password, permanent })
-        });
+     try {
+             const resp = await fetch('/auth/delete-account', {
+             method: 'POST',
+             credentials: 'include',
+             headers: {
+             'Content-Type': 'application/x-www-form-urlencoded',
+                     'X-CSRF-Token': csrfToken || ''
+                 },
+     body: formData
+             });
 
         const data = await resp.json().catch(() => ({}));
 
-        if (!resp.ok) {
-            if (box) box.innerHTML = `<div class="alert alert-danger">${data.detail || data.error || 'Не удалось удалить аккаунт.'}</div>`;
+         if (!resp.ok) {
+            if (box) box.innerHTML = `<div class="alert alert-danger">${typeof data.detail === 'string' ? data.detail : (data.error || 'Не удалось удалить аккаунт.')}</div>`;
             return;
-        }
+         }
 
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
