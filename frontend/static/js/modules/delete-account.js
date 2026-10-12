@@ -9,6 +9,7 @@
 
 function showStep1() {
     document.getElementById('delete-modal-step1')?.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
 }
 
 function showStep2() {
@@ -19,6 +20,7 @@ function showStep2() {
 function closeModals() {
     document.getElementById('delete-modal-step1')?.classList.add('hidden');
     document.getElementById('delete-modal-step2')?.classList.add('hidden');
+    document.body.style.overflow = '';
     const box = document.getElementById('message-box-delete');
     if (box) box.innerHTML = '';
 }
