@@ -8,7 +8,7 @@ import backend.app.Routers.web as web_module
 import backend.app.Routers.profile as profile_module
 from Config.logger import setup_logging
 from backend.app.database.database import AsyncSessionLocal
-from backend.app.Services.user_service import get_optional_user
+from backend.app.Services.user_service import get_optional_user, ensure_initial_admin
 from Config.imports import (FastAPI, asynccontextmanager, CORSMiddleware, Path, StaticFiles,
                             Jinja2Templates, SessionMiddleware, CsrfProtectError, CsrfProtect,
                             base64, RequestValidationError, Request, asyncio, JSONResponse, HTMLResponse, uvicorn, os, command, Config)
@@ -78,6 +78,21 @@ async def lifespan(app: FastAPI):
 			raise FileNotFoundError("Нет конфигурации Alembic")
 
 		await apply_migrations()
+
+		try:
+			async with AsyncSessionLocal() as session:
+				admin_user = await ensure_initial_admin(session)
+				if admin_user:
+					log.warning(
+						f"[STARTUP][ADMIN] Создан первый администратор: {admin_user.email}. "
+						"Обязательно смените пароль после первого входа."
+					)
+				else:
+					log.info("[STARTUP][ADMIN] Администратор уже существует, создание пропущено.")
+		except Exception as e:
+			# Сбой сидинга не должен ронять весь запуск приложения —
+			# просто логируем и продолжаем, без администратора тоже можно работать.
+			log.error(f"[STARTUP][ADMIN] Не удалось создать/проверить администратора: {e}", exc_info=True)
 
 		app.state.settings = settings
 		log.info("[STARTUP] Инициализация завершена")

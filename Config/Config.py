@@ -69,7 +69,10 @@ class WebAppSettings(BaseSettings):
 	""" Если True, браузер отправит куку только по HTTPS. В режиме разработки (localhost) должно быть False, 
 	иначе куки не установятся. На боевом сервере с SSL-сертификатом обязательно установить True. """
 	FRONTEND_URL: str
-	ADMIN_PASSWORD: str   # ОБЯЗАТЕЛЬНО указать в .env файле
+
+	ADMIN_PASSWORD: str     # ОБЯЗАТЕЛЬНО указать в .env файле
+	ADMIN_EMAIL: str        # можно переопределить в .env
+	ADMIN_NICKNAME: str     # можно переопределить в .env
 
 	# --- Настройки Twitch API ---
 

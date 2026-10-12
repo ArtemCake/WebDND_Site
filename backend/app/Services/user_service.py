@@ -319,3 +319,35 @@ async def require_verified_user(user: User = Depends(get_current_user)) -> User:
 			detail="Подтвердите email, чтобы получить доступ к играм и созданию контента."
 		)
 	return user
+
+async def ensure_initial_admin(session: AsyncSession) -> User | None:
+	"""
+	Создаёт первого администратора при самом первом запуске приложения —
+	ровно один раз, пока в базе нет вообще ни одного пользователя с ролью admin.
+	Логин, никнейм и пароль берутся из настроек (.env): ADMIN_EMAIL, ADMIN_NICKNAME,
+	ADMIN_PASSWORD. Возвращает созданного/повышенного пользователя либо None,
+	если администратор уже есть и делать ничего не нужно.
+	"""
+	existing_admin = await session.execute(select(User).where(User.roles.any(SystemRole.ADMIN)))
+	if existing_admin.scalar_one_or_none():
+			return None
+
+	# Если аккаунт с таким email уже зарегистрирован кем-то как обычный игрок —
+	# не плодим дубликат, а просто выдаём ему роль администратора.
+	existing_by_email = await get_user_by_email(session, settings.ADMIN_EMAIL)
+	if existing_by_email:
+			return await add_role(session, existing_by_email, SystemRole.ADMIN)
+
+	admin_user = await create_user(
+			session=session,
+		nickname=settings.ADMIN_NICKNAME,
+		email=settings.ADMIN_EMAIL,
+		password=settings.ADMIN_PASSWORD,
+		roles=[SystemRole.ADMIN],
+	)
+	# Почту администратору подтверждаем сразу — иначе он не сможет войти,
+	# пока не настроен SMTP, а на первом запуске это как раз частый случай.
+	admin_user.is_email_verified = True
+	await session.commit()
+	await session.refresh(admin_user)
+	return admin_user
