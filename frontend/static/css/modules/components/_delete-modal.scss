@@ -31,6 +31,20 @@
   border: 1px solid var(--border-subtle);
 }
 
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+
+  &.hidden {
+    display: none;
+  }
+}
+
 .modal-actions {
   display: flex;
   gap: 0.5rem;
