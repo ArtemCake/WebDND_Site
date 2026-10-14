@@ -37,6 +37,7 @@ backend/
 │   │   ├── admin_service.py
 │   │   ├── legal_service.py
 │   │   ├── mail_service.py
+│   │   ├── rate_limit_service.py
 │   │   ├── security_service.py
 │   │   └── user_service.py
 │   └── database/

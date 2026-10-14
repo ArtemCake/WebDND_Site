@@ -3,7 +3,7 @@
 """Модели ядра системы: пользователи, аутентификация и социальные связи."""
 
 from Config.imports import (Mapped, mapped_column, relationship, PG_UUID, datetime, uuid4, ForeignKey, text, ARRAY,
-                            JSONB, func, CheckConstraint, String, Boolean, DateTime, Text,  UniqueConstraint)
+                            JSONB, func, CheckConstraint, String, Boolean, DateTime, Text,  UniqueConstraint, Integer)
 from backend.app.database.database import Base
 from backend.app.enums.enums_BD import SystemRole, AdminPermission
 
@@ -31,6 +31,8 @@ class User(Base):
 	active_session_token: Mapped[str | None] = mapped_column(String(512), index=True, nullable=True)
 	# Отношения
 	roles: Mapped[list[SystemRole]] = mapped_column(ARRAY(SystemRole.pg_enum_type()), nullable=False,server_default=text("'{player}'::system_role_type[]"))
+	failed_login_attempts: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+	locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 	# Гранулярные права внутри роли admin — что именно видно и доступно
 	# этому конкретному администратору в /admin. Не используется, пока
 	# роль ADMIN не выдана: обычным игрокам/мастерам/редакторам поле

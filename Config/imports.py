@@ -31,6 +31,8 @@ from uuid import UUID, uuid4
 from contextlib import asynccontextmanager
 from starlette.middleware.sessions import SessionMiddleware
 from logging.handlers import TimedRotatingFileHandler, QueueHandler, QueueListener
+from asyncio import Lock
+from collections import defaultdict, deque
 
 # --- База данных (SQLAlchemy) ---
 from sqlalchemy.ext.asyncio import (AsyncSession, async_sessionmaker, create_async_engine)

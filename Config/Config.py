@@ -74,7 +74,11 @@ class WebAppSettings(BaseSettings):
 	ADMIN_EMAIL: str        # можно переопределить в .env
 	ADMIN_NICKNAME: str     # можно переопределить в .env
 
-	# --- Настройки Twitch API ---
+	# --- Настройки Блокировки ---
+	LOGIN_MAX_FAILED_ATTEMPTS: int
+	LOGIN_LOCKOUT_MINUTES: int
+	LOGIN_IP_RATE_LIMIT: int
+	LOGIN_IP_RATE_WINDOW_MINUTES: int
 
 	# --- Глобальные пути проекта (добавлены для удобства) ---
 	TIMER_DEFAULT_INTERVAL_MIN: int = TIMER_DEFAULT_INTERVAL_MIN

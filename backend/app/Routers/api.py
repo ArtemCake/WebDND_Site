@@ -1,6 +1,7 @@
 # backend/app/Routers/api.py
 
 from Config.logger import setup_logging
+from backend.app.Services.rate_limit_service import check_ip_rate_limit
 from backend.app.Services.security_service import (create_verification_token, verify_token)
 from backend.app.Services.user_service import (soft_delete_user, get_current_user)
 from Config.Config import settings
@@ -105,20 +106,36 @@ async def login_for_access_token(
 		csrf_protect: CsrfProtect = Depends()
 ):
 	await csrf_protect.validate_csrf(request)
-	log.info(f"[AUTH][LOGIN] Attempt for {email} from {request.client.host}")
+
+	client_ip = request.client.host if request.client else "unknown"
+	if await check_ip_rate_limit(client_ip, settings.LOGIN_IP_RATE_LIMIT, settings.LOGIN_IP_RATE_WINDOW_MINUTES):
+		log.warning(f"[AUTH][RATE_LIMIT] Too many login attempts from {client_ip}")
+		return JSONResponse(status_code=429, content={"error": "Слишком много попыток входа. Попробуйте позже."})
+
+	log.info(f"[AUTH][LOGIN] Attempt for {email} from {client_ip}")
 	access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
 	try:
 		user_record = await user_service.get_user_by_email(session, email)
 		if not user_record:
 			log.warning(f"[AUTH][FAILED] Account does not exist for {email}")
-			return JSONResponse(status_code=401, content={"error": "Аккаунт не найден."
-				, "action": "account_not_found"})
+			return JSONResponse(status_code=401, content={"error": "Аккаунт не найден.", "action": "account_not_found"})
+
+		if user_record.locked_until and user_record.locked_until > datetime.utcnow():
+			retry_after = int((user_record.locked_until - datetime.utcnow()).total_seconds())
+			log.warning(f"[AUTH][LOCKED] Login blocked for {email}, retry in {retry_after}s")
+			return JSONResponse(status_code=429, content={
+				"error": "Аккаунт временно заблокирован из-за множества неверных попыток входа.",
+				"retry_after_seconds": retry_after
+			})
 
 		user = await user_service.authenticate_user(session, email, password)
 		if not user or not user.is_active:
 			log.warning(f"[AUTH][FAILED] Invalid credentials or inactive account for {email}")
+			await user_service.register_failed_login(session, user_record)
 			return JSONResponse(status_code=401, content={"error": "Неверный пароль."})
+
+		await user_service.reset_login_lockout(session, user)
 
 		new_session_token = secrets.token_urlsafe(64)
 

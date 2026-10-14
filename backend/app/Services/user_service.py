@@ -4,7 +4,7 @@ from Config.Config import settings
 from backend.app.database.models.core.user import User
 from Config.imports import (Optional, AsyncSession, select, Depends, HTTPException, status, Path, uuid4, re,
                             jwt, JWTError, datetime, ValidationError, Dict, Any, UploadFile, update, CryptContext,
-                            Request)
+                            Request, timedelta)
 from backend.app.database.database import get_async_session
 from backend.app.enums.enums_BD import SystemRole, AdminPermission
 from Config.logger import setup_logging
@@ -366,3 +366,20 @@ async def ensure_initial_admin(session: AsyncSession) -> User | None:
 	await session.commit()
 	await session.refresh(admin_user)
 	return admin_user
+
+async def register_failed_login(session: AsyncSession, user: User) -> None:
+	"""Увеличивает счётчик неудачных попыток; при достижении порога
+	временно блокирует аккаунт на LOGIN_LOCKOUT_MINUTES."""
+	user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+
+	if user.failed_login_attempts >= settings.LOGIN_MAX_FAILED_ATTEMPTS:
+		user.locked_until = datetime.utcnow() + timedelta(minutes=settings.LOGIN_LOCKOUT_MINUTES)
+
+	await session.commit()
+
+async def reset_login_lockout(session: AsyncSession, user: User) -> None:
+	"""Сбрасывает счётчик и блокировку после успешного входа."""
+	if user.failed_login_attempts or user.locked_until:
+		user.failed_login_attempts = 0
+		user.locked_until = None
+		await session.commit()
