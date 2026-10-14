@@ -1,4 +1,4 @@
-# backend/app/models/content/equipment.py
+# backend/app/database/models/content/equipment.py
 
 """Модели снаряжения, предметов и их иерархии."""
 

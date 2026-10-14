@@ -1,4 +1,4 @@
-# backend/app/models/gameplay/characters.py
+# backend/app/database/models/gameplay/characters.py
 
 """Модели персонажей игроков и НПС в контексте игры."""
 

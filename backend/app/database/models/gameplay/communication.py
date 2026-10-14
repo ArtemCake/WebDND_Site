@@ -1,4 +1,4 @@
-# backend/app/models/gameplay/communication.py
+# backend/app/database/models/gameplay/communication.py
 
 """Модели коммуникации: чаты и сообщения."""
 

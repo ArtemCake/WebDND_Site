@@ -1,4 +1,4 @@
-# backend/app/models/systems/system.py
+# backend/app/database/models/systems/system.py
 
 """Служебные модели: логи, кэш и системные события."""
 

@@ -1,4 +1,4 @@
-# backend/app/models/gameplay/lobby.py
+# backend/app/database/database/models/gameplay/lobby.py
 
 """Модели игрового процесса: игры, приглашения и участники."""
 

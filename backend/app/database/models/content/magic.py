@@ -1,4 +1,4 @@
-# backend/app/models/content/magic.py
+# backend/app/database/models/content/magic.py
 
 """Модели магии: заклинания, школы, уровни."""
 

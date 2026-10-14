@@ -1,4 +1,4 @@
-# backend/app/models/content/character_building.py
+# backend/app/database/models/content/character_building.py
 
 """Модели билдинга персонажа: расы, классы, предыстории."""
 

@@ -1,4 +1,4 @@
-# backend/app/models/content/game_systems.py
+# backend/app/database/models/content/game_systems.py
 
 """Модели игровых систем (D&D, Pathfinder и др.) и домашних правил."""
 

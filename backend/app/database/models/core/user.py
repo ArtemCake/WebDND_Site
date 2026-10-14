@@ -1,4 +1,4 @@
-# backend/app/models/core/user.py
+# backend/app/database/models/core/user.py
 
 """Модели ядра системы: пользователи, аутентификация и социальные связи."""
 

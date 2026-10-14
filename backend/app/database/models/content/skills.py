@@ -1,4 +1,4 @@
-# backend/app/models/content/skills.py
+# backend/app/database/models/content/skills.py
 
 """Модели характеристик и навыков персонажа."""
 

@@ -1,4 +1,4 @@
-# backend/app/models/medias/media.py
+# backend/app/database/models/medias/media.py
 
 """Модели медиа-контента и ассетов."""
 
