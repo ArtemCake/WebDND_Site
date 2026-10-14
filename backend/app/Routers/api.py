@@ -3,7 +3,7 @@
 from Config.logger import setup_logging
 from backend.app.Services.rate_limit_service import check_ip_rate_limit
 from backend.app.Services.security_service import (create_verification_token, verify_token)
-from backend.app.Services.user_service import (soft_delete_user, get_current_user)
+from backend.app.Services.user_service import (soft_delete_user, get_current_user, pwd_context)
 from Config.Config import settings
 from Config.imports import (JSONResponse, datetime, AsyncSession, update, UUID, RedirectResponse,
                             APIRouter, Depends, HTTPException, status, timedelta, CryptContext,
@@ -14,21 +14,13 @@ from backend.app.Services import security_service, user_service
 from backend.app.Services.mail_service import mail_service
 from backend.app.schemas.auth import RegisterRequest
 
+
 router = APIRouter(
 	prefix="/auth",
 	tags=["auth"],
 )
 
 log = setup_logging(app_name="WorldLoom")
-pwd_context = CryptContext(
-	schemes=["argon2"],
-	deprecated="auto",
-	argon2__type="ID",
-	argon2__memory_cost=19456,   # 19 МиБ
-	argon2__time_cost=3,
-	argon2__parallelism=4,
-	argon2__salt_len=16,
-)
 
 @router.post("/register", response_model=dict, status_code=status.HTTP_201_CREATED)
 async def register_user_action(
