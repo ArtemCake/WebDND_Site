@@ -152,3 +152,40 @@ async def get_dashboard_page(request: Request, user: User | None = Depends(get_o
 	csrf_protect.set_csrf_cookie(signed_token, response)
 	response.headers["X-CSRF-Token"] = csrf_token
 	return response
+
+@router.get("/forgot-password", response_class=HTMLResponse, name="forgot_password_page_get")
+async def get_forgot_password_page(request: Request, user: User | None = Depends(get_optional_user),
+                                   csrf_protect: CsrfProtect = Depends()):
+	if user:
+		return RedirectResponse(url="/profile", status_code=status.HTTP_302_FOUND)
+
+	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+	context = {"project_name": settings.PROJECT_NAME, "csrf_token": csrf_token}
+	templates = request.app.state.templates
+	try:
+		response = templates.TemplateResponse(request=request, name="forgot_password.html", context=context)
+	except TemplateNotFound:
+		raise HTTPException(status_code=404, detail="Страница forgot_password.html не найдена")
+
+	csrf_protect.set_csrf_cookie(signed_token, response)
+	response.headers["X-CSRF-Token"] = csrf_token
+	return response
+
+@router.get("/reset-password", response_class=HTMLResponse, name="reset_password_page_get")
+async def get_reset_password_page(request: Request, token: str = "",
+                                  user: User | None = Depends(get_optional_user),
+                                  csrf_protect: CsrfProtect = Depends()):
+	if user:
+		return RedirectResponse(url="/profile", status_code=status.HTTP_302_FOUND)
+
+	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+	context = {"project_name": settings.PROJECT_NAME, "csrf_token": csrf_token, "reset_token": token}
+	templates = request.app.state.templates
+	try:
+		response = templates.TemplateResponse(request=request, name="reset_password.html", context=context)
+	except TemplateNotFound:
+		raise HTTPException(status_code=404, detail="Страница reset_password.html не найдена")
+
+	csrf_protect.set_csrf_cookie(signed_token, response)
+	response.headers["X-CSRF-Token"] = csrf_token
+	return response

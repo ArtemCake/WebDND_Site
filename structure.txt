@@ -82,6 +82,9 @@ frontend/
 │   ├── index.html
 │   ├── login.html
 │   ├── menu.html
+│   ├── forgot_password.html
+│   ├── password_reset.html
+│   ├── reset_password.html
 │   ├── not_found.html
 │   ├── profile.html
 │   ├── register.html

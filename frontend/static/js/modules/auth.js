@@ -140,12 +140,31 @@ export function setupAuthHandlers() {
         const path = evt.detail.requestConfig?.path;
         const isAuthPath = path && path.startsWith('/auth/');
         const isProfilePath = path && path.startsWith('/profile/');
+        const isPasswordResetPath = path === '/auth/forgot-password' || path === '/auth/reset-password';
         const isLogoutPath = path === '/auth/logout';
 		const freshToken = evt.detail.xhr?.getResponseHeader('X-CSRF-Token');
         if (freshToken) {
            document.querySelector('meta[name="csrf-token"]')?.setAttribute('content', freshToken);
         }
-        if (!isAuthPath && !isProfilePath) return;
+        if (!isAuthPath && !isProfilePath && !isPasswordResetPath) return;
+
+		        // === Восстановление пароля (forgot/reset) ===
+        if (isPasswordResetPath) {
+	        const isError = status >= 400;
+	        const text = isError
+	        ? (data.error || data.detail || `Ошибка сервера (${status})`)
+	        : (data.message || 'Готово.');
+
+	        showMessage(targetForm, isError ? 'danger' : 'success', text);
+	        scrollToMessageBox();
+
+	        if (!isError && data.redirect_url) {
+		        setTimeout(() => {
+		            window.location.href = data.redirect_url;
+		        }, 1200);
+	        }
+	        return;
+        }
 
         evt.preventDefault();
 

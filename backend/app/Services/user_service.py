@@ -314,6 +314,16 @@ async def change_password(
 
 	return True
 
+async def reset_password(session: AsyncSession, user: User, new_password: str) -> None:
+	"""Устанавливает новый пароль по ссылке восстановления (без знания старого)."""
+	user.password_hash = pwd_context.hash(new_password)
+
+	from secrets import token_urlsafe
+	user.active_session_token = token_urlsafe(64)  # выход со всех устройств после сброса
+
+	user.updated_at = datetime.utcnow()
+	await session.commit()
+
 async def require_verified_user(user: User = Depends(get_current_user)) -> User:
 	"""
 	То же, что get_current_user, но дополнительно требует подтверждённый email.

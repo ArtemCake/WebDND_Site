@@ -2,18 +2,17 @@
 
 from Config.logger import setup_logging
 from backend.app.Services.rate_limit_service import check_ip_rate_limit
-from backend.app.Services.security_service import (create_verification_token, verify_token)
+from backend.app.Services.security_service import (create_verification_token, verify_token, create_password_reset_token)
 from backend.app.Services.user_service import (soft_delete_user, get_current_user, pwd_context)
 from Config.Config import settings
 from Config.imports import (JSONResponse, datetime, AsyncSession, update, UUID, RedirectResponse,
-                            APIRouter, Depends, HTTPException, status, timedelta, CryptContext,
+                            APIRouter, Depends, HTTPException, status, timedelta, hashlib,
                             Form, secrets, Request, CsrfProtect)
 from backend.app.database.database import get_async_session
 from backend.app.database.models.core.user import User
 from backend.app.Services import security_service, user_service
 from backend.app.Services.mail_service import mail_service
-from backend.app.schemas.auth import RegisterRequest
-
+from backend.app.schemas.auth import RegisterRequest, validate_password_complexity
 
 router = APIRouter(
 	prefix="/auth",
@@ -377,3 +376,86 @@ async def refresh_access_token(
 	)
 	log.info(f"[AUTH][REFRESH] Tokens refreshed for {user.id}")
 	return response
+
+@router.post("/forgot-password", response_model=dict)
+async def forgot_password(
+		request: Request,
+		email: str = Form(...),
+		session: AsyncSession = Depends(get_async_session),
+		csrf_protect: CsrfProtect = Depends()
+):
+	"""
+	Запрос на восстановление пароля. Ответ намеренно одинаковый независимо
+	от того, существует ли такой email, — иначе по ответу можно было бы
+	проверять, какие адреса зарегистрированы (перечисление аккаунтов).
+	"""
+	await csrf_protect.validate_csrf(request)
+
+	client_ip = request.client.host if request.client else "unknown"
+	# Отдельный ключ бакета (":password_reset"), чтобы не делить счётчик
+	# попыток с /auth/login — иначе спам сюда блокировал бы и вход по IP.
+	rate_limit_key = f"{client_ip}:password_reset"
+	if await check_ip_rate_limit(rate_limit_key, settings.LOGIN_IP_RATE_LIMIT, settings.LOGIN_IP_RATE_WINDOW_MINUTES):
+		log.warning(f"[AUTH][RATE_LIMIT] Too many password reset requests from {client_ip}")
+		return JSONResponse(status_code=429, content={"error": "Слишком много попыток. Попробуйте позже."})
+
+	generic_response = JSONResponse(status_code=200, content={
+		"message": "Если такой email зарегистрирован, на него отправлена ссылка для восстановления пароля."
+	})
+
+	user = await user_service.get_user_by_email(session, email)
+	if not user or not user.is_active or not user.password_hash:
+		# Нет аккаунта, деактивирован или это OAuth-only без локального пароля —
+		# наружу в любом случае уходит один и тот же нейтральный ответ.
+		log.info(f"[AUTH][FORGOT_PASSWORD] No-op for {email}")
+		return generic_response
+
+	reset_token = create_password_reset_token(user)
+
+	try:
+		await mail_service.send_password_reset(user_email=user.email, reset_token=reset_token, valid_minutes=30)
+	except Exception as e:
+		log.error(f"[AUTH][FORGOT_PASSWORD] Failed to send reset email to {user.email}: {e}")
+
+	log.info(f"[AUTH][FORGOT_PASSWORD] Reset link issued for {user.id}")
+	return generic_response
+
+
+@router.post("/reset-password", response_model=dict)
+async def reset_password_action(
+		request: Request,
+		token: str = Form(...),
+		new_password: str = Form(...),
+		session: AsyncSession = Depends(get_async_session),
+		csrf_protect: CsrfProtect = Depends()
+):
+	await csrf_protect.validate_csrf(request)
+
+	payload = verify_token(token, purpose="password_reset")
+	user_id = payload.get("sub") if payload else None
+	if not user_id:
+		return JSONResponse(status_code=400, content={"error": "Ссылка недействительна или устарела."})
+
+	user = await user_service.get_user_by_id(session, user_id)
+	if not user or not user.is_active or not user.password_hash:
+		return JSONResponse(status_code=400, content={"error": "Ссылка недействительна."})
+
+	current_fingerprint = hashlib.sha256(user.password_hash.encode()).hexdigest()[:16]
+	if payload.get("pwfp") != current_fingerprint:
+		log.warning(f"[AUTH][RESET_PASSWORD] Reused or stale token for {user.id}")
+		return JSONResponse(status_code=400, content={"error": "Ссылка уже использована или устарела."})
+
+	if not (8 <= len(new_password) <= 128):
+		return JSONResponse(status_code=400, content={"error": "Пароль должен быть от 8 до 128 символов."})
+
+	complexity_error = validate_password_complexity(new_password)
+	if complexity_error:
+		return JSONResponse(status_code=400, content={"error": complexity_error})
+
+	await user_service.reset_password(session, user, new_password)
+	log.info(f"[AUTH][RESET_PASSWORD] Password reset completed for {user.id}")
+
+	return JSONResponse(status_code=200, content={
+		"message": "Пароль успешно изменён. Теперь можно войти с новым паролем.",
+		"redirect_url": "/login"
+	})

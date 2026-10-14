@@ -1,7 +1,7 @@
 # backend/app/Services/security_service.py
 
 from Config.Config import settings
-from Config.imports import (OAuth2PasswordBearer, jwt, JWTError, datetime, timedelta)
+from Config.imports import (OAuth2PasswordBearer, jwt, JWTError, datetime, timedelta, hashlib)
 from backend.app.database.models.core.user import User
 
 
@@ -62,3 +62,18 @@ async def create_jwt_pair(user_obj_or_id, expires_delta: timedelta = None, sessi
 		"access_token": jwt.encode(access_data, settings.SECRET_KEY, algorithm=settings.ALGORITHM),
 		"refresh_token": jwt.encode(refresh_data, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 	}
+
+def create_password_reset_token(user, expires_delta: timedelta = None) -> str:
+	"""
+	Токен для сброса пароля. Короткий срок жизни (30 минут) плюс отпечаток
+	текущего password_hash в payload: как только пароль сменится — отпечаток
+	перестанет совпадать и ссылка станет недействительной даже раньше exp
+	(защита от повторного использования уже применённой ссылки).
+	"""
+	fingerprint = hashlib.sha256((user.password_hash or "").encode()).hexdigest()[:16]
+	to_encode = {"sub": str(user.id), "purpose": "password_reset", "pwfp": fingerprint}
+	if expires_delta is None:
+		expires_delta = timedelta(minutes=30)
+	expire = datetime.utcnow() + expires_delta
+	to_encode["exp"] = expire
+	return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)

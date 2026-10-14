@@ -184,13 +184,13 @@ class MailService:
 		subject = "Подтвердите регистрацию в WorldLoom"
 		return await self.send_email(to_email=user_email, subject=subject, html_content=html, text_content=text)
 
-	async def send_password_reset(self, user_email: str, reset_token: str) -> bool:
+	async def send_password_reset(self, user_email: str, reset_token: str, valid_minutes: int = 30) -> bool:
 		"""Отправка ссылки для сброса пароля."""
 		context = {
 			"user_email": user_email,
 			"frontend_url": settings.FRONTEND_URL,
 			"reset_token": reset_token,
-			"valid_minutes": int(settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+			"valid_minutes": valid_minutes
 		}
 
 		html = self._render_template("password_reset.html", context)
