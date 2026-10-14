@@ -41,6 +41,7 @@ import { initCookieBanner } from './modules/cookie-banner.js';
  */
 import { initDeleteAccountModal } from './modules/delete-account.js';
 import { initAdminPanel } from './modules/admin.js';
+import './modules/UI/avatar-preview.js';
 
 // --- ИМПОРТ КОНФИГУРАЦИИ И СИСТЕМЫ ---
 import { AppConfig } from './config/appConfig.js';

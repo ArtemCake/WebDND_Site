@@ -168,6 +168,10 @@ frontend/
             ├── delete-account.js
             ├── map.js
             ├── ui.js
+            ├── UI/
+            │   ├── avatar-preview.js
+            │   ├── password-toggle.js
+            │   └── theme-switcher.js
             ├── pixi/
             │   ├── DisplayObjectPool.js
             │   └── TokenFactory.js
