@@ -101,23 +101,30 @@ export function applyTheme(themeName, forceRerollBackground = false) {
      body.classList.add('has-bg-image');
  }
 
-function getReadableTextColor(hexColor) {
+function getReadableTextColors(hexColor) {
     const hex = hexColor.replace('#', '');
     const r = parseInt(hex.substring(0, 2), 16);
     const g = parseInt(hex.substring(2, 4), 16);
     const b = parseInt(hex.substring(4, 6), 16);
     const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance > 0.6 ? '#1a1a1a' : '#e8e8ea';
+    const isLight = luminance > 0.6;
+    return {
+        primary: isLight ? '#1a1a1a' : '#e8e8ea',
+        secondary: isLight ? '#4b4b4b' : '#c9c9cf',
+    };
 }
 
 export function setAccentColor(color) {
+    const { primary, secondary } = getReadableTextColors(color);
     document.documentElement.style.setProperty('--color-bg-page', color);
-    document.documentElement.style.setProperty('--color-text-primary', getReadableTextColor(color));
+    document.documentElement.style.setProperty('--color-text-primary', primary);
+    document.documentElement.style.setProperty('--color-text-secondary', secondary);
 }
-
 
 function clearAccentOverride() {
     document.documentElement.style.removeProperty('--color-bg-page');
+    document.documentElement.style.removeProperty('--color-text-primary');
+    document.documentElement.style.removeProperty('--color-text-secondary');
 }
 
 export function loadUserTheme() {
