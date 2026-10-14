@@ -167,6 +167,8 @@ frontend/
             ├── cookie-banner.js
             ├── delete-account.js
             ├── map.js
+            ├── dice-roller.js
+            ├── network-error-handler.js
             ├── ui.js
             ├── UI/
             │   ├── avatar-preview.js

@@ -15,12 +15,10 @@
 import { initGlobalUI } from './modules/ui.js';
 
 /**
- * Настройка обработчиков форм авторизации, защиты маршрутов
- * и показа сообщений (showMessage/scrollToMessageBox нужны обработчикам
- * сетевых ошибок ниже — раньше не импортировались, из-за чего падал ReferenceError).
+ * Настройка обработчиков форм авторизации и защиты маршрутов.
  * @module modules/auth
  */
-import { setupAuthHandlers, protectPrivateRoutes, showMessage, scrollToMessageBox } from './modules/auth.js';
+import { setupAuthHandlers, protectPrivateRoutes } from './modules/auth.js';
 
 /**
  * Рендерер игровой карты на базе PixiJS.
@@ -34,7 +32,6 @@ import { GameMap } from './modules/map.js';
  */
 import { initCookieBanner } from './modules/cookie-banner.js';
 
-
 /**
  * Модальное окно удаления аккаунта (страница профиля).
  * @module modules/delete-account
@@ -42,6 +39,18 @@ import { initCookieBanner } from './modules/cookie-banner.js';
 import { initDeleteAccountModal } from './modules/delete-account.js';
 import { initAdminPanel } from './modules/admin.js';
 import './modules/UI/avatar-preview.js';
+
+/**
+ * Глобальная обработка сетевых ошибок HTMX (вынесено из main.js).
+ * @module modules/network-error-handler
+ */
+import { initNetworkErrorHandlers } from './modules/network-error-handler.js';
+
+/**
+ * Делегирование кликов для бросков кубиков активной игровой системы (вынесено из main.js).
+ * @module modules/dice-roller
+ */
+import { initDiceRollers } from './modules/dice-roller.js';
 
 // --- ИМПОРТ КОНФИГУРАЦИИ И СИСТЕМЫ ---
 import { AppConfig } from './config/appConfig.js';
@@ -83,51 +92,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initDeleteAccountModal();
     initAdminPanel();
 
-    // ===================================================================
-    // БЛОК ГЛОБАЛЬНОЙ ОБРАБОТКИ ОШИБОК СЕТИ (FIX FOR FUNC-005)
-    // ===================================================================
-    function registerNetworkErrorHandlers() {
-        const extractErrorMessage = (xhr) => {
-            let msg = 'Неизвестная ошибка сети.';
-            try {
-                if (xhr.responseText) {
-                    const data = JSON.parse(xhr.responseText);
-                    return data.error || data.detail || xhr.statusText;
-                }
-            } catch (_) {}
-            return msg;
-        };
-
-        document.body.addEventListener('htmx:responseError', function(evt) {
-            const errorMsg = extractErrorMessage(evt.detail.xhr);
-            console.error(`[NETWORK][HTTP-${evt.detail.xhr.status}] ${errorMsg}`, evt.detail);
-            showMessage(evt.detail.requestConfig.elt, 'danger', `Ошибка (${evt.detail.xhr.status}): ${errorMsg}`);
-            scrollToMessageBox();
-        });
-
-        document.body.addEventListener('htmx:xhr:abort', function(evt) {
-            console.warn('[NETWORK][ABORTED] Request was aborted.', evt.detail);
-            showMessage(evt.detail.elt, 'danger', 'Соединение прервано. Проверьте сеть.');
-            scrollToMessageBox();
-        });
-
-        document.body.addEventListener('htmx:timeout', function(evt) {
-            console.error('[NETWORK][TIMEOUT] Server did not respond in time.', evt.detail);
-            showMessage(evt.detail.elt, 'danger', 'Превышено время ожидания ответа сервера.');
-            scrollToMessageBox();
-        });
-
-        document.body.addEventListener('htmx:beforeSwap', function(evt) {
-            if (evt.detail.targetError && evt.detail.xhr.status >= 400) {
-                evt.detail.shouldSwap = false;
-                showMessage(evt.detail.elt, 'danger', 'Внутренняя ошибка приложения. Обратитесь к администратору.');
-                scrollToMessageBox();
-            }
-        });
-    }
-
-    registerNetworkErrorHandlers();
-    // ===================================================================
+    // Глобальная обработка сетевых ошибок HTMX
+    initNetworkErrorHandlers();
 
     // 2. Навешивание обработчиков для форм авторизации (регистрация/вход)
     setupAuthHandlers();
@@ -144,31 +110,6 @@ document.addEventListener('DOMContentLoaded', () => {
         );
     }
 
-    // ===================================================================
-    // БЛОК ДЕЛЕГИРОВАНИЯ СОБЫТИЙ ДЛЯ БРОСКОВ КУБИКОВ (MAS-009)
-    // ===================================================================
-    document.body.addEventListener('click', (e) => {
-        if (e.target.matches('[data-dice-roll]')) {
-            e.preventDefault();
-
-            const sides = parseInt(e.target.dataset.sides || '20');
-            const modifier = parseInt(e.target.dataset.mod || '0');
-            const mode = e.target.dataset.mode || 'normal';
-            const quantity = parseInt(e.target.dataset.qty) || 1;
-
-            const result = gameSystem.rollDice(sides, { modifier, mode, quantity });
-
-            const resultBox = document.createElement('div');
-            resultBox.className = 'dice-result-toast';
-
-            const modeText = (mode === 'advantage') ? ' (Преимущество)' :
-                           (mode === 'disadvantage') ? ' (Помеха)' : '';
-
-            resultBox.textContent = `Результат (${sides}${modeText}): ${result.sum} (${result.rolls.join(' + ')}${modifier >= 0 ? ' + ' : ''}${modifier})`;
-            document.body.appendChild(resultBox);
-
-            setTimeout(() => resultBox.remove(), AppConfig.ui.toastDuration);
-        }
-    });
-    // ===================================================================
+    // Делегирование кликов для бросков кубиков активной игровой системы
+    initDiceRollers(gameSystem);
 });
