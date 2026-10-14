@@ -131,9 +131,29 @@ frontend/
     ├── images/
     │   ├── default-avatar.jpg
     │   ├── favicon.ico
-    │   ├── backgrounds/   (содержимое — бинарные файлы, список не разворачивала)
+    │   ├── backgrounds/
+    │   │   ├──dark_fantasy/
+    │   │   │   ├──fantasy-1.webp
+    │   │   │   ├──fantasy-2.webp
+    │   │   │   ├──fantasy-3.webp
+    │   │   │   ├──fantasy-5.webp
+    │   │   │   └──fantasy-5.webp
+    │   │   ├──light_fantasy/
+    │   │   │   ├──fantasy-1.webp
+    │   │   │   ├──fantasy-2.webp
+    │   │   │   ├──fantasy-3.webp
+    │   │   │   ├──fantasy-5.webp
+    │   │   │   └──fantasy-5.webp
+    │   │   ├──general_fantasy/
+    │   │   │   ├──fantasy-1.webp
+    │   │   │   ├──fantasy-2.webp
+    │   │   │   ├──fantasy-3.webp
+    │   │   │   ├──fantasy-5.webp
+    │   │   │   └──fantasy-5.webp
     │   ├── borders/
+    │   │   └──parchment_corner.png
     │   └── textures/
+    │       └──paper-fibers.webp
     └── js/
         ├── main.js
         ├── main.min.js
