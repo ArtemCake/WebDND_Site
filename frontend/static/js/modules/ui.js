@@ -1,21 +1,5 @@
 // frontend/static/js/modules/ui.js
 
-/**
- * Инициализирует IntersectionObserver для фиксации навигационной панели.
- */
-function initStickyNavigation() {
-    const nav = document.getElementById('main-nav');
-    if (!nav) return;
-
-    const observer = new IntersectionObserver(
-        ([entry]) => {
-            nav.classList.toggle('navbar-main--scrolled', entry.intersectionRatio < 1 || entry.boundingClientRect.top < 0);
-        },
-        { threshold: [1], rootMargin: '0px 0px -1px 0px' }
-    );
-
-    observer.observe(nav);
-}
 
 export function initPasswordToggles(root = document) {
 	const fields = root.querySelectorAll('input[type="password"]:not([data-toggle-bound])');
@@ -50,7 +34,6 @@ export function initGlobalUI() {
         htmx.config.scrollIntoViewOnBoost = false;
     }
 
-    initStickyNavigation();
     initPasswordToggles();
     initThemeSwitcher();
 
@@ -118,9 +101,20 @@ export function applyTheme(themeName, forceRerollBackground = false) {
      body.classList.add('has-bg-image');
  }
 
+function getReadableTextColor(hexColor) {
+    const hex = hexColor.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.6 ? '#1a1a1a' : '#e8e8ea';
+}
+
 export function setAccentColor(color) {
     document.documentElement.style.setProperty('--color-bg-page', color);
+    document.documentElement.style.setProperty('--color-text-primary', getReadableTextColor(color));
 }
+
 
 function clearAccentOverride() {
     document.documentElement.style.removeProperty('--color-bg-page');
@@ -129,7 +123,7 @@ function clearAccentOverride() {
 export function loadUserTheme() {
     const serverTheme = document.body.dataset.userTheme || '';
     const savedTheme = serverTheme || localStorage.getItem('user-theme') || 'dark-fantasy';
-    const savedAccent = document.body.dataset.userAccent || localStorage.getItem('user-accent') || '#ffd700';
+    const savedAccent = document.body.dataset.userAccent || localStorage.getItem('user-accent') || '#8a5cf6';
 
     if (serverTheme) {
         localStorage.setItem('user-theme', serverTheme);

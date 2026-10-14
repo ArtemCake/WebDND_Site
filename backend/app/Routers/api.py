@@ -19,7 +19,15 @@ router = APIRouter(
 )
 
 log = setup_logging(app_name="WorldLoom")
-pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+pwd_context = CryptContext(
+	schemes=["argon2"],
+	deprecated="auto",
+	argon2__type="ID",
+	argon2__memory_cost=19456,   # 19 МиБ
+	argon2__time_cost=3,
+	argon2__parallelism=4,
+	argon2__salt_len=16,
+)
 
 @router.post("/register", response_model=dict, status_code=status.HTTP_201_CREATED)
 async def register_user_action(

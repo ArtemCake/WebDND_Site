@@ -135,6 +135,11 @@
     background-color: var(--color-hover-overlay);
 }
 
+.main-nav.navbar-main--scrolled {
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+}
+
+
 /* --- Переключатель темы --- */
 
 .main-header__controls {

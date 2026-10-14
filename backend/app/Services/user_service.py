@@ -10,7 +10,15 @@ from backend.app.enums.enums_BD import SystemRole, AdminPermission
 from Config.logger import setup_logging
 
 
-pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
+pwd_context = CryptContext(
+	schemes=["argon2"],
+	deprecated="auto",
+	argon2__type="ID",
+	argon2__memory_cost=19456,   # 19 МиБ
+	argon2__time_cost=3,
+	argon2__parallelism=4,
+	argon2__salt_len=16,
+)
 _SELF_EDITABLE_DEFAULT = {SystemRole.PLAYER, SystemRole.MASTER}
 _SELF_EDITABLE_FULL = {SystemRole.PLAYER, SystemRole.MASTER, SystemRole.EDITOR, SystemRole.ADMIN}
 AVATARS_DIR = Path(settings.BASE_DIR) / "frontend" / "static" / "avatars"
