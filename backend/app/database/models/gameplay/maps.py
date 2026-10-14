@@ -1,4 +1,4 @@
-# backend/app/models/gameplay/maps.py
+# backend/app/database/models/gameplay/maps.py
 
 """Модели карт, слоев и гексов."""
 
