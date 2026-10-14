@@ -1,160 +1,155 @@
-WorldLoom/
-├── .gitignore
-├── LICENSE
-├── README.md
-├── alembic.ini
-├── amvera.yml
-├── eslint.config.mjs
-├── main.py
-├── package.json
-├── package-lock.json
-├── rename-script.js
-├── requirements.txt
-├── structure.txt
-├── vite.config.js
-│
-├── Config/
+Корень
+
+.gitignore
+LICENSE
+README.md                 (пустой)
+alembic.ini
+amvera.yml
+eslint.config.mjs
+main.py
+package.json
+package-lock.json
+rename-script.js
+requirements.txt
+structure.txt
+vite.config.js
+
+CONFIG
+Config/
+├── __init__.py
+├── Config.py
+├── csrf_config.py
+├── imports.py
+└── logger.py
+
+BACKEND
+backend/
+├── __init__.py
+├── app/
 │   ├── __init__.py
-│   ├── Config.py
-│   ├── csrf_config.py
-│   ├── imports.py
-│   └── logger.py
-│
-├── backend/
-│   ├── __init__.py
-│   ├── db_migrations/
-│   │   ├── README
-│   │   ├── env.py
-│   │   └── script.py.mako              # папки versions/ нет — миграций пока не создавалось
-│   └── app/
+│   ├── Routers/
+│   │   ├── admin.py
+│   │   ├── api.py
+│   │   ├── profile.py
+│   │   └── web.py
+│   ├── Services/
+│   │   ├── __init__.py
+│   │   ├── admin_service.py
+│   │   ├── legal_service.py
+│   │   ├── mail_service.py
+│   │   ├── security_service.py
+│   │   └── user_service.py
+│   └── database/
 │       ├── __init__.py
-│       ├── Routers/
-│       │   ├── api.py
-│       │   ├── profile.py
-│       │   └── web.py
-│       ├── Services/
-│       │   ├── __init__.py
-│       │   ├── legal_service.py
-│       │   ├── mail_service.py
-│       │   ├── security_service.py
-│       │   └── user_service.py
-│       ├── database/
-│       │   ├── __init__.py
-│       │   ├── _models.py
-│       │   ├── database.py
-│       │   └── models/
-│       │       ├── __init__.py
-│       │       ├── core/
-│       │       │   ├── __init__.py
-│       │       │   └── user.py
-│       │       ├── content/
-│       │       │   ├── __init__.py
-│       │       │   ├── character_building.py
-│       │       │   ├── equipment.py
-│       │       │   ├── game_systems.py
-│       │       │   ├── magic.py
-│       │       │   ├── skills.py
-│       │       │   └── worldbuilding.py
-│       │       ├── gameplay/
-│       │       │   ├── __init__.py
-│       │       │   ├── characters.py
-│       │       │   ├── communication.py
-│       │       │   ├── lobby.py
-│       │       │   └── maps.py
-│       │       ├── medias/
-│       │       │   ├── __init__.py
-│       │       │   └── media.py
-│       │       └── systems/
-│       │           ├── __init__.py
-│       │           └── system.py
-│       ├── enums/
-│       │   ├── __init__.py
-│       │   └── enums_BD.py
-│       └── schemas/
-│           └── auth.py
-│
-└── frontend/
-    ├── static/
-    │   ├── css/
-    │   │   ├── style.scss
-    │   │   ├── style.min.css
-    │   │   └── modules/
-    │   │       ├── auth/
-    │   │       │   └── _auth.scss
-    │   │       ├── base/
-    │   │       │   ├── _reset.scss
-    │   │       │   ├── _responsive.scss
-    │   │       │   ├── _typography.scss
-    │   │       │   └── _variables.scss
-    │   │       ├── buttons/
-    │   │       │   └── _buttons.scss
-    │   │       ├── components/
-    │   │       │   └── _cookie-banner.scss
-    │   │       ├── forms/
-    │   │       │   └── _inputs.scss
-    │   │       ├── layout/
-    │   │       │   ├── _container.scss
-    │   │       │   └── _navbar.scss
-    │   │       ├── pages/
-    │   │       │   ├── _landing.scss
-    │   │       │   ├── _legal.scss
-    │   │       │   └── _profile.scss
-    │   │       └── toast/
-    │   │           └── _toast.scss
-    │   │
-    │   ├── docs/
-    │   │   ├── cookie_policy.md
-    │   │   ├── privacy_policy.md
-    │   │   └── terms_of_service.md
-    │   │
-    │   ├── fonts/
-    │   │   ├── Cinzel-Black.woff
-    │   │   ├── Cinzel-Black.woff2
-    │   │   ├── Cinzel-Bold.woff
-    │   │   ├── Cinzel-Bold.woff2
-    │   │   ├── Cinzel-Regular.woff
-    │   │   └── Cinzel-Regular.woff2
-    │   │
-    │   ├── images/
-    │   │   ├── default-avatar.jpg
-    │   │   ├── favicon.ico
-    │   │   ├── backgrounds/
-    │   │   │   ├── dark_fantasy/fantasy-1.webp … fantasy-5.webp
-    │   │   │   ├── general_fantasy/fantasy-1.webp … fantasy-5.webp
-    │   │   │   └── light_fantasy/fantasy-1.webp … fantasy-5.webp
-    │   │   ├── borders/
-    │   │   │   └── parchment_corner.png
-    │   │   └── textures/
-    │   │       └── paper-fibers.webp
-    │   │
-    │   └── js/
-    │       ├── main.js
-    │       ├── main.min.js
-    │       ├── theme-init.js
-    │       ├── config/
-    │       │   └── appConfig.js
-    │       └── modules/
-    │           ├── auth.js
-    │           ├── cookie-banner.js
-    │           ├── map.js
-    │           ├── ui.js
-    │           ├── pixi/
-    │           │   ├── DisplayObjectPool.js
-    │           │   └── TokenFactory.js
-    │           └── systems/
-    │               ├── Dnd5eSystem.js
-    │               └── ISystem.js
-    │
-    └── templates/
-        ├── base.html
-        ├── index.html
-        ├── login.html
-        ├── menu.html
-        ├── profile.html
-        ├── register.html
-        ├── docs/
-        │   ├── cookie_policy.html
-        │   ├── privacy_policy.html
-        │   └── terms.html
-        └── emails/
-            └── verification_email.html
+│       ├── _models.py
+│       ├── database.py
+│       └── models/
+│           ├── __init__.py
+│           ├── content/
+│           │   ├── __init__.py
+│           │   ├── character_building.py
+│           │   ├── equipment.py
+│           │   ├── game_systems.py
+│           │   ├── magic.py
+│           │   ├── skills.py
+│           │   └── worldbuilding.py
+│           ├── core/
+│           │   ├── __init__.py
+│           │   └── user.py
+│           ├── gameplay/
+│           │   ├── __init__.py
+│           │   ├── characters.py
+│           │   ├── communication.py
+│           │   ├── lobby.py
+│           │   └── maps.py
+│           ├── medias/
+│           │   ├── __init__.py
+│           │   └── media.py
+│           └── systems/
+│               ├── __init__.py
+│               └── system.py            ⚠ cache.py отсутствует
+└── db_migrations/
+    ├── README
+    ├── env.py
+    ├── script.py.mako
+    └── versions/                        ⚠ пусто — ни одной миграции не закоммичено
+
+FRONTEND
+frontend/
+├── templates/
+│   ├── base.html
+│   ├── index.html
+│   ├── login.html
+│   ├── menu.html
+│   ├── not_found.html
+│   ├── profile.html
+│   ├── register.html
+│   ├── admin/
+│   │   ├── audit.html
+│   │   ├── dashboard.html
+│   │   ├── reports.html
+│   │   └── users.html
+│   ├── docs/
+│   │   ├── cookie_policy.html
+│   │   ├── privacy_policy.html
+│   │   └── terms.html
+│   └── emails/
+│       └── verification_email.html
+└── static/
+    ├── css/
+    │   ├── style.scss
+    │   ├── style.min.css
+    │   └── modules/
+    │       ├── auth/_auth.scss
+    │       ├── base/
+    │       │   ├── _reset.scss
+    │       │   ├── _responsive.scss
+    │       │   ├── _typography.scss
+    │       │   └── _variables.scss
+    │       ├── buttons/_buttons.scss
+    │       ├── components/
+    │       │   ├── _cookie-banner.scss
+    │       │   └── _delete-modal.scss
+    │       ├── forms/_inputs.scss
+    │       ├── layout/
+    │       │   ├── _container.scss
+    │       │   └── _navbar.scss
+    │       ├── pages/
+    │       │   ├── _admin.scss
+    │       │   ├── _landing.scss
+    │       │   ├── _legal.scss
+    │       │   └── _profile.scss
+    │       └── toast/_toast.scss
+    ├── docs/                       (исходники .md — рендерятся в templates/docs/*.html)
+    │   ├── cookie_policy.md
+    │   ├── privacy_policy.md
+    │   └── terms_of_service.md
+    ├── fonts/
+    │   ├── Cinzel-Black.woff / .woff2
+    │   ├── Cinzel-Bold.woff / .woff2
+    │   └── Cinzel-Regular.woff / .woff2
+    ├── images/
+    │   ├── default-avatar.jpg
+    │   ├── favicon.ico
+    │   ├── backgrounds/   (содержимое — бинарные файлы, список не разворачивала)
+    │   ├── borders/
+    │   └── textures/
+    └── js/
+        ├── main.js
+        ├── main.min.js
+        ├── theme-init.js
+        ├── config/
+        │   └── appConfig.js
+        └── modules/
+            ├── admin.js
+            ├── auth.js
+            ├── cookie-banner.js
+            ├── delete-account.js
+            ├── map.js
+            ├── ui.js
+            ├── pixi/
+            │   ├── DisplayObjectPool.js
+            │   └── TokenFactory.js
+            └── systems/
+                ├── Dnd5eSystem.js
+                └── ISystem.js
