@@ -148,24 +148,6 @@ export function setupAuthHandlers() {
         }
         if (!isAuthPath && !isProfilePath && !isPasswordResetPath) return;
 
-		        // === Восстановление пароля (forgot/reset) ===
-        if (isPasswordResetPath) {
-	        const isError = status >= 400;
-	        const text = isError
-	        ? (data.error || data.detail || `Ошибка сервера (${status})`)
-	        : (data.message || 'Готово.');
-
-	        showMessage(targetForm, isError ? 'danger' : 'success', text);
-	        scrollToMessageBox();
-
-	        if (!isError && data.redirect_url) {
-		        setTimeout(() => {
-		            window.location.href = data.redirect_url;
-		        }, 1200);
-	        }
-	        return;
-        }
-
         evt.preventDefault();
 
         const xhr = evt.detail.xhr;
@@ -201,6 +183,24 @@ export function setupAuthHandlers() {
             }
         } catch (e) {
             data = { error: 'Неизвестный формат ответа сервера' };
+        }
+
+		// === Восстановление пароля (forgot/reset) ===
+        if (isPasswordResetPath) {
+	        const isError = status >= 400;
+	        const text = isError
+	        ? (data.error || data.detail || `Ошибка сервера (${status})`)
+	        : (data.message || 'Готово.');
+
+	        showMessage(targetForm, isError ? 'danger' : 'success', text);
+	        scrollToMessageBox();
+
+	        if (!isError && data.redirect_url) {
+		        setTimeout(() => {
+		            window.location.href = data.redirect_url;
+		        }, 1200);
+	        }
+	        return;
         }
 
         // === Истёкший access-токен на защищённой профильной форме ===
