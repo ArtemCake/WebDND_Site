@@ -120,14 +120,15 @@ async def login_for_access_token(
 		if not user_record:
 			log.warning(f"[AUTH][FAILED] Account does not exist for {email}")
 			return JSONResponse(status_code=401, content={"error": "Аккаунт не найден.", "action": "account_not_found"})
-
-		if user_record.locked_until and user_record.locked_until > datetime.utcnow():
-			retry_after = int((user_record.locked_until - datetime.utcnow()).total_seconds())
-			log.warning(f"[AUTH][LOCKED] Login blocked for {email}, retry in {retry_after}s")
-			return JSONResponse(status_code=429, content={
-				"error": "Аккаунт временно заблокирован из-за множества неверных попыток входа.",
-				"retry_after_seconds": retry_after
-			})
+		if user_record.locked_until:
+			locked_naive = user_record.locked_until.replace(tzinfo=None)
+			if locked_naive > datetime.utcnow():
+				retry_after = int((user_record.locked_until - datetime.utcnow()).total_seconds())
+				log.warning(f"[AUTH][LOCKED] Login blocked for {email}, retry in {retry_after}s")
+				return JSONResponse(status_code=429, content={
+					"error": "Аккаунт временно заблокирован из-за множества неверных попыток входа.",
+					"retry_after_seconds": retry_after
+				})
 
 		user = await user_service.authenticate_user(session, email, password)
 		if not user or not user.is_active:
