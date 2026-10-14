@@ -2,6 +2,7 @@
 
 import { initPasswordToggles } from './UI/password-toggle.js';
 import { initThemeSwitcher } from './UI/theme-switcher.js';
+import { initStickyNavigation } from './UI/sticky-navigation.js';
 
 export function initGlobalUI() {
 	if (window.htmx) {
@@ -9,7 +10,8 @@ export function initGlobalUI() {
 	}
 
 	initPasswordToggles();
-	initThemeSwitcher();
+    initThemeSwitcher();
+    initStickyNavigation();
 
 	document.body.addEventListener('htmx:afterSwap', () => {
 		initThemeSwitcher();

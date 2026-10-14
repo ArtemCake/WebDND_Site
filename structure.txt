@@ -172,6 +172,7 @@ frontend/
             ├── ui.js
             ├── UI/
             │   ├── avatar-preview.js
+            │   ├── sticky-navigation.js
             │   ├── password-toggle.js
             │   └── theme-switcher.js
             ├── pixi/
