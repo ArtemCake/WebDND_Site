@@ -81,17 +81,23 @@ export function initMfaSetup() {
 	});
 
 	confirmForm?.addEventListener('submit', async (e) => {
-		e.preventDefault();
-		const { ok, data } = await postForm('/profile/mfa/confirm', new FormData(confirmForm));
-		if (!ok) return showStatus(statusEl, 'danger', data.error || 'Неверный код.');
+    	e.preventDefault();
+    	const { ok, data } = await postForm('/profile/mfa/confirm', new FormData(confirmForm));
+    	if (!ok) return showStatus(statusEl, 'danger', data.error || 'Неверный код.');
 
-		showStatus(statusEl, 'success', data.message || 'Готово.');
-		if (Array.isArray(data.backup_codes) && backupList) {
-			backupList.innerHTML = data.backup_codes.map(c => `<li><code>${c}</code></li>`).join('');
-			backupList.closest('.mfa-backup-wrapper')?.classList.remove('hidden');
-		}
-		setTimeout(() => window.location.reload(), 4000);
-	});
+    	showStatus(statusEl, 'success', data.message || 'Готово. Резервные коды отправлены вам на почту.');
+
+    	if (Array.isArray(data.backup_codes) && backupList) {
+    		backupList.innerHTML = data.backup_codes.map(c => `<li><code>${c}</code></li>`).join('');
+    		const wrapper = backupList.closest('.mfa-backup-wrapper');
+    		wrapper?.classList.remove('hidden');
+
+    		// Кнопка подтверждения вместо автообновления через setTimeout —
+    		// пользователь сам решает, когда коды сохранены.
+    		const ackBtn = document.getElementById('mfa-backup-ack');
+    		ackBtn?.addEventListener('click', () => window.location.reload(), { once: true });
+    	}
+    });
 
 	disableForm?.addEventListener('submit', async (e) => {
 		e.preventDefault();

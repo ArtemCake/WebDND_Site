@@ -141,6 +141,8 @@
 					<div class="mfa-backup-wrapper hidden">
 						<p><strong>Сохрани эти резервные коды — каждый показывается только один раз:</strong></p>
 						<ul id="mfa-backup-codes"></ul>
+						<p class="profile-note">Коды также отправлены на вашу почту.</p>
+						<button type="button" id="mfa-backup-ack" class="btn btn-primary">Я сохранил(а) коды</button>
 					</div>
 				</div>
 				{% endif %}
@@ -230,5 +232,5 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
 {% endblock %}
