@@ -112,41 +112,39 @@
 			</div>
 		</div>
 		
-		<section class="profile-security">
-			<h3>Безопасность</h3>
-			<div id="mfa-status"></div>
-			
-			{% if user.is_2fa_enabled %}
-			<p>Двухфакторная аутентификация включена.</p>
-			<form id="mfa-disable-form">
-				<input type="password" name="password" placeholder="Текущий пароль" required autocomplete="current-password">
-				<button type="submit" class="btn btn-danger">Отключить 2FA</button>
-			</form>
-			{% else %}
-			<p>Двухфакторная аутентификация выключена.</p>
-			<button type="button" id="mfa-start-setup" class="btn btn-primary">Включить 2FA</button>
-			
-			<div id="mfa-setup-block" class="hidden">
-				<p>Отсканируй QR-код приложением-аутентификатором или введи секрет вручную:</p>
-				<canvas id="mfa-qr-canvas"></canvas>
-				<p><code id="mfa-manual-secret"></code></p>
-				
-				<form id="mfa-confirm-form">
-					<input type="text" name="code" placeholder="Код из приложения" required autocomplete="one-time-code" inputmode="numeric">
-					<button type="submit">Подтвердить и включить</button>
-				</form>
-				
-				<div class="mfa-backup-wrapper hidden">
-					<p><strong>Сохрани эти резервные коды — каждый показывается только один раз:</strong></p>
-					<ul id="mfa-backup-codes"></ul>
-				</div>
-			</div>
-			{% endif %}
-		</section>
-		
 		<!-- Блок смены пароля -->
 		<div class="profile-section">
 			<h3 class="profile-subheading">Безопасность</h3>
+			
+			<section class="profile-security">
+				<div id="mfa-status"></div>
+				{% if user.is_2fa_enabled %}
+				<p>Двухфакторная аутентификация включена.</p>
+				<form id="mfa-disable-form">
+					<input type="password" name="password" placeholder="Текущий пароль" required autocomplete="current-password">
+					<button type="submit" class="btn btn-danger">Отключить 2FA</button>
+				</form>
+				{% else %}
+				<p>Двухфакторная аутентификация выключена.</p>
+				<button type="button" id="mfa-start-setup" class="btn btn-primary">Включить 2FA</button>
+				
+				<div id="mfa-setup-block" class="hidden">
+					<p>Отсканируй QR-код приложением-аутентификатором или введи секрет вручную:</p>
+					<canvas id="mfa-qr-canvas"></canvas>
+					<p><code id="mfa-manual-secret"></code></p>
+					
+					<form id="mfa-confirm-form">
+						<input type="text" name="code" placeholder="Код из приложения" required autocomplete="one-time-code" inputmode="numeric">
+						<button type="submit" class="btn btn-primary">Подтвердить и включить</button>
+					</form>
+					
+					<div class="mfa-backup-wrapper hidden">
+						<p><strong>Сохрани эти резервные коды — каждый показывается только один раз:</strong></p>
+						<ul id="mfa-backup-codes"></ul>
+					</div>
+				</div>
+				{% endif %}
+			</section>
 			
 			<div id="password-form-section" hx-target="this" hx-swap="outerHTML">
 				<form
