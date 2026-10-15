@@ -65,7 +65,7 @@ class WebAppSettings(BaseSettings):
 	SECRET_KEY: str  # ОБЯЗАТЕЛЬНО указать в .env файле
 	ALGORITHM: str = "HS256"
 	ACCESS_TOKEN_EXPIRE_MINUTES: int = 30  # 30 минут — короткий access, продление через /auth/refresh
-	SECURE_COOKIES: bool = False
+	SECURE_COOKIES: bool = ENVIRONMENT == "production"
 	""" Если True, браузер отправит куку только по HTTPS. В режиме разработки (localhost) должно быть False, 
 	иначе куки не установятся. На боевом сервере с SSL-сертификатом обязательно установить True. """
 	FRONTEND_URL: str

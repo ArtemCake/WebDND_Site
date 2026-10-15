@@ -2,7 +2,7 @@
 
 from Config.Config import settings
 from Config.imports import (OAuth2PasswordBearer, jwt, JWTError, datetime, timedelta, hashlib,
-                            update, secrets, AsyncSession, JSONResponse)
+                            update, secrets, AsyncSession, JSONResponse, Response)
 from backend.app.database.models.core.user import User
 from Config.logger import setup_logging
 
@@ -84,17 +84,8 @@ async def issue_login_session(user: User, session: AsyncSession) -> JSONResponse
 		"token_type": "bearer",
 		"refresh_token": tokens["refresh_token"]
 	})
-
-	response.set_cookie(
-		key="access_token", value=tokens["access_token"], httponly=True,
-		samesite="lax", path="/", max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-		secure=settings.SECURE_COOKIES
-	)
-	response.set_cookie(
-		key="refresh_token", value=tokens["refresh_token"], httponly=True,
-		samesite="lax", path="/", max_age=7 * 24 * 60 * 60,
-		secure=settings.SECURE_COOKIES
-	)
+	set_auth_cookie(response, "access_token", tokens["access_token"], settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60)
+	set_auth_cookie(response, "refresh_token", tokens["refresh_token"], 7 * 24 * 60 * 60)
 
 	stmt = (
 		update(User)
@@ -129,3 +120,23 @@ def create_mfa_pending_token(user_id: str, expires_delta: timedelta = None) -> s
 	expire = datetime.utcnow() + expires_delta
 	to_encode["exp"] = expire
 	return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+def set_auth_cookie(response: Response, key: str, value: str, max_age: int):
+	response.set_cookie(
+		key=key,
+		value=value,
+		max_age=max_age,
+		httponly=True,                                      # недоступна из JS — защита от XSS-кражи токена
+		secure=settings.SECURE_COOKIES,        # только по HTTPS; на локальной разработке придётся временно False
+		samesite="lax",                                     # защита от CSRF при переходах с чужих сайтов; "strict" — ещё жёстче, но может мешать переходам по ссылке из письма
+		path="/",
+	)
+
+def clear_auth_cookie(response: Response, key: str) -> None:
+	response.delete_cookie(
+		key=key,
+		path="/",
+		httponly=True,
+		secure=settings.SECURE_COOKIES,
+		samesite="lax",
+	)

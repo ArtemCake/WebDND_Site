@@ -1,6 +1,7 @@
 # backend/app/Services/user_service.py
 
 from Config.Config import settings
+from backend.app.core.crypto import hash_email
 from backend.app.database.models.core.user import User
 from Config.imports import (Optional, AsyncSession, select, Depends, HTTPException, status, Path, uuid4, re,
                             jwt, JWTError, datetime, ValidationError, Dict, Any, UploadFile, update, CryptContext,
@@ -29,7 +30,7 @@ def _safe_folder_name(nickname: str) -> str:
 	return cleaned.strip("_") or "user"
 
 async def get_user_by_email(session: AsyncSession, email: str) -> Optional[User]:
-	result = await session.execute(select(User).where(User.email == email))
+	result = await session.execute(select(User).where(User.email_hash == hash_email(email)))
 	return result.scalar_one_or_none()
 
 async def create_user(

@@ -15,7 +15,8 @@ class User(Base):
 	__tablename__ = "users"
 	__table_args__ = (CheckConstraint("nickname !~ '^\\s+$'", name="ck_user_nickname_not_blank"),)
 	id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4, nullable=False)
-	email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+	email_encrypted: Mapped[str] = mapped_column(String(500))
+	email_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
 	# Расширено до Text для безопасного хранения длинных хешей Argon2id без риска обрезки
 	password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
 	nickname: Mapped[str] = mapped_column(String(50), nullable=False, index=True, unique=True)
@@ -80,6 +81,17 @@ class User(Base):
 	created_rarities: Mapped[list["Rarity"]] = relationship("Rarity", back_populates="owner", lazy="selectin")
 	created_weapon_types: Mapped[list["WeaponType"]] = relationship("WeaponType", back_populates="owner", lazy="selectin")
 	created_map_objects: Mapped[list["MapObject"]] = relationship("MapObject", back_populates="owner", lazy="selectin")
+
+	@property
+	def email(self) -> str:
+		from backend.app.core.crypto import decrypt_value
+		return decrypt_value(self.email_encrypted)
+
+	@email.setter
+	def email(self, value: str) -> None:
+		from backend.app.core.crypto import encrypt_value, hash_email
+		self.email_encrypted = encrypt_value(value)
+		self.email_hash = hash_email(value)
 
 	def __repr__(self) -> str:
 		return f"<User(id='{self.id}', nickname='{self.nickname}', email='{self.email}')>"

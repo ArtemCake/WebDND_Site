@@ -3,7 +3,7 @@
 from Config.logger import setup_logging
 from backend.app.Services.rate_limit_service import check_ip_rate_limit
 from backend.app.Services.security_service import (create_verification_token, verify_token, create_password_reset_token,
-                                                   issue_login_session)
+                                                   issue_login_session, set_auth_cookie, clear_auth_cookie)
 from backend.app.Services.user_service import (soft_delete_user, get_current_user, pwd_context)
 from Config.Config import settings
 from Config.imports import (JSONResponse, datetime, AsyncSession, update, UUID, RedirectResponse,
@@ -260,8 +260,8 @@ async def logout(
 	await session.commit()
 
 	response = JSONResponse(content={"message": "Выход выполнен успешно"})
-	response.delete_cookie(key="access_token", path="/")
-	response.delete_cookie(key="refresh_token", path="/")
+	clear_auth_cookie(response,"access_token")
+	clear_auth_cookie(response,"refresh_token")
 	response.headers["HX-Redirect"] = "/login"
 
 	log.info(f"[AUTH][LOGOUT] Session invalidated and cookies cleared for {current_user.id}.")
@@ -315,8 +315,8 @@ async def delete_account(
 	log.info(f"[ACCOUNT][DELETED] Account {current_user.id} processed. Action: {action_log}")
 
 	response = JSONResponse(content={"message": "Аккаунт удалён."})
-	response.delete_cookie(key="access_token", path="/")
-	response.delete_cookie(key="refresh_token", path="/")
+	clear_auth_cookie(response,"access_token")
+	clear_auth_cookie(response,"refresh_token")
 	response.headers["HX-Redirect"] = "/login"
 	return response
 
@@ -364,16 +364,9 @@ async def refresh_access_token(
 	await session.commit()
 
 	response = JSONResponse(content={"message": "Токен обновлён."})
-	response.set_cookie(
-		key="access_token", value=tokens["access_token"],
-		httponly=True, samesite="lax", path="/",
-		max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60, secure=settings.SECURE_COOKIES
-	)
-	response.set_cookie(
-		key="refresh_token", value=tokens["refresh_token"],
-		httponly=True, samesite="lax", path="/",
-		max_age=7 * 24 * 60 * 60, secure=settings.SECURE_COOKIES
-	)
+	set_auth_cookie(response, "access_token", tokens["access_token"], settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60)
+	set_auth_cookie(response, "refresh_token", tokens["refresh_token"], 7 * 24 * 60 * 60)
+
 	log.info(f"[AUTH][REFRESH] Tokens refreshed for {user.id}")
 	return response
 

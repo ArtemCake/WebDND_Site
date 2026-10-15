@@ -234,6 +234,24 @@ async def csrf_protect_exception_handler(request: Request, exc: CsrfProtectError
 	log.warning(f"[SECURITY][CSRF] Validation failed for {request.method} {request.url.path}: {exc.message}")
 	return JSONResponse(status_code=exc.status_code, content={"detail": exc.message})
 
+@app.middleware("http")
+async def security_headers_middleware(request: Request, call_next):
+	response = await call_next(request)
+	response.headers["X-Content-Type-Options"] = "nosniff"
+	response.headers["X-Frame-Options"] = "DENY"
+	response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+	response.headers["Content-Security-Policy"] = (
+		"default-src 'self'; "
+		"script-src 'self' https://cdn.jsdelivr.net https://unpkg.com; "
+		"style-src 'self' 'unsafe-inline'; "
+		"img-src 'self' data: blob:; "
+		"connect-src 'self'; "
+		"frame-ancestors 'none';"
+	)
+	if settings.ENVIRONMENT == "production":
+		response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
+	return response
+
 # --- ГЛОБАЛЬНЫЕ НАСТРОЙКИ ---
 os.environ['PROJECT_ROOT'] = str(BASE_DIR)
 app.state.templates = templates
