@@ -63,6 +63,8 @@ class WebAppSettings(BaseSettings):
 
 	# --- Настройки JWT (Аутентификация) ---
 	SECRET_KEY: str  # ОБЯЗАТЕЛЬНО указать в .env файле
+	ENCRYPTION_KEY: str  # ОБЯЗАТЕЛЬНО указать в .env файле
+	EMAIL_HASH_KEY: str  # ОБЯЗАТЕЛЬНО указать в .env файле
 	ALGORITHM: str = "HS256"
 	ACCESS_TOKEN_EXPIRE_MINUTES: int = 30  # 30 минут — короткий access, продление через /auth/refresh
 	SECURE_COOKIES: bool = ENVIRONMENT == "production"
