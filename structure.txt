@@ -27,6 +27,8 @@ backend/
 ├── __init__.py
 ├── app/
 │   ├── __init__.py
+│   ├── core/
+│   │   └── crypto.py
 │   ├── Routers/
 │   │   ├── admin.py
 │   │   ├── api.py
