@@ -101,6 +101,7 @@ frontend/
 │   └── emails/
 │       └── verification_email.html
 └── static/
+    ├── avatars/
     ├── css/
     │   ├── style.scss
     │   ├── style.min.css

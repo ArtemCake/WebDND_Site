@@ -4,13 +4,53 @@ function getCsrfToken() {
 	return document.querySelector('meta[name="csrf-token"]')?.content || '';
 }
 
-async function postForm(path, formData) {
+/**
+ * Тихое обновление пары токенов через /auth/refresh — та же схема,
+ * что attemptTokenRefresh в auth.js, но без повторного htmx-запроса:
+ * здесь просто обновляем токены в localStorage и сообщаем об успехе.
+ */
+async function refreshAccessToken() {
+	try {
+		const resp = await fetch('/auth/refresh', {
+			method: 'POST',
+			credentials: 'include'
+		});
+		if (!resp.ok) return false;
+
+		const data = await resp.json();
+		if (data.access_token) localStorage.setItem('accessToken', data.access_token);
+		if (data.refresh_token) localStorage.setItem('refreshToken', data.refresh_token);
+		return true;
+	} catch (e) {
+		console.warn('[MFA] Token refresh failed.', e);
+		return false;
+	}
+}
+
+/**
+ * @param {boolean} isRetry - true, если это повтор запроса после обновления токена
+ *     (чтобы не уйти в бесконечный цикл при повторном 401).
+ */
+async function postForm(path, formData, isRetry = false) {
 	const resp = await fetch(path, {
 		method: 'POST',
 		credentials: 'include',
 		headers: { 'X-CSRF-Token': getCsrfToken() },
 		body: formData
 	});
+
+	if (resp.status === 401 && !isRetry) {
+		const refreshed = await refreshAccessToken();
+		if (refreshed) {
+			return postForm(path, formData, true);
+		}
+
+		localStorage.removeItem('accessToken');
+		localStorage.removeItem('refreshToken');
+		window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+		return { ok: false, data: { error: 'Сессия истекла, выполните вход заново.' } };
+	}
+
 	const data = await resp.json().catch(() => ({}));
 	return { ok: resp.ok, data };
 }
