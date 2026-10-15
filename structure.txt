@@ -99,6 +99,7 @@ frontend/
 │   │   ├── privacy_policy.html
 │   │   └── terms.html
 │   └── emails/
+│       ├── password_reset.html
 │       └── verification_email.html
 └── static/
     ├── avatars/

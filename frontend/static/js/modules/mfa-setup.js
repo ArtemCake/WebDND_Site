@@ -81,23 +81,36 @@ export function initMfaSetup() {
 	});
 
 	confirmForm?.addEventListener('submit', async (e) => {
-    	e.preventDefault();
-    	const { ok, data } = await postForm('/profile/mfa/confirm', new FormData(confirmForm));
-    	if (!ok) return showStatus(statusEl, 'danger', data.error || 'Неверный код.');
+		e.preventDefault();
+		const { ok, data } = await postForm('/profile/mfa/confirm', new FormData(confirmForm));
+		if (!ok) return showStatus(statusEl, 'danger', data.error || 'Неверный код.');
 
-    	showStatus(statusEl, 'success', data.message || 'Готово. Резервные коды отправлены вам на почту.');
+		showStatus(statusEl, 'success', data.message || 'Готово.');
 
-    	if (Array.isArray(data.backup_codes) && backupList) {
-    		backupList.innerHTML = data.backup_codes.map(c => `<li><code>${c}</code></li>`).join('');
-    		const wrapper = backupList.closest('.mfa-backup-wrapper');
-    		wrapper?.classList.remove('hidden');
+		if (Array.isArray(data.backup_codes) && backupList) {
+			backupList.innerHTML = data.backup_codes.map(c => `<li><code>${c}</code></li>`).join('');
+			const wrapper = backupList.closest('.mfa-backup-wrapper');
+			wrapper?.classList.remove('hidden');
 
-    		// Кнопка подтверждения вместо автообновления через setTimeout —
-    		// пользователь сам решает, когда коды сохранены.
-    		const ackBtn = document.getElementById('mfa-backup-ack');
-    		ackBtn?.addEventListener('click', () => window.location.reload(), { once: true });
-    	}
-    });
+			const downloadBtn = document.getElementById('mfa-backup-download');
+			downloadBtn?.addEventListener('click', () => downloadBackupCodes(data.backup_codes));
+
+			const ackBtn = document.getElementById('mfa-backup-ack');
+			ackBtn?.addEventListener('click', () => window.location.reload(), { once: true });
+		}
+	});
+
+	function downloadBackupCodes(codes) {
+		const text = 'Резервные коды двухфакторной аутентификации WorldLoom\n\n' + codes.join('\n') +
+			'\n\nКаждый код можно использовать только один раз. Храните файл в надёжном месте.';
+		const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = 'worldloom-backup-codes.txt';
+		a.click();
+		URL.revokeObjectURL(url);
+	}
 
 	disableForm?.addEventListener('submit', async (e) => {
 		e.preventDefault();

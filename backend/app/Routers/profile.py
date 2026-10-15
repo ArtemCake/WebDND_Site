@@ -264,7 +264,7 @@ async def mfa_confirm(
 		return JSONResponse(status_code=400, content={"error": "Неверный код. Проверьте время на устройстве и попробуйте снова."})
 
 	return JSONResponse(status_code=200, content={
-		"message": "Двухфакторная аутентификация включена.",
+		"message": "Двухфакторная аутентификация включена. Сохраните резервные коды.",
 		"backup_codes": backup_codes
 	})
 
