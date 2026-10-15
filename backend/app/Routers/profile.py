@@ -9,7 +9,7 @@ from backend.app.Services.security_service import create_verification_token
 from backend.app.Services.mail_service import mail_service
 from backend.app.database.models.core.user import User
 from backend.app.Services.user_service import (update_user_profile, change_password, get_current_user, update_own_roles,
-                                               pwd_context)
+                                               verify_user_password)
 from backend.app.enums.enums_BD import SystemRole
 
 
@@ -278,7 +278,7 @@ async def mfa_disable(
 ):
 	await csrf_protect.validate_csrf(request)
 
-	if not current_user.password_hash or not pwd_context.verify(password, current_user.password_hash):
+	if not current_user.password_hash or not verify_user_password(current_user, password):
 		return JSONResponse(status_code=403, content={"error": "Неверный пароль."})
 
 	await mfa_service.disable_mfa(session, current_user)

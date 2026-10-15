@@ -394,3 +394,8 @@ async def reset_login_lockout(session: AsyncSession, user: User) -> None:
 		user.failed_login_attempts = 0
 		user.locked_until = None
 		await session.commit()
+
+def verify_user_password(user: User, password: str) -> bool:
+	if not user.password_hash:
+		return False
+	return pwd_context.verify(password, user.password_hash)

@@ -4,7 +4,7 @@ from Config.logger import setup_logging
 from backend.app.Services.rate_limit_service import check_ip_rate_limit
 from backend.app.Services.security_service import (create_verification_token, verify_token, create_password_reset_token,
                                                    issue_login_session, set_auth_cookie, clear_auth_cookie)
-from backend.app.Services.user_service import (soft_delete_user, get_current_user, pwd_context)
+from backend.app.Services.user_service import (soft_delete_user, get_current_user, verify_user_password)
 from Config.Config import settings
 from Config.imports import (JSONResponse, datetime, AsyncSession, update, UUID, RedirectResponse,
                             APIRouter, Depends, HTTPException, status, timedelta, hashlib,
@@ -286,7 +286,7 @@ async def delete_account(
 			detail="Для этого аккаунта не задан пароль (вход через соцсеть). Удаление по паролю недоступно.",
 		)
 
-	if not pwd_context.verify(password, current_user.password_hash):
+	if not verify_user_password(current_user, password):
 		log.warning(f"[ACCOUNT][DELETE] Wrong password attempt for {current_user.id}")
 		raise HTTPException(
 			status_code=status.HTTP_401_UNAUTHORIZED,
