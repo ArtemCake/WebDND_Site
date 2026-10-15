@@ -250,18 +250,18 @@ export function setupAuthHandlers() {
 
             case 200: // Вход успешен (но нужно проверить наличие токена)
                 if (data.access_token) {
-                    // Сохраняем токены локально для JS-доступа (проверка exp)
                     localStorage.setItem('accessToken', data.access_token);
                     localStorage.setItem('refreshToken', data.refresh_token);
-
                     showMessage(targetForm, 'success', 'Добро пожаловать!');
-
-                    // Принудительный редирект после успешной авторизации
-                    setTimeout(() => {
-                        window.location.href = '/profile';
-                    }, 300);
-                    return; // Прерываем выполнение хэндлера
-
+                    setTimeout(() => { window.location.href = '/profile'; }, 300);
+                    return;
+                } else if (data.mfa_required) {
+                    document.getElementById('login-form')?.classList.add('hidden');
+                    document.getElementById('mfa-code-form')?.classList.remove('hidden');
+                    const tokenField = document.getElementById('mfa-token-field');
+                    if (tokenField) tokenField.value = data.mfa_token;
+                    showMessage(targetForm, 'success', data.message || 'Введите код двухфакторной аутентификации.');
+                    return;
                 } else {
                     messageText = data.error || 'Сервер вернул ответ без токена. Попробуйте снова.';
                 }

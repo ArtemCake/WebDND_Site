@@ -55,6 +55,7 @@ import { initDiceRollers } from './modules/dice-roller.js';
 // --- ИМПОРТ КОНФИГУРАЦИИ И СИСТЕМЫ ---
 import { AppConfig } from './config/appConfig.js';
 import { Dnd5eSystem } from './modules/systems/Dnd5eSystem.js';
+import { initMfaSetup } from './modules/mfa-setup.js';
 
 // --- ТОЧКА ВХОДА ПРИЛОЖЕНИЯ ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -91,6 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Модалка удаления аккаунта (страница профиля)
     initDeleteAccountModal();
     initAdminPanel();
+    initMfaSetup();
 
     // Глобальная обработка сетевых ошибок HTMX
     initNetworkErrorHandlers();

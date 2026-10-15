@@ -1,5 +1,5 @@
 # backend/app/Routers/profile.py
-
+from backend.app.Services import mfa_service
 from backend.app.database.database import get_async_session
 from Config.Config import settings
 from Config.imports import (JSONResponse, HTMLResponse, APIRouter, Depends, HTTPException, Literal,
@@ -8,7 +8,8 @@ from Config.imports import (JSONResponse, HTMLResponse, APIRouter, Depends, HTTP
 from backend.app.Services.security_service import create_verification_token
 from backend.app.Services.mail_service import mail_service
 from backend.app.database.models.core.user import User
-from backend.app.Services.user_service import (update_user_profile, change_password, get_current_user, update_own_roles)
+from backend.app.Services.user_service import (update_user_profile, change_password, get_current_user, update_own_roles,
+                                               pwd_context)
 from backend.app.enums.enums_BD import SystemRole
 
 
@@ -233,3 +234,52 @@ async def api_resend_verification(
 		)
 
 	return JSONResponse(status_code=200, content={"message": "Письмо с подтверждением отправлено повторно."})
+
+@router.post("/mfa/setup", response_model=dict)
+async def mfa_setup(
+		request: Request,
+		current_user: User = Depends(get_current_user),
+		session: AsyncSession = Depends(get_async_session),
+		csrf_protect: CsrfProtect = Depends()
+):
+	await csrf_protect.validate_csrf(request)
+	if current_user.is_2fa_enabled:
+		return JSONResponse(status_code=400, content={"error": "Двухфакторная аутентификация уже включена."})
+
+	secret, uri = await mfa_service.start_totp_setup(session, current_user)
+	return JSONResponse(status_code=200, content={"secret": secret, "otpauth_uri": uri})
+
+@router.post("/mfa/confirm", response_model=dict)
+async def mfa_confirm(
+		request: Request,
+		code: str = Form(...),
+		current_user: User = Depends(get_current_user),
+		session: AsyncSession = Depends(get_async_session),
+		csrf_protect: CsrfProtect = Depends()
+):
+	await csrf_protect.validate_csrf(request)
+
+	backup_codes = await mfa_service.confirm_totp_setup(session, current_user, code)
+	if backup_codes is None:
+		return JSONResponse(status_code=400, content={"error": "Неверный код. Проверьте время на устройстве и попробуйте снова."})
+
+	return JSONResponse(status_code=200, content={
+		"message": "Двухфакторная аутентификация включена.",
+		"backup_codes": backup_codes
+	})
+
+@router.post("/mfa/disable", response_model=dict)
+async def mfa_disable(
+		request: Request,
+		password: str = Form(...),
+		current_user: User = Depends(get_current_user),
+		session: AsyncSession = Depends(get_async_session),
+		csrf_protect: CsrfProtect = Depends()
+):
+	await csrf_protect.validate_csrf(request)
+
+	if not current_user.password_hash or not pwd_context.verify(password, current_user.password_hash):
+		return JSONResponse(status_code=403, content={"error": "Неверный пароль."})
+
+	await mfa_service.disable_mfa(session, current_user)
+	return JSONResponse(status_code=200, content={"message": "Двухфакторная аутентификация отключена."})

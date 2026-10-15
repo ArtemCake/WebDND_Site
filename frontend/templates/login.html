@@ -9,15 +9,17 @@
 	<!-- ВАЖНО: У сообщения должен быть именно такой ID -->
 	<div id="message-box"></div>
 	
-	<form hx-post="/auth/login"
-	      hx-trigger="submit"
-	      method="post">
-		
+	<form id="login-form" hx-post="/auth/login" hx-trigger="submit" method="post">
 		<input type="email" name="email" placeholder="Email" required autocomplete="username">
 		<input type="password" name="password" placeholder="Пароль" required autocomplete="current-password">
-		
-		<!-- Кнопка должна иметь тип submit -->
 		<button type="submit">Войти</button>
+	</form>
+	
+	<form id="mfa-code-form" class="hidden" hx-post="/auth/login/verify-mfa" hx-trigger="submit" hx-swap="none" method="post">
+		<input type="hidden" name="mfa_token" id="mfa-token-field" value="">
+		<p>Введите код из приложения-аутентификатора или резервный код</p>
+		<input type="text" name="code" placeholder="Код" required autocomplete="one-time-code" inputmode="numeric">
+		<button type="submit">Подтвердить</button>
 	</form>
 	<p><a href="/forgot-password"
 	      hx-get="/forgot-password"

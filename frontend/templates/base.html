@@ -12,6 +12,8 @@
 	<link rel="stylesheet" href="{{ static_url('css/style.min.css') }}">
 	<link rel="icon" href="{{ static_url('images/favicon.ico') }}" type="image/x-icon">
 </head>
+{% block extra_head %}
+{% endblock %}
 <body class="auth-body"
 {% if user %}
 	data-user-theme="{{ user.profile_settings.theme if user.profile_settings and user.profile_settings.theme else 'dark-fantasy' }}"
@@ -49,5 +51,7 @@
 	<button type="button" id="cookie-banner-accept" class="btn btn-primary btn-sm">Понятно</button>
 </div>
 <script type="module" src="{{ static_url('js/main.min.js') }}"></script>
+{% block extra_scripts %}
+{% endblock %}
 </body>
 </html>

@@ -36,6 +36,7 @@ backend/
 │   │   ├── __init__.py
 │   │   ├── admin_service.py
 │   │   ├── legal_service.py
+│   │   ├── mfa_service.py
 │   │   ├── mail_service.py
 │   │   ├── rate_limit_service.py
 │   │   ├── security_service.py
@@ -171,6 +172,7 @@ frontend/
             ├── delete-account.js
             ├── map.js
             ├── dice-roller.js
+            ├── mfa-setup.js
             ├── network-error-handler.js
             ├── ui.js
             ├── UI/

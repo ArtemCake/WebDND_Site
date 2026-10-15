@@ -2,7 +2,8 @@
 
 from Config.logger import setup_logging
 from backend.app.Services.rate_limit_service import check_ip_rate_limit
-from backend.app.Services.security_service import (create_verification_token, verify_token, create_password_reset_token)
+from backend.app.Services.security_service import (create_verification_token, verify_token, create_password_reset_token,
+                                                   issue_login_session)
 from backend.app.Services.user_service import (soft_delete_user, get_current_user, pwd_context)
 from Config.Config import settings
 from Config.imports import (JSONResponse, datetime, AsyncSession, update, UUID, RedirectResponse,
@@ -10,7 +11,7 @@ from Config.imports import (JSONResponse, datetime, AsyncSession, update, UUID, 
                             Form, secrets, Request, CsrfProtect)
 from backend.app.database.database import get_async_session
 from backend.app.database.models.core.user import User
-from backend.app.Services import security_service, user_service
+from backend.app.Services import security_service, user_service, mfa_service
 from backend.app.Services.mail_service import mail_service
 from backend.app.schemas.auth import RegisterRequest, validate_password_complexity
 
@@ -129,50 +130,18 @@ async def login_for_access_token(
 
 		await user_service.reset_login_lockout(session, user)
 
-		new_session_token = secrets.token_urlsafe(64)
+		await user_service.reset_login_lockout(session, user)
 
-		tokens = await security_service.create_jwt_pair(
-			user_obj_or_id=user,
-			expires_delta=access_token_expires,
-			session_token=new_session_token
-		)
+		if user.is_2fa_enabled:
+			mfa_token = security_service.create_mfa_pending_token(str(user.id))
+			log.info(f"[AUTH][MFA] Password OK, awaiting TOTP for {email} (ID: {user.id})")
+			return JSONResponse(status_code=200, content={
+				"mfa_required": True,
+				"mfa_token": mfa_token,
+				"message": "Введите код двухфакторной аутентификации."
+			})
 
-		log.info(f"[AUTH][SUCCESS] Login successful for {email} (ID: {user.id})")
-
-		response = JSONResponse(content={
-			"access_token": tokens["access_token"],
-			"token_type": "bearer",
-			"refresh_token": tokens["refresh_token"]
-		})
-
-		response.set_cookie(
-			key="access_token",
-			value=tokens["access_token"],
-			httponly=True,
-			samesite="lax",
-			path="/",
-			max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-			secure=settings.SECURE_COOKIES
-		)
-		response.set_cookie(
-			key="refresh_token",
-			value=tokens["refresh_token"],
-			httponly=True,
-			samesite="lax",
-			path="/",
-			max_age=7 * 24 * 60 * 60,
-			secure=settings.SECURE_COOKIES
-		)
-
-		stmt = (
-			update(User)
-			.where(User.id == user.id)
-			.values(active_session_token=new_session_token, updated_at=datetime.utcnow())
-		)
-		await session.execute(stmt)
-		await session.commit()
-
-		return response
+		return await issue_login_session(user, session)
 
 	except PermissionError as e:
 		log.warning(f"[AUTH][BLOCKED] Account state issue during login for {email}: {e}")
@@ -180,6 +149,37 @@ async def login_for_access_token(
 	except Exception as e:
 		log.error(f"Critical error during login for '{email}'", exc_info=True)
 		return JSONResponse(status_code=500, content={"error": "Непредвиденная ошибка сервера."})
+
+@router.post("/login/verify-mfa", response_model=dict)
+async def login_verify_mfa(
+		request: Request,
+		mfa_token: str = Form(...),
+		code: str = Form(...),
+		session: AsyncSession = Depends(get_async_session),
+		csrf_protect: CsrfProtect = Depends()
+):
+	await csrf_protect.validate_csrf(request)
+
+	client_ip = request.client.host if request.client else "unknown"
+	rate_limit_key = f"{client_ip}:mfa_verify"
+	if await check_ip_rate_limit(rate_limit_key, settings.LOGIN_IP_RATE_LIMIT, settings.LOGIN_IP_RATE_WINDOW_MINUTES):
+		log.warning(f"[AUTH][MFA][RATE_LIMIT] Too many code attempts from {client_ip}")
+		return JSONResponse(status_code=429, content={"error": "Слишком много попыток. Попробуйте позже."})
+
+	payload = security_service.verify_token(mfa_token, purpose="mfa_pending")
+	user_id = payload.get("sub") if payload else None
+	if not user_id:
+		return JSONResponse(status_code=400, content={"error": "Сессия входа истекла, войдите заново."})
+
+	user = await user_service.get_user_by_id(session, user_id)
+	if not user or not user.is_active or not user.is_2fa_enabled:
+		return JSONResponse(status_code=400, content={"error": "Сессия входа недействительна."})
+
+	if not await mfa_service.verify_login_code(session, user, code):
+		log.warning(f"[AUTH][MFA][FAILED] Invalid code for {user.email}")
+		return JSONResponse(status_code=401, content={"error": "Неверный код."})
+
+	return await issue_login_session(user, session)
 
 @router.get("/verify-email")
 async def verify_email(token: str, session: AsyncSession = Depends(get_async_session)):

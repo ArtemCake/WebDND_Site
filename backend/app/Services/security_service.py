@@ -1,11 +1,14 @@
 # backend/app/Services/security_service.py
 
 from Config.Config import settings
-from Config.imports import (OAuth2PasswordBearer, jwt, JWTError, datetime, timedelta, hashlib)
+from Config.imports import (OAuth2PasswordBearer, jwt, JWTError, datetime, timedelta, hashlib,
+                            update, secrets, AsyncSession, JSONResponse)
 from backend.app.database.models.core.user import User
+from Config.logger import setup_logging
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
+log = setup_logging(app_name="WorldLoom")
 
 def create_verification_token(user_id: str, expires_delta: timedelta = None) -> str:
 	"""Токен для подтверждения почты (не дает доступа к API)."""
@@ -63,6 +66,46 @@ async def create_jwt_pair(user_obj_or_id, expires_delta: timedelta = None, sessi
 		"refresh_token": jwt.encode(refresh_data, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 	}
 
+async def issue_login_session(user: User, session: AsyncSession) -> JSONResponse:
+	"""Общий хвост успешного входа: пара JWT, cookie, обновление active_session_token."""
+	new_session_token = secrets.token_urlsafe(64)
+	access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+
+	tokens = await create_jwt_pair(
+		user_obj_or_id=user,
+		expires_delta=access_token_expires,
+		session_token=new_session_token
+	)
+
+	log.info(f"[AUTH][SUCCESS] Login session issued for {user.email} (ID: {user.id})")
+
+	response = JSONResponse(content={
+		"access_token": tokens["access_token"],
+		"token_type": "bearer",
+		"refresh_token": tokens["refresh_token"]
+	})
+
+	response.set_cookie(
+		key="access_token", value=tokens["access_token"], httponly=True,
+		samesite="lax", path="/", max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+		secure=settings.SECURE_COOKIES
+	)
+	response.set_cookie(
+		key="refresh_token", value=tokens["refresh_token"], httponly=True,
+		samesite="lax", path="/", max_age=7 * 24 * 60 * 60,
+		secure=settings.SECURE_COOKIES
+	)
+
+	stmt = (
+		update(User)
+		.where(User.id == user.id)
+		.values(active_session_token=new_session_token, updated_at=datetime.utcnow())
+	)
+	await session.execute(stmt)
+	await session.commit()
+
+	return response
+
 def create_password_reset_token(user, expires_delta: timedelta = None) -> str:
 	"""
 	Токен для сброса пароля. Короткий срок жизни (30 минут) плюс отпечаток
@@ -74,6 +117,15 @@ def create_password_reset_token(user, expires_delta: timedelta = None) -> str:
 	to_encode = {"sub": str(user.id), "purpose": "password_reset", "pwfp": fingerprint}
 	if expires_delta is None:
 		expires_delta = timedelta(minutes=30)
+	expire = datetime.utcnow() + expires_delta
+	to_encode["exp"] = expire
+	return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+def create_mfa_pending_token(user_id: str, expires_delta: timedelta = None) -> str:
+	"""Короткоживущий токен между вводом пароля и вводом TOTP-кода — сам по себе доступа к API не даёт."""
+	to_encode = {"sub": str(user_id), "purpose": "mfa_pending"}
+	if expires_delta is None:
+		expires_delta = timedelta(minutes=5)
 	expire = datetime.utcnow() + expires_delta
 	to_encode["exp"] = expire
 	return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
