@@ -103,7 +103,6 @@ async def create_character_sheet(session, user_id: UUID, data: CharacterSheetCre
 	await session.refresh(sheet)
 	return sheet
 
-
 async def get_character_sheet(session: AsyncSession, sheet_id: UUID, player_id: UUID) -> CharacterSheet:
 	stmt = (
 		select(CharacterSheet)
