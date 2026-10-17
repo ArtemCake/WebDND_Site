@@ -40,7 +40,7 @@ from collections import defaultdict, deque
 
 # --- База данных (SQLAlchemy) ---
 from sqlalchemy.ext.asyncio import (AsyncSession, async_sessionmaker, create_async_engine)
-from sqlalchemy.orm import Mapped, mapped_column, relationship, declarative_base, backref
+from sqlalchemy.orm import Mapped, mapped_column, relationship, declarative_base, backref, selectinload
 from sqlalchemy import (JSON, Boolean, DateTime, ForeignKey, Index, Float,	Integer, Table, Column,
 	String,	Text, UniqueConstraint,	text, func, CheckConstraint, SmallInteger, update)
 from sqlalchemy.dialects.postgresql import INET, JSONB, ARRAY, UUID as PG_UUID, ENUM as PG_ENUM
@@ -61,7 +61,6 @@ from jinja2.exceptions import TemplateNotFound
 from aiosmtplib import SMTP
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-
 # --- Конфигурация окружения ---
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -79,7 +78,7 @@ from itsdangerous import URLSafeTimedSerializer
 from pathlib import Path
 
 # --- Валидация API (Pydantic) ---
-from pydantic import ValidationError, EmailStr, BaseModel, Field, field_validator
+from pydantic import ValidationError, EmailStr, BaseModel, Field, field_validator, ConfigDict
 from fastapi.exceptions import RequestValidationError
 
 # --- Роутинг ---
