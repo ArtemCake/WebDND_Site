@@ -229,7 +229,7 @@ async def resend_verification_email(
 		content={"message": "Письмо с подтверждением отправлено повторно."}
 	)
 
-@router.post("/logout")
+@router.post("/logout", dependencies=[Depends(enforce_csrf)])
 async def logout(
 		current_user: User = Depends(get_current_user),
 		session: AsyncSession = Depends(get_async_session)):
