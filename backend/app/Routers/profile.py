@@ -11,11 +11,12 @@ from backend.app.database.models.core.user import User
 from backend.app.Services.user_service import (update_user_profile, change_password, get_current_user, update_own_roles,
                                                verify_user_password)
 from backend.app.enums.enums_BD import SystemRole
+from backend.app.core.csrf import enforce_csrf
 
 
 router = APIRouter(
 	prefix="/profile",
-	tags=["profile"],
+	tags=["profile"]
 )
 
 ROLE_LABELS: dict[SystemRole, str] = {
@@ -66,7 +67,7 @@ async def get_profile_page(request: Request, user: User = Depends(get_current_us
 	csrf_protect.set_csrf_cookie(signed_token, response)
 	return response
 
-@router.patch("/roles", response_class=JSONResponse, status_code=status.HTTP_200_OK, operation_id="updateUserRoles")
+@router.patch("/roles", response_class=JSONResponse, status_code=status.HTTP_200_OK, operation_id="updateUserRoles", dependencies=[Depends(enforce_csrf)])
 async def api_update_roles(
 		request: Request,
 		roles: list[SystemRole] = Form([]),
@@ -99,7 +100,7 @@ async def get_profile_data(user: User = Depends(get_current_user)):
 		profile_settings=settings_dto
 	)
 
-@router.put("/update", response_class=JSONResponse, status_code=status.HTTP_200_OK, operation_id="updateUserProfile")
+@router.put("/update", response_class=JSONResponse, status_code=status.HTTP_200_OK, operation_id="updateUserProfile", dependencies=[Depends(enforce_csrf)])
 async def api_update_profile(
 		request: Request,
 		nickname: str = Form(...),
@@ -160,7 +161,7 @@ async def api_update_profile(
 			detail="Ошибка сервера при сохранении профиля."
 		)
 
-@router.patch("/theme", response_class=JSONResponse, status_code=status.HTTP_200_OK, operation_id="updateUserTheme")
+@router.patch("/theme", response_class=JSONResponse, status_code=status.HTTP_200_OK, operation_id="updateUserTheme", dependencies=[Depends(enforce_csrf)])
 async def api_update_theme(
 				request: Request,
 				payload: UpdateThemeDTO,
@@ -180,7 +181,7 @@ async def api_update_theme(
 
 	return {"message": "Тема сохранена.", "theme": payload.theme}
 
-@router.post("/change-password", response_class=JSONResponse, status_code=status.HTTP_200_OK, operation_id="changeUserPassword")
+@router.post("/change-password", response_class=JSONResponse, status_code=status.HTTP_200_OK, operation_id="changeUserPassword", dependencies=[Depends(enforce_csrf)])
 async def api_change_password(
 		request: Request,
 		current_password: str = Form(...),
@@ -209,7 +210,7 @@ async def api_change_password(
 		"redirect_url": "/login"
 	}
 
-@router.post("/resend-verification", response_class=JSONResponse, status_code=status.HTTP_200_OK, operation_id="resendOwnVerificationEmail")
+@router.post("/resend-verification", response_class=JSONResponse, status_code=status.HTTP_200_OK, operation_id="resendOwnVerificationEmail", dependencies=[Depends(enforce_csrf)])
 async def api_resend_verification(
 		request: Request,
 		user: User = Depends(get_current_user),
@@ -249,7 +250,7 @@ async def mfa_setup(
 	secret, uri = await mfa_service.start_totp_setup(session, current_user)
 	return JSONResponse(status_code=200, content={"secret": secret, "otpauth_uri": uri})
 
-@router.post("/mfa/confirm", response_model=dict)
+@router.post("/mfa/confirm", response_model=dict, dependencies=[Depends(enforce_csrf)])
 async def mfa_confirm(
 		request: Request,
 		code: str = Form(...),
@@ -268,7 +269,7 @@ async def mfa_confirm(
 		"backup_codes": backup_codes
 	})
 
-@router.post("/mfa/disable", response_model=dict)
+@router.post("/mfa/disable", response_model=dict, dependencies=[Depends(enforce_csrf)])
 async def mfa_disable(
 		request: Request,
 		password: str = Form(...),

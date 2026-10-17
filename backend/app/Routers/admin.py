@@ -9,13 +9,15 @@ from backend.app.database.database import get_async_session
 from backend.app.database.models.core.user import User
 from backend.app.enums.enums_BD import SystemRole, AdminPermission
 from backend.app.Services.user_service import soft_delete_user, hard_delete_user, get_user_by_id
-from backend.app.Services.admin_service import (
-	get_admin_user, require_permission, list_users, admin_set_roles, admin_set_permissions,
-	list_reports, update_report, get_report_by_id, list_audit_logs,
+from backend.app.Services.admin_service import (get_admin_user, require_permission, list_users, admin_set_roles, admin_set_permissions,
+	list_reports, update_report, get_report_by_id, list_audit_logs)
+from backend.app.core.csrf import enforce_csrf
+
+
+router = APIRouter(
+	prefix="/admin",
+    tags=["admin"]
 )
-
-
-router = APIRouter(prefix="/admin", tags=["admin"])
 
 ROLE_LABELS = {
 	SystemRole.PLAYER: "Игрок", SystemRole.MASTER: "Мастер (ведущий)",
@@ -57,14 +59,10 @@ async def admin_users_page(
 	csrf_protect.set_csrf_cookie(signed_token, response)
 	return response
 
-@router.patch("/users/{user_id}/roles", response_class=JSONResponse, operation_id="adminUpdateUserRoles")
+@router.patch("/users/{user_id}/roles", response_class=JSONResponse, operation_id="adminUpdateUserRoles", dependencies=[Depends(enforce_csrf)])
 async def admin_update_user_roles(
-		request: Request, user_id: UUID, roles: list[SystemRole] = Form([]),
-		session: AsyncSession = Depends(get_async_session),
-		actor: User = Depends(require_permission(AdminPermission.USERS)),
-		csrf_protect: CsrfProtect = Depends(),
-):
-	await csrf_protect.validate_csrf(request)
+		user_id: UUID, roles: list[SystemRole] = Form([]),
+		session: AsyncSession = Depends(get_async_session)):
 	target = await get_user_by_id(session, str(user_id))
 	if not target:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден.")
@@ -76,14 +74,10 @@ async def admin_update_user_roles(
 
 	return {"message": "Роли обновлены.", "roles": [r.value for r in updated.roles]}
 
-@router.patch("/users/{user_id}/permissions", response_class=JSONResponse, operation_id="adminUpdateUserPermissions")
+@router.patch("/users/{user_id}/permissions", response_class=JSONResponse, operation_id="adminUpdateUserPermissions", dependencies=[Depends(enforce_csrf)])
 async def admin_update_user_permissions(
-		request: Request, user_id: UUID, permissions: list[AdminPermission] = Form([]),
-		session: AsyncSession = Depends(get_async_session),
-		actor: User = Depends(require_permission(AdminPermission.USERS)),
-		csrf_protect: CsrfProtect = Depends(),
-):
-	await csrf_protect.validate_csrf(request)
+		user_id: UUID, permissions: list[AdminPermission] = Form([]),
+		session: AsyncSession = Depends(get_async_session)):
 	target = await get_user_by_id(session, str(user_id))
 	if not target:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден.")
@@ -96,14 +90,11 @@ async def admin_update_user_permissions(
 	updated = await admin_set_permissions(session, target, permissions)
 	return {"message": "Права обновлены.", "permissions": [p.value for p in updated.admin_permissions]}
 
-@router.post("/users/{user_id}/delete", response_class=JSONResponse, operation_id="adminDeleteUser")
+@router.post("/users/{user_id}/delete", response_class=JSONResponse, operation_id="adminDeleteUser", dependencies=[Depends(enforce_csrf)])
 async def admin_delete_user(
-		request: Request, user_id: UUID, permanent: bool = Form(False),
+		user_id: UUID, permanent: bool = Form(False),
 		session: AsyncSession = Depends(get_async_session),
-		actor: User = Depends(require_permission(AdminPermission.USERS)),
-		csrf_protect: CsrfProtect = Depends(),
-):
-	await csrf_protect.validate_csrf(request)
+		actor: User = Depends(require_permission(AdminPermission.USERS))):
 	if user_id == actor.id:
 		raise HTTPException(
 			status_code=status.HTTP_400_BAD_REQUEST,
@@ -140,14 +131,10 @@ async def admin_reports_page(
 	csrf_protect.set_csrf_cookie(signed_token, response)
 	return response
 
-@router.patch("/reports/{report_id}", response_class=JSONResponse, operation_id="adminUpdateReport")
+@router.patch("/reports/{report_id}", response_class=JSONResponse, operation_id="adminUpdateReport", dependencies=[Depends(enforce_csrf)])
 async def admin_update_report(
-		request: Request, report_id: UUID, new_status: str = Form(...), moderator_note: str | None = Form(None),
-		session: AsyncSession = Depends(get_async_session),
-		actor: User = Depends(require_permission(AdminPermission.REPORTS)),
-		csrf_protect: CsrfProtect = Depends(),
-):
-	await csrf_protect.validate_csrf(request)
+		report_id: UUID, new_status: str = Form(...), moderator_note: str | None = Form(None),
+		session: AsyncSession = Depends(get_async_session)):
 	report = await get_report_by_id(session, report_id)
 	if not report:
 		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Жалоба не найдена.")

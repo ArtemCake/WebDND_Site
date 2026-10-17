@@ -14,22 +14,19 @@ from backend.app.database.models.core.user import User
 from backend.app.Services import security_service, user_service, mfa_service
 from backend.app.Services.mail_service import mail_service
 from backend.app.schemas.auth import RegisterRequest, validate_password_complexity
+from backend.app.core.csrf import enforce_csrf
 
 router = APIRouter(
 	prefix="/auth",
-	tags=["auth"],
+	tags=["auth"]
 )
 
 log = setup_logging(app_name="WorldLoom")
 
-@router.post("/register", response_model=dict, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=dict, status_code=status.HTTP_201_CREATED, dependencies=[Depends(enforce_csrf)])
 async def register_user_action(
-		request: Request,
 		data: RegisterRequest,
-		session: AsyncSession = Depends(get_async_session),
-		csrf_protect: CsrfProtect = Depends()
-):
-	await csrf_protect.validate_csrf(request)
+		session: AsyncSession = Depends(get_async_session)):
 	log.info(f"[AUTH][REGISTER] Attempt for {data.email}")
 	try:
 		existing_user = await user_service.get_user_by_email(session, data.email)
@@ -89,15 +86,12 @@ async def register_user_action(
 			content={"error": "Непредвиденная ошибка сервера. Администраторы уведомлены."}
 		)
 
-@router.post("/login", response_model=dict)
+@router.post("/login", response_model=dict, dependencies=[Depends(enforce_csrf)])
 async def login_for_access_token(
 		request: Request,
 		email: str = Form(...),
 		password: str = Form(...),
-		session: AsyncSession = Depends(get_async_session),
-		csrf_protect: CsrfProtect = Depends()
-):
-	await csrf_protect.validate_csrf(request)
+		session: AsyncSession = Depends(get_async_session)):
 
 	client_ip = request.client.host if request.client else "unknown"
 	if await check_ip_rate_limit(client_ip, settings.LOGIN_IP_RATE_LIMIT, settings.LOGIN_IP_RATE_WINDOW_MINUTES):
@@ -105,7 +99,6 @@ async def login_for_access_token(
 		return JSONResponse(status_code=429, content={"error": "Слишком много попыток входа. Попробуйте позже."})
 
 	log.info(f"[AUTH][LOGIN] Attempt for {email} from {client_ip}")
-	access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
 	try:
 		user_record = await user_service.get_user_by_email(session, email)
@@ -150,15 +143,12 @@ async def login_for_access_token(
 		log.error(f"Critical error during login for '{email}'", exc_info=True)
 		return JSONResponse(status_code=500, content={"error": "Непредвиденная ошибка сервера."})
 
-@router.post("/login/verify-mfa", response_model=dict)
+@router.post("/login/verify-mfa", response_model=dict, dependencies=[Depends(enforce_csrf)])
 async def login_verify_mfa(
 		request: Request,
 		mfa_token: str = Form(...),
 		code: str = Form(...),
-		session: AsyncSession = Depends(get_async_session),
-		csrf_protect: CsrfProtect = Depends()
-):
-	await csrf_protect.validate_csrf(request)
+		session: AsyncSession = Depends(get_async_session)):
 
 	client_ip = request.client.host if request.client else "unknown"
 	rate_limit_key = f"{client_ip}:mfa_verify"
@@ -202,15 +192,11 @@ async def verify_email(token: str, session: AsyncSession = Depends(get_async_ses
 	# Было: JSONResponse({"message": "Email успешно подтвержден."}) — теперь переход на вход.
 	return RedirectResponse(url="/login?verify=success", status_code=status.HTTP_303_SEE_OTHER)
 
-@router.post("/resend-verification/{user_id}", response_model=dict)
+@router.post("/resend-verification/{user_id}", response_model=dict, dependencies=[Depends(enforce_csrf)])
 async def resend_verification_email(
 		user_id: UUID,
-		request: Request,
-		session: AsyncSession = Depends(get_async_session),
-		csrf_protect: CsrfProtect = Depends()
-):
+		session: AsyncSession = Depends(get_async_session)):
 	"""Повторная отправка письма подтверждения почты."""
-	await csrf_protect.validate_csrf(request)
 	target_user = await user_service.get_user_by_id(session, user_id)
 
 	if not target_user:
@@ -245,12 +231,8 @@ async def resend_verification_email(
 
 @router.post("/logout")
 async def logout(
-		request: Request,
 		current_user: User = Depends(get_current_user),
-		session: AsyncSession = Depends(get_async_session),
-		csrf_protect: CsrfProtect = Depends()
-):
-	await csrf_protect.validate_csrf(request)
+		session: AsyncSession = Depends(get_async_session)):
 	stmt = (
 		update(User)
 		.where(User.id == current_user.id)
@@ -267,17 +249,13 @@ async def logout(
 	log.info(f"[AUTH][LOGOUT] Session invalidated and cookies cleared for {current_user.id}.")
 	return response
 
-@router.post("/delete-account")
+@router.post("/delete-account", dependencies=[Depends(enforce_csrf)])
 async def delete_account(
-		request: Request,
 		password: str = Form(...),
 		permanent: bool = Form(False),
 		db: AsyncSession = Depends(get_async_session),
-		current_user: User = Depends(get_current_user),
-		csrf_protect: CsrfProtect = Depends()
-):
+		current_user: User = Depends(get_current_user)):
 	"""Удаление аккаунта."""
-	await csrf_protect.validate_csrf(request)
 
 	if not current_user.password_hash:
 		log.warning(f"[ACCOUNT][DELETE] No local password set (OAuth-only account) for {current_user.id}")
@@ -370,19 +348,16 @@ async def refresh_access_token(
 	log.info(f"[AUTH][REFRESH] Tokens refreshed for {user.id}")
 	return response
 
-@router.post("/forgot-password", response_model=dict)
+@router.post("/forgot-password", response_model=dict, dependencies=[Depends(enforce_csrf)])
 async def forgot_password(
 		request: Request,
 		email: str = Form(...),
-		session: AsyncSession = Depends(get_async_session),
-		csrf_protect: CsrfProtect = Depends()
-):
+		session: AsyncSession = Depends(get_async_session)):
 	"""
 	Запрос на восстановление пароля. Ответ намеренно одинаковый независимо
 	от того, существует ли такой email, — иначе по ответу можно было бы
 	проверять, какие адреса зарегистрированы (перечисление аккаунтов).
 	"""
-	await csrf_protect.validate_csrf(request)
 
 	client_ip = request.client.host if request.client else "unknown"
 	# Отдельный ключ бакета (":password_reset"), чтобы не делить счётчик
@@ -413,16 +388,11 @@ async def forgot_password(
 	log.info(f"[AUTH][FORGOT_PASSWORD] Reset link issued for {user.id}")
 	return generic_response
 
-
-@router.post("/reset-password", response_model=dict)
+@router.post("/reset-password", response_model=dict, dependencies=[Depends(enforce_csrf)])
 async def reset_password_action(
-		request: Request,
 		token: str = Form(...),
 		new_password: str = Form(...),
-		session: AsyncSession = Depends(get_async_session),
-		csrf_protect: CsrfProtect = Depends()
-):
-	await csrf_protect.validate_csrf(request)
+		session: AsyncSession = Depends(get_async_session)):
 
 	payload = verify_token(token, purpose="password_reset")
 	user_id = payload.get("sub") if payload else None
