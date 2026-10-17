@@ -84,20 +84,18 @@ async def delete_character(session: AsyncSession, character_id: UUID, owner_id: 
 # --- CharacterSheet (лист в рамках конкретной игры) ---
 
 async def create_character_sheet(session, user_id: UUID, data: CharacterSheetCreate) -> CharacterSheet:
-	# проверяем, что пользователь состоит в этой игре (есть активная запись в Party)
-	party_check = await session.execute(
-		select(Party).where(Party.game_id == data.game_id, Party.user_id == user_id, Party.is_active.is_(True))
-	)
-	if party_check.scalar_one_or_none() is None:
-		raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Вы не состоите в этой игре")
+	await _ensure_active_party_member(session, data.game_id, user_id)
 
 	if data.party_id is not None:
-		# party_id, если указан, обязан принадлежать той же игре
 		party = await session.get(Party, data.party_id)
 		if party is None or party.game_id != data.game_id:
 			raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="party_id не относится к указанной игре")
 
-	sheet = CharacterSheet(game_id=data.game_id, **data.model_dump(exclude={"game_id"}))
+	sheet = CharacterSheet(
+		game_id=data.game_id,
+		base_character_id=data.character_id,   # маппинг: схема → модель
+		**data.model_dump(exclude={"game_id", "character_id"}),
+	)
 	session.add(sheet)
 	await session.commit()
 	await session.refresh(sheet)
