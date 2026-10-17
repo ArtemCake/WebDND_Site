@@ -69,14 +69,9 @@ async def get_profile_page(request: Request, user: User = Depends(get_current_us
 
 @router.patch("/roles", response_class=JSONResponse, status_code=status.HTTP_200_OK, operation_id="updateUserRoles", dependencies=[Depends(enforce_csrf)])
 async def api_update_roles(
-		request: Request,
 		roles: list[SystemRole] = Form([]),
 		session: AsyncSession = Depends(get_async_session),
-		user: User = Depends(get_current_user),
-		csrf_protect: CsrfProtect = Depends()
-):
-	await csrf_protect.validate_csrf(request)
-
+		user: User = Depends(get_current_user)):
 	try:
 		updated_user = await update_own_roles(session=session, user=user, requested_roles=roles)
 	except ValueError as e:
@@ -102,15 +97,11 @@ async def get_profile_data(user: User = Depends(get_current_user)):
 
 @router.put("/update", response_class=JSONResponse, status_code=status.HTTP_200_OK, operation_id="updateUserProfile", dependencies=[Depends(enforce_csrf)])
 async def api_update_profile(
-		request: Request,
 		nickname: str = Form(...),
 		email: EmailStr = Form(...),
 		avatar: UploadFile | None = File(None),
 		session: AsyncSession = Depends(get_async_session),
-		user: User = Depends(get_current_user),
-		csrf_protect: CsrfProtect = Depends()
-):
-	await csrf_protect.validate_csrf(request)
+		user: User = Depends(get_current_user)):
 	old_email = user.email
 
 	try:
@@ -163,12 +154,9 @@ async def api_update_profile(
 
 @router.patch("/theme", response_class=JSONResponse, status_code=status.HTTP_200_OK, operation_id="updateUserTheme", dependencies=[Depends(enforce_csrf)])
 async def api_update_theme(
-				request: Request,
-				payload: UpdateThemeDTO,
-				session: AsyncSession = Depends(get_async_session),
-		user: User = Depends(get_current_user),
-		csrf_protect: CsrfProtect = Depends()):
-	await csrf_protect.validate_csrf(request)
+		payload: UpdateThemeDTO,
+		session: AsyncSession = Depends(get_async_session),
+		user: User = Depends(get_current_user)):
 
 	current_settings = dict(user.profile_settings or {})
 	current_settings["theme"] = payload.theme
@@ -183,14 +171,10 @@ async def api_update_theme(
 
 @router.post("/change-password", response_class=JSONResponse, status_code=status.HTTP_200_OK, operation_id="changeUserPassword", dependencies=[Depends(enforce_csrf)])
 async def api_change_password(
-		request: Request,
 		current_password: str = Form(...),
 		new_password: str = Form(...),
 		session: AsyncSession = Depends(get_async_session),
-		user: User = Depends(get_current_user),
-		csrf_protect: CsrfProtect = Depends()
-):
-	await csrf_protect.validate_csrf(request)
+		user: User = Depends(get_current_user)):
 	success = await change_password(
 		session=session,
 		user=user,
@@ -211,12 +195,7 @@ async def api_change_password(
 	}
 
 @router.post("/resend-verification", response_class=JSONResponse, status_code=status.HTTP_200_OK, operation_id="resendOwnVerificationEmail", dependencies=[Depends(enforce_csrf)])
-async def api_resend_verification(
-		request: Request,
-		user: User = Depends(get_current_user),
-		csrf_protect: CsrfProtect = Depends()
-):
-	await csrf_protect.validate_csrf(request)
+async def api_resend_verification(user: User = Depends(get_current_user)):
 
 	if user.is_email_verified:
 		return JSONResponse(status_code=200, content={"message": "Почта уже подтверждена."})
@@ -236,14 +215,10 @@ async def api_resend_verification(
 
 	return JSONResponse(status_code=200, content={"message": "Письмо с подтверждением отправлено повторно."})
 
-@router.post("/mfa/setup", response_model=dict)
+@router.post("/mfa/setup", response_model=dict, dependencies=[Depends(enforce_csrf)])
 async def mfa_setup(
-		request: Request,
 		current_user: User = Depends(get_current_user),
-		session: AsyncSession = Depends(get_async_session),
-		csrf_protect: CsrfProtect = Depends()
-):
-	await csrf_protect.validate_csrf(request)
+		session: AsyncSession = Depends(get_async_session)):
 	if current_user.is_2fa_enabled:
 		return JSONResponse(status_code=400, content={"error": "Двухфакторная аутентификация уже включена."})
 
@@ -252,14 +227,9 @@ async def mfa_setup(
 
 @router.post("/mfa/confirm", response_model=dict, dependencies=[Depends(enforce_csrf)])
 async def mfa_confirm(
-		request: Request,
 		code: str = Form(...),
 		current_user: User = Depends(get_current_user),
-		session: AsyncSession = Depends(get_async_session),
-		csrf_protect: CsrfProtect = Depends()
-):
-	await csrf_protect.validate_csrf(request)
-
+		session: AsyncSession = Depends(get_async_session)):
 	backup_codes = await mfa_service.confirm_totp_setup(session, current_user, code)
 	if backup_codes is None:
 		return JSONResponse(status_code=400, content={"error": "Неверный код. Проверьте время на устройстве и попробуйте снова."})
@@ -271,13 +241,9 @@ async def mfa_confirm(
 
 @router.post("/mfa/disable", response_model=dict, dependencies=[Depends(enforce_csrf)])
 async def mfa_disable(
-		request: Request,
 		password: str = Form(...),
 		current_user: User = Depends(get_current_user),
-		session: AsyncSession = Depends(get_async_session),
-		csrf_protect: CsrfProtect = Depends()
-):
-	await csrf_protect.validate_csrf(request)
+		session: AsyncSession = Depends(get_async_session)):
 
 	if not current_user.password_hash or not verify_user_password(current_user, password):
 		return JSONResponse(status_code=403, content={"error": "Неверный пароль."})
