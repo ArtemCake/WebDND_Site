@@ -33,6 +33,7 @@ backend/
 │   ├── Routers/
 │   │   ├── admin.py
 │   │   ├── api.py
+│   │   ├── character.py
 │   │   ├── profile.py
 │   │   └── web.py
 │   ├── Services/

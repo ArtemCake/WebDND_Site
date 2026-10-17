@@ -4,6 +4,7 @@ from Config.imports import (UUID, HTTPException, status, select, AsyncSession, s
 from backend.app.database.models.gameplay.characters import (Character, CharacterSheet, CharacterSheetAbilityScore, CharacterInventory)
 from backend.app.database.models.content.skills import Skill, SkillCharacteristicMap
 from backend.app.schemas.character import (CharacterCreate, CharacterUpdate, CharacterSheetCreate, CharacterSheetUpdate)
+from backend.app.database.models.gameplay.lobby import Party
 
 
 # --- Расчётные хелперы (чистые функции, без обращения к БД) ---
@@ -15,17 +16,16 @@ def proficiency_bonus_for_level(level: int) -> int:
 	# Стандартная прогрессия 5e: +2 на 1–4 уровне, далее +1 каждые 4 уровня
 	return 2 + (level - 1) // 4
 
-async def resolve_skill_characteristic(
-		session: AsyncSession, skill_id: UUID, game_id: UUID | None = None,
-) -> UUID:
+async def resolve_skill_characteristic(session: AsyncSession, skill_id: UUID) -> UUID:
 	"""
-	Возвращает characteristic_id для навыка. Сначала проверяет homebrew-переопределение
-	(SkillCharacteristicMap), и только если его нет — берёт характеристику по умолчанию
-	у самого Skill.
+	Возвращает characteristic_id для навыка: сначала homebrew-переопределение
+	(SkillCharacteristicMap, уникально на skill_id во всей системе),
+	иначе — характеристика по умолчанию из Skill.ability_score_id.
 	"""
-	stmt = select(SkillCharacteristicMap).where(SkillCharacteristicMap.skill_id == skill_id)
-	if game_id is not None:
-		stmt = stmt.where(SkillCharacteristicMap.game_id == game_id)
+	stmt = select(SkillCharacteristicMap).where(
+		SkillCharacteristicMap.skill_id == skill_id,
+		SkillCharacteristicMap.is_active.is_(True),
+		)
 	custom_link = (await session.execute(stmt)).scalar_one_or_none()
 	if custom_link is not None:
 		return custom_link.characteristic_id
@@ -34,6 +34,18 @@ async def resolve_skill_characteristic(
 	if skill is None:
 		raise HTTPException(status.HTTP_404_NOT_FOUND, "Навык не найден")
 	return skill.ability_score_id
+
+async def _ensure_active_party_member(session: AsyncSession, game_id: UUID, user_id: UUID) -> None:
+	stmt = select(Party).where(
+		Party.game_id == game_id,
+		Party.user_id == user_id,
+		)
+	party = (await session.execute(stmt)).scalar_one_or_none()
+	if party is None or not party.is_active or party.role_in_game == "banned":
+		raise HTTPException(
+			status.HTTP_403_FORBIDDEN,
+			"Вы не являетесь активным участником этой игры",
+		)
 
 # --- CRUD Character (глобальный шаблон персонажа) ---
 
@@ -74,7 +86,8 @@ async def delete_character(session: AsyncSession, character_id: UUID, owner_id: 
 async def create_character_sheet(
 		session: AsyncSession, player_id: UUID, data: CharacterSheetCreate,
 ) -> CharacterSheet:
-	# Если лист клонируется из шаблона — убеждаемся, что шаблон принадлежит игроку
+	await _ensure_active_party_member(session, data.game_id, player_id)
+
 	if data.base_character_id is not None:
 		await get_character(session, data.base_character_id, player_id)
 
@@ -91,7 +104,7 @@ async def create_character_sheet(
 		hp_temp=data.hp_temp,
 	)
 	session.add(sheet)
-	await session.flush()  # получаем sheet.id до коммита
+	await session.flush()
 
 	for score in data.ability_scores:
 		session.add(CharacterSheetAbilityScore(
