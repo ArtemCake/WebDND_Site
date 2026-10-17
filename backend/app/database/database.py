@@ -1,4 +1,4 @@
-# backend/app/database/database.py
+# backend/app/Database/database.py
 
 """
 Модуль управления подключениями к базе данных PostgreSQL.
