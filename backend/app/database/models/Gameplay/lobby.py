@@ -1,11 +1,11 @@
-# backend/app/database/models/gameplay/lobby.py
+# backend/app/Database/Models/Gameplay/lobby.py
 
 """Модели игрового процесса: игры, приглашения и участники."""
 
 from Config.imports import (Mapped, mapped_column, relationship, JSONB, text, datetime,
                             PG_UUID, String, Text, Integer, Boolean, DateTime, ForeignKey,
 							ARRAY, datetime, uuid4)
-from backend.app.database.database import Base
+from backend.app.Database.database import Base
 
 
 # --- ИГРЫ ---

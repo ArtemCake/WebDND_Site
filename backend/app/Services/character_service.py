@@ -1,10 +1,10 @@
 # backend/app/Services/character_service.py
 
 from Config.imports import (UUID, HTTPException, status, select, AsyncSession, selectinload)
-from backend.app.database.models.gameplay.characters import (Character, CharacterSheet, CharacterSheetAbilityScore, CharacterInventory)
-from backend.app.database.models.content.skills import Skill, SkillCharacteristicMap
-from backend.app.schemas.character import (CharacterCreate, CharacterUpdate, CharacterSheetCreate, CharacterSheetUpdate)
-from backend.app.database.models.gameplay.lobby import Party
+from backend.app.Database.Models.Gameplay.characters import (Character, CharacterSheet, CharacterSheetAbilityScore, CharacterInventory)
+from backend.app.Database.Models.Content.skills import Skill, SkillCharacteristicMap
+from backend.app.Schemas.character import (CharacterCreate, CharacterUpdate, CharacterSheetCreate, CharacterSheetUpdate)
+from backend.app.Database.Models.Gameplay.lobby import Party
 
 
 # --- Расчётные хелперы (чистые функции, без обращения к БД) ---

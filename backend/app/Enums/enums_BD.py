@@ -1,4 +1,4 @@
-# backend/app/enums/enums_BD.py
+# backend/app/Enums/enums_BD.py
 
 from Config.imports import PG_ENUM, StrEnum
 

@@ -1,10 +1,10 @@
-# backend/app/database/models/gameplay/communication.py
+# backend/app/Database/Models/Gameplay/communication.py
 
 """Модели коммуникации: чаты и сообщения."""
 
 from Config.imports import (String, Text, Boolean, DateTime, ForeignKey,
 					Mapped, mapped_column, relationship, text, PG_UUID, uuid4, datetime)
-from backend.app.database.database import Base
+from backend.app.Database.database import Base
 
 
 # --- ЧАТЫ ---

@@ -1,11 +1,11 @@
-# backend/app/database/models/gameplay/maps.py
+# backend/app/Database/Models/Gameplay/maps.py
 
 """Модели карт, слоев и гексов."""
 
 from Config.imports import (String, Text, Integer, Boolean, DateTime, ForeignKey,
 				Mapped, mapped_column, relationship, JSONB, text, datetime, PG_UUID,
 				datetime, uuid4, Float, ARRAY)
-from backend.app.database.database import Base
+from backend.app.Database.database import Base
 
 
 # --- КАРТЫ КАМПАНИИ ---

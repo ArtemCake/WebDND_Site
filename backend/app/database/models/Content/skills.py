@@ -1,10 +1,10 @@
-# backend/app/database/models/content/skills.py
+# backend/app/Database/Models/Content/skills.py
 
 """Модели характеристик и навыков персонажа."""
 
 from Config.imports import (Mapped, mapped_column, relationship, UniqueConstraint, ForeignKey, text,
 					Text, String, Integer, Boolean, DateTime, PG_UUID, datetime, uuid4)
-from backend.app.database.database import Base
+from backend.app.Database.database import Base
 
 
 # --- НАВЫКИ ---

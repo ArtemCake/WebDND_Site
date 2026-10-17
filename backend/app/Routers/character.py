@@ -1,12 +1,12 @@
 # backend/app/Routers/character.py
 
 from Config.imports import (APIRouter, Depends, status, AsyncSession, UUID)
-from backend.app.database.database import get_async_session
-from backend.app.core.csrf import enforce_csrf
+from backend.app.Database.database import get_async_session
+from backend.app.Core.csrf import enforce_csrf
 from backend.app.Services.user_service import get_current_user
-from backend.app.database.models.core.user import User
-from backend.app.schemas.character import (CharacterCreate, CharacterUpdate, CharacterRead,
-	CharacterSheetCreate, CharacterSheetUpdate, CharacterSheetRead)
+from backend.app.Database.Models.Core.user import User
+from backend.app.Schemas.character import (CharacterCreate, CharacterUpdate, CharacterRead,
+                                           CharacterSheetCreate, CharacterSheetUpdate, CharacterSheetRead)
 from backend.app.Services import character_service as svc
 
 

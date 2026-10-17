@@ -5,13 +5,13 @@
 from Config.Config import settings
 from Config.imports import (APIRouter, Depends, Request, HTMLResponse, JSONResponse,
                             status, HTTPException, CsrfProtect, Form, UUID, AsyncSession)
-from backend.app.database.database import get_async_session
-from backend.app.database.models.core.user import User
-from backend.app.enums.enums_BD import SystemRole, AdminPermission
+from backend.app.Database.database import get_async_session
+from backend.app.Database.Models.Core.user import User
+from backend.app.Enums.enums_BD import SystemRole, AdminPermission
 from backend.app.Services.user_service import soft_delete_user, hard_delete_user, get_user_by_id
 from backend.app.Services.admin_service import (get_admin_user, require_permission, list_users, admin_set_roles, admin_set_permissions,
 	list_reports, update_report, get_report_by_id, list_audit_logs)
-from backend.app.core.csrf import enforce_csrf
+from backend.app.Core.csrf import enforce_csrf
 
 
 router = APIRouter(

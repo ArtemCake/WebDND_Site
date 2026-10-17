@@ -1,10 +1,10 @@
-# backend/app/database/models/content/magic.py
+# backend/app/Database/Models/Content/magic.py
 
 """Модели магии: заклинания, школы, уровни."""
 
 from Config.imports import (Mapped, mapped_column, relationship, JSONB, ARRAY, text, uuid4, UniqueConstraint, Column,
                             DateTime, String, Text, Integer, Boolean, ForeignKey, PG_UUID, datetime)
-from backend.app.database.database import Base
+from backend.app.Database.database import Base
 
 
 # --- ЗАКЛИНАНИЯ ---

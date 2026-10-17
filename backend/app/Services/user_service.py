@@ -1,13 +1,13 @@
 # backend/app/Services/user_service.py
 
 from Config.Config import settings
-from backend.app.core.crypto import hash_email
-from backend.app.database.models.core.user import User
+from backend.app.Core.crypto import hash_email
+from backend.app.Database.Models.Core.user import User
 from Config.imports import (Optional, AsyncSession, select, Depends, HTTPException, status, Path, uuid4, re,
                             jwt, JWTError, datetime, ValidationError, Dict, Any, UploadFile, update, CryptContext,
                             Request, timedelta)
-from backend.app.database.database import get_async_session
-from backend.app.enums.enums_BD import SystemRole, AdminPermission
+from backend.app.Database.database import get_async_session
+from backend.app.Enums.enums_BD import SystemRole, AdminPermission
 from Config.logger import setup_logging
 
 

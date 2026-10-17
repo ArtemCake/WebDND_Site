@@ -1,11 +1,11 @@
-# backend/app/database/models/content/worldbuilding.py
+# backend/app/Database/Models/Content/worldbuilding.py
 
 """Модели лора, языков и бестиария."""
 
 from Config.imports import (Mapped, mapped_column, relationship, ARRAY, PG_UUID, uuid4,
 						DateTime, datetime, String, Text, Boolean, ForeignKey, text,
 						JSONB, Integer, Float, backref, Column, Table, Index, UniqueConstraint)
-from backend.app.database.database import Base
+from backend.app.Database.database import Base
 
 
 # ЭТА ТАБЛИЦА ДОЛЖНА БЫТЬ ГЛОБАЛЬНОЙ (вне классов)

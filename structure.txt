@@ -16,42 +16,54 @@ vite.config.js
 
 CONFIG
 Config/
-├── __init__.py
-├── Config.py
-├── csrf_config.py
-├── imports.py
-└── logger.py
+	├── __init__.py
+	├── Config.py
+	├── csrf_config.py
+	├── imports.py
+	└── logger.py
 
 BACKEND
 backend/
 ├── __init__.py
 ├── app/
 │   ├── __init__.py
-│   ├── core/
+│   ├── Core/
+│   ├── __init__.py
 │   │   ├── csrf.py
 │   │   └── crypto.py
+│   ├── Enums/
+│   ├── __init__.py
+│   │   └── enums_BD.py
 │   ├── Routers/
+│   ├── __init__.py
 │   │   ├── admin.py
 │   │   ├── api.py
 │   │   ├── character.py
+│   │   ├── lobby.py
 │   │   ├── profile.py
 │   │   └── web.py
+│   ├── Schemas/
+│   ├── __init__.py
+│   │   ├── auth.py
+│   │   ├── character.py
+│   │   └── lobby.py
 │   ├── Services/
 │   │   ├── __init__.py
 │   │   ├── admin_service.py
 │   │   ├── legal_service.py
+│   │   ├── lobby_service.py
 │   │   ├── mfa_service.py
 │   │   ├── mail_service.py
 │   │   ├── rate_limit_service.py
 │   │   ├── security_service.py
 │   │   └── user_service.py
-│   └── database/
+│   └── Database/
 │       ├── __init__.py
 │       ├── _models.py
 │       ├── database.py
-│       └── models/
+│       └── Models/
 │           ├── __init__.py
-│           ├── content/
+│           ├── Content/
 │           │   ├── __init__.py
 │           │   ├── character_building.py
 │           │   ├── equipment.py
@@ -59,19 +71,19 @@ backend/
 │           │   ├── magic.py
 │           │   ├── skills.py
 │           │   └── worldbuilding.py
-│           ├── core/
+│           ├── Core/
 │           │   ├── __init__.py
 │           │   └── user.py
-│           ├── gameplay/
+│           ├── Gameplay/
 │           │   ├── __init__.py
 │           │   ├── characters.py
 │           │   ├── communication.py
 │           │   ├── lobby.py
 │           │   └── maps.py
-│           ├── medias/
+│           ├── Medias/
 │           │   ├── __init__.py
 │           │   └── media.py
-│           └── systems/
+│           └── Systems/
 │               ├── __init__.py
 │               └── system.py            ⚠ cache.py отсутствует
 └── db_migrations/

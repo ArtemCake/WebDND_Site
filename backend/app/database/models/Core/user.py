@@ -1,11 +1,11 @@
-# backend/app/database/models/core/user.py
+# backend/app/Database/Models/Core/user.py
 
 """Модели ядра системы: пользователи, аутентификация и социальные связи."""
 
 from Config.imports import (Mapped, mapped_column, relationship, PG_UUID, datetime, uuid4, ForeignKey, text, ARRAY,
                             JSONB, func, CheckConstraint, String, Boolean, DateTime, Text,  UniqueConstraint, Integer)
-from backend.app.database.database import Base
-from backend.app.enums.enums_BD import SystemRole, AdminPermission
+from backend.app.Database.database import Base
+from backend.app.Enums.enums_BD import SystemRole, AdminPermission
 
 
 class User(Base):
@@ -84,12 +84,12 @@ class User(Base):
 
 	@property
 	def email(self) -> str:
-		from backend.app.core.crypto import decrypt_value
+		from backend.app.Core.crypto import decrypt_value
 		return decrypt_value(self.email_encrypted)
 
 	@email.setter
 	def email(self, value: str) -> None:
-		from backend.app.core.crypto import encrypt_value, hash_email
+		from backend.app.Core.crypto import encrypt_value, hash_email
 		self.email_encrypted = encrypt_value(value)
 		self.email_hash = hash_email(value)
 

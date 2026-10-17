@@ -1,10 +1,10 @@
-# backend/app/database/models/content/game_systems.py
+# backend/app/Database/Models/Content/game_systems.py
 
 """Модели игровых систем (D&D, Pathfinder и др.) и домашних правил."""
 
 from Config.imports import (String, Text, Boolean, DateTime, ForeignKey, PG_UUID,
 	Mapped, mapped_column, relationship, JSONB, text, datetime, uuid4)
-from backend.app.database.database import Base
+from backend.app.Database.database import Base
 
 
 class GameSystem(Base):

@@ -1,10 +1,10 @@
-# backend/app/database/models/content/character_building.py
+# backend/app/Database/Models/Content/character_building.py
 
 """Модели билдинга персонажа: расы, классы, предыстории."""
 
 from Config.imports import (DateTime, String, Text, Integer, Boolean, ForeignKey, Table, List,
 	Mapped, mapped_column, relationship, JSONB, text, PG_UUID, ARRAY, datetime, uuid4, Column, backref)
-from backend.app.database.database import Base
+from backend.app.Database.database import Base
 
 
 race_languages = Table( "race_languages", Base.metadata,

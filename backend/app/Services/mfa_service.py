@@ -11,7 +11,7 @@ Argon2id-хеш через тот же pwd_context, что и у паролей 
 from Config.imports import (AsyncSession, select, delete, Fernet, InvalidToken, pyotp, secrets,
                             hashlib, base64)
 from Config.Config import settings
-from backend.app.database.models.core.user import User, MFADevice
+from backend.app.Database.Models.Core.user import User, MFADevice
 from backend.app.Services.user_service import pwd_context
 
 

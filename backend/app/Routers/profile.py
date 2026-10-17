@@ -1,17 +1,18 @@
 # backend/app/Routers/profile.py
+
 from backend.app.Services import mfa_service
-from backend.app.database.database import get_async_session
+from backend.app.Database.database import get_async_session
 from Config.Config import settings
 from Config.imports import (JSONResponse, HTMLResponse, APIRouter, Depends, HTTPException, Literal,
                             status, UploadFile, File, Request, EmailStr, BaseModel, Field, AsyncSession, UUID,
                             Form, CsrfProtect)
 from backend.app.Services.security_service import create_verification_token
 from backend.app.Services.mail_service import mail_service
-from backend.app.database.models.core.user import User
+from backend.app.Database.Models.Core.user import User
 from backend.app.Services.user_service import (update_user_profile, change_password, get_current_user, update_own_roles,
                                                verify_user_password)
-from backend.app.enums.enums_BD import SystemRole
-from backend.app.core.csrf import enforce_csrf
+from backend.app.Enums.enums_BD import SystemRole
+from backend.app.Core.csrf import enforce_csrf
 
 
 router = APIRouter(

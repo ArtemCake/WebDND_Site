@@ -3,7 +3,7 @@
 from Config.Config import settings
 from Config.imports import (OAuth2PasswordBearer, jwt, JWTError, datetime, timedelta, hashlib,
                             update, secrets, AsyncSession, JSONResponse, Response)
-from backend.app.database.models.core.user import User
+from backend.app.Database.Models.Core.user import User
 from Config.logger import setup_logging
 
 

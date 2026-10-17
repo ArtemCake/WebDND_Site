@@ -1,11 +1,11 @@
-# backend/app/database/models/gameplay/characters.py
+# backend/app/Database/Models/Gameplay/characters.py
 
 """Модели персонажей игроков и НПС в контексте игры."""
 
 from Config.imports import (Mapped, mapped_column, relationship, JSONB, ARRAY, text,
 							String, Text, Integer, Boolean, DateTime, ForeignKey, PG_UUID,
 							datetime, uuid4)
-from backend.app.database.database import Base
+from backend.app.Database.database import Base
 
 
 class Character(Base):

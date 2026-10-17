@@ -2,14 +2,14 @@
 
 from Config.Config import settings
 from Config import csrf_config
-from backend.app.database.database import engine
+from backend.app.Database.database import engine
 import backend.app.Routers.api as api_module
 import backend.app.Routers.web as web_module
 import backend.app.Routers.profile as profile_module
 import backend.app.Routers.character as character_module
 import backend.app.Routers.admin as admin_module
 from Config.logger import setup_logging
-from backend.app.database.database import AsyncSessionLocal
+from backend.app.Database.database import AsyncSessionLocal
 from backend.app.Services.user_service import get_optional_user, ensure_initial_admin
 from Config.imports import (FastAPI, asynccontextmanager, CORSMiddleware, Path, StaticFiles,
                             Jinja2Templates, SessionMiddleware, CsrfProtectError, CsrfProtect,

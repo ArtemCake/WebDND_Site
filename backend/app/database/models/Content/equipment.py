@@ -1,10 +1,10 @@
-# backend/app/database/models/content/equipment.py
+# backend/app/Database/Models/Content/equipment.py
 
 """Модели снаряжения, предметов и их иерархии."""
 
 from Config.imports import (Mapped, mapped_column, relationship, JSONB, UniqueConstraint, text, Float, backref,
 					DateTime, String, Text, Integer, Boolean, ForeignKey, PG_UUID, uuid4, datetime)
-from backend.app.database.database import Base
+from backend.app.Database.database import Base
 
 
 # --- СНАРЯЖЕНИЕ (БАЗОВЫЙ ПРЕДМЕТ) ---

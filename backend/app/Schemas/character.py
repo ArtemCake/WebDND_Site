@@ -1,4 +1,4 @@
-# backend/app/schemas/character.py
+# backend/app/Schemas/character.py
 
 from Config.imports import (BaseModel, Field, ConfigDict, Optional, datetime)
 

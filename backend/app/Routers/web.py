@@ -4,7 +4,7 @@ from Config.Config import settings
 from Config.imports import (os, URLSafeTimedSerializer, HTTPException, TemplateNotFound, CsrfProtect,
                             Request, APIRouter, HTMLResponse, status, RedirectResponse, Depends)
 from backend.app.Services.user_service import get_optional_user
-from backend.app.database.models.core.user import User
+from backend.app.Database.Models.Core.user import User
 from backend.app.Services.legal_service import render_legal_markdown
 
 

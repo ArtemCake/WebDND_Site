@@ -1,10 +1,10 @@
-# backend/app/database/models/systems/system.py
+# backend/app/Database/Models/Systems/system.py
 
 """Служебные модели: логи, кэш и системные события."""
 
 from Config.imports import (String, Text, Integer, Boolean, DateTime, ForeignKey,
 						Mapped, mapped_column, relationship, JSONB, text, PG_UUID, datetime, uuid4)
-from backend.app.database.database import Base
+from backend.app.Database.database import Base
 
 
 # --- ЛОГИ АУДИТА ---

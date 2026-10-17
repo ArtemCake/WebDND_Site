@@ -1,4 +1,4 @@
-# backend/app/core/crypto.py
+# backend/app/Core/crypto.py
 
 from Config.imports import (Fernet, hashlib, hmac)
 from Config.Config import settings

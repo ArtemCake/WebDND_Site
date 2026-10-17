@@ -1,4 +1,4 @@
-# backend/app/schemas/auth.py
+# backend/app/Schemas/auth.py
 
 from Config.imports import (BaseModel, EmailStr, Field, field_validator, re, Optional)
 

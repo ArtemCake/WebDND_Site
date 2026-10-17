@@ -1,11 +1,11 @@
-# backend/app/database/models/medias/media.py
+# backend/app/Database/Models/Medias/media.py
 
 """Модели медиа-контента и ассетов."""
 
 from Config.imports import (String, Text, Integer, Boolean, DateTime, ForeignKey,
 						Mapped, mapped_column, relationship, text, PG_UUID, JSONB,datetime,
 						uuid4)
-from backend.app.database.database import Base
+from backend.app.Database.database import Base
 
 
 # --- ЗАГРУЖЕННЫЕ АССЕТЫ ---
