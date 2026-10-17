@@ -22,8 +22,8 @@ class Equipment(Base):
 	name: Mapped[str] = mapped_column(String(100), nullable=False)
 	slug: Mapped[str] = mapped_column(String(100), nullable=False)
 	description: Mapped[str | None] = mapped_column(Text, nullable=True)
-	item_type_id: Mapped[int] = mapped_column(Integer, ForeignKey("item_types.id"), nullable=False, index=True)
-	rarity_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("rarities.id"), nullable=True, index=True)
+	item_type_id: Mapped[PG_UUID] = mapped_column(Integer, ForeignKey("item_types.id"), nullable=False, index=True)
+	rarity_id: Mapped[PG_UUID | None] = mapped_column(Integer, ForeignKey("rarities.id"), nullable=True, index=True)
 	weight: Mapped[float | None] = mapped_column(Float, nullable=True) # в фунтах
 	cost: Mapped[dict | None] = mapped_column( JSONB, nullable=True, server_default=text("'{\"gp\": 0}'::jsonb") )
 	# Структура: {"cp": 5, "sp": 0, "ep": 0, "gp": 10, "pp": 0}
@@ -56,7 +56,7 @@ class ItemType(Base):
 	"""
 	__tablename__ = "item_types"
 
-	id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+	id: Mapped[PG_UUID] = mapped_column(Integer, primary_key=True, autoincrement=True)
 	system_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True)
 	# Для Homebrew
 	owner_id: Mapped[PG_UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
@@ -88,7 +88,7 @@ class Rarity(Base):
 	"""
 	__tablename__ = "rarities"
 
-	id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+	id: Mapped[PG_UUID] = mapped_column(Integer, primary_key=True, autoincrement=True)
 	system_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True)
 	# Для Homebrew
 	owner_id: Mapped[PG_UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
@@ -125,8 +125,8 @@ class Weapon(Base):
 
 	id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
 	base_item_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("equipment.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
-	weapon_type_id: Mapped[int] = mapped_column(Integer, ForeignKey("weapon_types.id"), nullable=False, index=True)
-	weapon_class_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("weapon_classes.id"), nullable=True, index=True)
+	weapon_type_id: Mapped[PG_UUID] = mapped_column(Integer, ForeignKey("weapon_types.id"), nullable=False, index=True)
+	weapon_class_id: Mapped[PG_UUID | None] = mapped_column(Integer, ForeignKey("weapon_classes.id"), nullable=True, index=True)
 	# Боевая механика
 	damage_dice: Mapped[str] = mapped_column(String(20), nullable=False) # e.g. '1d8', '2d6'
 	damage_type_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("damage_types.id", ondelete="SET NULL"), nullable=True, index=True)
@@ -155,7 +155,7 @@ class WeaponType(Base):
 	"""
 	__tablename__ = "weapon_types"
 
-	id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+	id: Mapped[PG_UUID] = mapped_column(Integer, primary_key=True, autoincrement=True)
 	system_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True)
 	# Для Homebrew
 	owner_id: Mapped[PG_UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
@@ -186,9 +186,9 @@ class WeaponClass(Base):
 	"""
 	__tablename__ = "weapon_classes"
 
-	id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+	id: Mapped[PG_UUID] = mapped_column(Integer, primary_key=True, autoincrement=True)
 	system_id: Mapped[PG_UUID] = mapped_column(	PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True)
-	type_id: Mapped[int] = mapped_column(Integer, ForeignKey("weapon_types.id", ondelete="CASCADE"), nullable=False, index=True)
+	type_id: Mapped[PG_UUID] = mapped_column(Integer, ForeignKey("weapon_types.id", ondelete="CASCADE"), nullable=False, index=True)
 	name: Mapped[str] = mapped_column(String(50), nullable=False) # e.g. 'Sword', 'Bow'
 	slug: Mapped[str] = mapped_column(String(50), nullable=False)
 	description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -215,7 +215,7 @@ class Armor(Base):
 	id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
 
 	base_item_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("equipment.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
-	armor_type_id: Mapped[int] = mapped_column(Integer, ForeignKey("armor_types.id"), nullable=False, index=True)
+	armor_type_id: Mapped[PG_UUID] = mapped_column(Integer, ForeignKey("armor_types.id"), nullable=False, index=True)
 	# Механика защиты
 	base_armor_class: Mapped[int] = mapped_column(Integer, nullable=False) # Базовый КЗ без модификаторов
 	requires_stealth_disadvantage: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -241,7 +241,7 @@ class ArmorType(Base):
 	"""
 	__tablename__ = "armor_types"
 
-	id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+	id: Mapped[PG_UUID] = mapped_column(Integer, primary_key=True, autoincrement=True)
 	system_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True)
 	# Для Homebrew
 	owner_id: Mapped[PG_UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
@@ -272,7 +272,7 @@ class MagicalItem(Base):
 	id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
 
 	base_item_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("equipment.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
-	rarity_id: Mapped[int] = mapped_column(Integer, ForeignKey("rarities.id"), nullable=False, index=True)
+	rarity_id: Mapped[PG_UUID] = mapped_column(Integer, ForeignKey("rarities.id"), nullable=False, index=True)
 	# Механика активации согласно ТЗ
 	requires_attunement: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 	attunement_restriction: Mapped[str | None] = mapped_column(String(255), nullable=True)
