@@ -1,21 +1,19 @@
 # backend/app/Routers/character.py
 
-from uuid import UUID
-from fastapi import APIRouter, Depends, status
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from backend.app.core.csrf import enforce_csrf
+from Config.imports import (APIRouter, Depends, status, AsyncSession, UUID)
 from backend.app.database.database import get_async_session
+from backend.app.core.csrf import enforce_csrf
 from backend.app.Services.user_service import get_current_user
 from backend.app.database.models.core.user import User
 from backend.app.schemas.character import (CharacterCreate, CharacterUpdate, CharacterRead,
 	CharacterSheetCreate, CharacterSheetUpdate, CharacterSheetRead)
 from backend.app.Services import character_service as svc
 
-router = APIRouter(prefix="/characters", tags=["characters"])
 
-
-# --- Character: шаблоны персонажей пользователя ---
+router = APIRouter(
+	prefix="/characters",
+	tags=["characters"]
+)
 
 @router.get("", response_model=list[CharacterRead])
 async def list_characters(
@@ -59,8 +57,6 @@ async def delete_character(
 		current_user: User = Depends(get_current_user),
 ):
 	await svc.delete_character(session, character_id, current_user.id)
-
-# --- CharacterSheet: игровой лист внутри конкретной игры ---
 
 @router.post("/{character_id}/sheets", response_model=CharacterSheetRead,
              status_code=status.HTTP_201_CREATED, dependencies=[Depends(enforce_csrf)])
