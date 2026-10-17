@@ -1,6 +1,6 @@
 # backend/app/Schemas/character.py
 
-from Config.imports import (BaseModel, Field, ConfigDict, Optional, datetime)
+from Config.imports import (BaseModel, Field, ConfigDict, Optional, datetime, UUID)
 
 
 # --- Ability scores (сила, ловкость, телосложение, интеллект, мудрость, харизма) ---
@@ -65,6 +65,7 @@ class CharacterRead(BaseModel):
 
 class CharacterSheetCreate(BaseModel):
 	character_id: int
+	game_id: UUID
 	party_id: Optional[int] = None
 	npc_id: Optional[int] = None
 	version_note: Optional[str] = Field(default=None, max_length=200)
@@ -87,6 +88,7 @@ class CharacterSheetRead(BaseModel):
 
 	id: int
 	character_id: int
+	game_id: UUID
 	party_id: Optional[int]
 	npc_id: Optional[int]
 	version_note: Optional[str]

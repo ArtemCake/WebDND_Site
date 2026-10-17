@@ -83,38 +83,26 @@ async def delete_character(session: AsyncSession, character_id: UUID, owner_id: 
 
 # --- CharacterSheet (лист в рамках конкретной игры) ---
 
-async def create_character_sheet(
-		session: AsyncSession, player_id: UUID, data: CharacterSheetCreate,
-) -> CharacterSheet:
-	await _ensure_active_party_member(session, data.game_id, player_id)
-
-	if data.base_character_id is not None:
-		await get_character(session, data.base_character_id, player_id)
-
-	sheet = CharacterSheet(
-		player_id=player_id,
-		game_id=data.game_id,
-		base_character_id=data.base_character_id,
-		party_id=data.party_id,
-		version_note=data.version_note,
-		stats_json=data.stats_json,
-		saves_json=data.saves_json,
-		skills_json=data.skills_json,
-		hp_current=data.hp_current,
-		hp_temp=data.hp_temp,
+async def create_character_sheet(session, user_id: UUID, data: CharacterSheetCreate) -> CharacterSheet:
+	# проверяем, что пользователь состоит в этой игре (есть активная запись в Party)
+	party_check = await session.execute(
+		select(Party).where(Party.game_id == data.game_id, Party.user_id == user_id, Party.is_active.is_(True))
 	)
+	if party_check.scalar_one_or_none() is None:
+		raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Вы не состоите в этой игре")
+
+	if data.party_id is not None:
+		# party_id, если указан, обязан принадлежать той же игре
+		party = await session.get(Party, data.party_id)
+		if party is None or party.game_id != data.game_id:
+			raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="party_id не относится к указанной игре")
+
+	sheet = CharacterSheet(game_id=data.game_id, **data.model_dump(exclude={"game_id"}))
 	session.add(sheet)
-	await session.flush()
-
-	for score in data.ability_scores:
-		session.add(CharacterSheetAbilityScore(
-			character_sheet_id=sheet.id,
-			characteristic_id=score.characteristic_id,
-			value=score.value,
-		))
-
 	await session.commit()
-	return await get_character_sheet(session, sheet.id, player_id)
+	await session.refresh(sheet)
+	return sheet
+
 
 async def get_character_sheet(session: AsyncSession, sheet_id: UUID, player_id: UUID) -> CharacterSheet:
 	stmt = (
