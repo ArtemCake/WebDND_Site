@@ -25,6 +25,7 @@ import hashlib
 import markdown
 from queue import Queue
 from typing import Literal
+from abc import ABC, abstractmethod
 from sqlalchemy import select, delete
 from enum import Enum, StrEnum
 from cryptography.fernet import Fernet, InvalidToken

@@ -48,6 +48,10 @@ backend/
 │   │   ├── character.py
 │   │   └── lobby.py
 │   ├── Services/
+│   │   ├── Models/
+│   │   │    ├── __init__.py
+│   │   │    ├── dnd5e_system.py
+│   │   │    └── i_system.py
 │   │   ├── __init__.py
 │   │   ├── admin_service.py
 │   │   ├── legal_service.py
