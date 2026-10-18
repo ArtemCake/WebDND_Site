@@ -3,7 +3,7 @@
 """Модели карт, слоев и гексов."""
 
 from Config.imports import (String, Text, Integer, Boolean, DateTime, ForeignKey,
-				Mapped, mapped_column, relationship, JSONB, text, datetime, PG_UUID,
+				Mapped, mapped_column, relationship, JSONB, text, UniqueConstraint, PG_UUID,
 				datetime, uuid4, Float, ARRAY)
 from backend.app.Database.database import Base
 
@@ -64,30 +64,33 @@ class MapLayer(Base):
 		return f"<MapLayer(id='{self.id}', type='{self.layer_type}', z={self.z_index})>"
 
 # --- ГЕКСЫ КАРТЫ ---
+# backend/app/Database/Models/Gameplay/maps.py — изменения в MapHex
+
 class MapHex(Base):
-	"""
-	Процедурный гекс карты.
-	Реализует требование ТЗ о процедурной генерации местности, где каждое поле карты — это гекс.
-	Использует систему индексации Uber H3 для сверхбыстрого поиска соседей и зон видимости.
-	"""
 	__tablename__ = "map_hexes"
 
 	id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
 	layer_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("map_layers.id", ondelete="CASCADE"), nullable=False, index=True)
-	h3_index: Mapped[str] = mapped_column(String(15), nullable=False, unique=True) # Индекс H3 (например, 8928307fffffffff)
+	axial_q: Mapped[int] = mapped_column(Integer, nullable=False)
+	axial_r: Mapped[int] = mapped_column(Integer, nullable=False)
+	h3_index: Mapped[str] = mapped_column(String(40), nullable=False)
+	# больше не вычислительный ключ — только метка для отладки/логов; реальная геометрия идёт через axial_q/axial_r
 	terrain_type_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("item_types.id"), nullable=True, index=True)
-	elevation: Mapped[int] = mapped_column(Integer, default=0, nullable=False) # Высота в метрах/футах
-	is_visible_to_players: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False) # Для динамического тумана войны
-	explored_by_players: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False) # Память игрока
+	elevation: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+	is_visible_to_players: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+	explored_by_players: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 	data_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True, server_default="{}")
-	# {"cover": true, "difficult_terrain": true, "water_depth": 5}
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
 	layer: Mapped["MapLayer"] = relationship("MapLayer", back_populates="hexes")
-	terrain_type: Mapped["ItemType"] = relationship("ItemType") # Ссылка на справочник типов предметов как террейна
+	terrain_type: Mapped["ItemType"] = relationship("ItemType")
+
+	__table_args__ = (
+		UniqueConstraint("layer_id", "axial_q", "axial_r", name="uq_map_hexes_layer_axial"),
+	)
 
 	def __repr__(self) -> str:
-		return f"<MapHex(id='{self.id}', h3='{self.h3_index}')>"
+		return f"<MapHex(id='{self.id}', q={self.axial_q}, r={self.axial_r})>"
 
 # --- ОБЪЕКТЫ НА КАРТЕ ---
 class MapObject(Base):
@@ -157,6 +160,10 @@ class Token(Base):
 	character_sheet: Mapped["CharacterSheet"] = relationship("CharacterSheet")
 	npc: Mapped["NPC"] = relationship("NPC")
 	current_map: Mapped["CampaignMap | None"] = relationship("CampaignMap", back_populates="tokens", lazy="selectin")
+	current_hex_id: Mapped[PG_UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("map_hexes.id", ondelete="SET NULL"), nullable=True, index=True)
+	vision_radius_cells: Mapped[int] = mapped_column(Integer, default=6, nullable=False)
+	# дальность зрения токена в гексах; 6 — разумное значение по умолчанию, при необходимости можно переопределить на уровне токена
+	current_hex: Mapped["MapHex | None"] = relationship("MapHex")
 
 	def __repr__(self) -> str:
 		return f"<Token(id='{self.id}', name='{self.display_name or 'Unnamed'}', x={self.grid_x})>"

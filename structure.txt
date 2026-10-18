@@ -46,6 +46,7 @@ backend/
 │   ├── __init__.py
 │   │   ├── auth.py
 │   │   ├── character.py
+│   │   ├── maps.py
 │   │   └── lobby.py
 │   ├── Services/
 │   │   ├── GameSystems/
@@ -55,6 +56,11 @@ backend/
 │   │   │    └── i_system.py
 │   │   ├── __init__.py
 │   │   ├── admin_service.py
+│   │   ├── hex_geometry.py
+│   │   ├── map_hex_service.py
+│   │   ├── dice_service.py
+│   │   ├── initiative_service.py
+│   │   ├── token_service.py
 │   │   ├── legal_service.py
 │   │   ├── lobby_service.py
 │   │   ├── mfa_service.py

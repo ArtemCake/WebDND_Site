@@ -1,8 +1,8 @@
 """add_tables
 
-Revision ID: 700229629c44
+Revision ID: 2f2a24dbb145
 Revises: 
-Create Date: 2026-10-18 15:00:18.926348
+Create Date: 2026-10-18 16:05:01.755206
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '700229629c44'
+revision: str = '2f2a24dbb145'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -1316,7 +1316,9 @@ def upgrade() -> None:
     op.create_table('map_hexes',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('layer_id', sa.UUID(), nullable=False),
-    sa.Column('h3_index', sa.String(length=15), nullable=False),
+    sa.Column('axial_q', sa.Integer(), nullable=False),
+    sa.Column('axial_r', sa.Integer(), nullable=False),
+    sa.Column('h3_index', sa.String(length=40), nullable=False),
     sa.Column('terrain_type_id', sa.Integer(), nullable=True),
     sa.Column('elevation', sa.Integer(), nullable=False),
     sa.Column('is_visible_to_players', sa.Boolean(), nullable=False),
@@ -1327,7 +1329,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['layer_id'], ['map_layers.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['terrain_type_id'], ['item_types.id'], ),
     sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('h3_index')
+    sa.UniqueConstraint('layer_id', 'axial_q', 'axial_r', name='uq_map_hexes_layer_axial')
     )
     op.create_index(op.f('ix_map_hexes_layer_id'), 'map_hexes', ['layer_id'], unique=False)
     op.create_index(op.f('ix_map_hexes_terrain_type_id'), 'map_hexes', ['terrain_type_id'], unique=False)
@@ -1394,7 +1396,10 @@ def upgrade() -> None:
     sa.Column('controlled_by_ids', postgresql.ARRAY(sa.UUID()), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('current_hex_id', sa.UUID(), nullable=True),
+    sa.Column('vision_radius_cells', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['character_sheet_id'], ['character_sheets.id'], ondelete='SET NULL'),
+    sa.ForeignKeyConstraint(['current_hex_id'], ['map_hexes.id'], ondelete='SET NULL'),
     sa.ForeignKeyConstraint(['current_map_id'], ['campaign_maps.id'], ondelete='SET NULL'),
     sa.ForeignKeyConstraint(['npc_id'], ['npcs.id'], ondelete='SET NULL'),
     sa.ForeignKeyConstraint(['owner_id'], ['users.id'], ondelete='CASCADE'),
@@ -1402,6 +1407,7 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_tokens_character_sheet_id'), 'tokens', ['character_sheet_id'], unique=False)
+    op.create_index(op.f('ix_tokens_current_hex_id'), 'tokens', ['current_hex_id'], unique=False)
     op.create_index(op.f('ix_tokens_current_map_id'), 'tokens', ['current_map_id'], unique=False)
     op.create_index(op.f('ix_tokens_npc_id'), 'tokens', ['npc_id'], unique=False)
     op.create_index(op.f('ix_tokens_owner_id'), 'tokens', ['owner_id'], unique=False)
@@ -1416,6 +1422,7 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_tokens_owner_id'), table_name='tokens')
     op.drop_index(op.f('ix_tokens_npc_id'), table_name='tokens')
     op.drop_index(op.f('ix_tokens_current_map_id'), table_name='tokens')
+    op.drop_index(op.f('ix_tokens_current_hex_id'), table_name='tokens')
     op.drop_index(op.f('ix_tokens_character_sheet_id'), table_name='tokens')
     op.drop_table('tokens')
     op.drop_index(op.f('ix_messages_sender_id'), table_name='messages')

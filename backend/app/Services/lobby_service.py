@@ -123,3 +123,7 @@ async def claim_invite(session: AsyncSession, token: str, user_id: UUID) -> Part
 	await session.commit()
 	await session.refresh(party)
 	return party
+
+async def is_game_master(session: AsyncSession, game_id: UUID, user_id: UUID) -> bool:
+	game = await session.get(Game, game_id)
+	return game is not None and game.master_id == user_id

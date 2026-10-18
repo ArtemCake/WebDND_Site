@@ -6,7 +6,7 @@ from Config.imports import (BaseModel, Field, Literal, Optional, UUID, datetime)
 GameStatus = Literal["draft", "active", "archived"]
 PrivacyLevel = Literal["public", "friends_only", "invite_only", "private"]
 PartyRole = Literal["player", "assistant_dm", "banned"]
-
+AdvantageType = Literal["advantage", "disadvantage"]
 
 # --- Game ---
 
@@ -77,3 +77,31 @@ class InviteRead(BaseModel):
 
 class InviteClaim(BaseModel):
 	token: str
+
+# --- Dice Roll ---
+
+class DiceRollIn(BaseModel):
+	formula: str = Field(min_length=2, max_length=100)
+	advantage: Optional[AdvantageType] = None
+	is_gm_hidden: bool = False
+	context_type: Optional[str] = None
+	context_target_id: Optional[UUID] = None
+
+
+class DiceRollRead(BaseModel):
+	id: UUID
+	session_id: Optional[UUID]
+	roller_id: Optional[UUID]
+	npc_id: Optional[UUID]
+	party_id: Optional[UUID]
+	formula: str
+	result_total: int
+	individual_results: list[int]
+	advantage: Optional[AdvantageType]
+	is_gm_hidden: bool
+	context_type: Optional[str]
+	context_target_id: Optional[UUID]
+	created_at: datetime
+
+	class Config:
+		from_attributes = True
