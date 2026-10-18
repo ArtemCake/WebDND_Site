@@ -1,6 +1,6 @@
 # backend/app/Schemas/character.py
 
-from Config.imports import (BaseModel, Field, ConfigDict, Optional, datetime, UUID)
+from Config.imports import (BaseModel, Field, ConfigDict, Optional, datetime, UUID, computed_field)
 
 
 # --- Ability scores (сила, ловкость, телосложение, интеллект, мудрость, харизма) ---
@@ -10,12 +10,22 @@ class AbilityScoreIn(BaseModel):
 	base_value: int = Field(ge=1, le=30)
 	bonus: int = Field(default=0, ge=-10, le=10)
 
-class AbilityScoreRead(AbilityScoreIn):
+class AbilityScoreRead(BaseModel):
 	model_config = ConfigDict(from_attributes=True)
 
 	id: UUID
-	final_value: int
-	modifier: int  # (final_value - 10) // 2, считается в сервисе
+	characteristic_id: UUID
+	value: int
+
+	@computed_field
+	@property
+	def final_value(self) -> int:
+		return self.value
+
+	@computed_field
+	@property
+	def modifier(self) -> int:
+		return (self.value - 10) // 2
 
 # --- Инвентарь листа ---
 
@@ -45,6 +55,7 @@ class InventoryItemRead(BaseModel):
 	ammo_count: Optional[int]
 	charges_current: Optional[int]
 	custom_name: Optional[str]
+	notes_json: Optional[dict]
 
 # --- Заклинания ---
 
@@ -129,18 +140,22 @@ class CharacterSheetRead(BaseModel):
 	model_config = ConfigDict(from_attributes=True)
 
 	id: UUID
-	character_id: UUID
+	character_id: Optional[UUID] = Field(validation_alias="base_character_id")
 	game_id: UUID
 	party_id: Optional[UUID]
 	npc_id: Optional[UUID]
 	version_note: Optional[str]
-	proficiency_bonus: int
 	hp_current: int
 	hp_temp: int
-	death_save_successes: int
-	death_save_failures: int
-	conditions: list[str]
+	death_save_successes: int = Field(validation_alias="death_saves_success")
+	death_save_failures: int = Field(validation_alias="death_saves_failure")
+	conditions: Optional[dict] = Field(validation_alias="conditions_json")
 	is_active_in_game: bool
+	stats_json: dict
+	saves_json: dict
+	skills_json: dict
+	spell_slots_json: dict
 	ability_scores: list[AbilityScoreRead]
 	inventory: list[InventoryItemRead]
+	spells: list[SpellOnSheetRead]
 	created_at: datetime

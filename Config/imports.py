@@ -79,7 +79,7 @@ from itsdangerous import URLSafeTimedSerializer
 from pathlib import Path
 
 # --- Валидация API (Pydantic) ---
-from pydantic import ValidationError, EmailStr, BaseModel, Field, field_validator, ConfigDict
+from pydantic import ValidationError, EmailStr, BaseModel, Field, field_validator, ConfigDict, computed_field
 from fastapi.exceptions import RequestValidationError
 
 # --- Роутинг ---
