@@ -13,6 +13,7 @@ import { initNetworkErrorHandlers } from './modules/network-error-handler.js';
 import { initDiceRollers } from './modules/dice-roller.js';
 import { AppConfig } from './config/appConfig.js';
 import { Dnd5eSystem } from './modules/systems/Dnd5eSystem.js';
+import { initLobby } from './modules/lobby.js';
 
 // --- ТОЧКА ВХОДА ПРИЛОЖЕНИЯ ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -56,6 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 2. Навешивание обработчиков для форм авторизации (регистрация/вход)
     setupAuthHandlers();
     protectPrivateRoutes();
+    initLobby();
 
     // 3. Инициализация игровой карты (Canvas + PixiJS)
     const canvasRoot = document.getElementById('game-canvas-root');

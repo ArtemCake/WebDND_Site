@@ -102,7 +102,7 @@ backend/
     ├── README
     ├── env.py
     ├── script.py.mako
-    └── versions/                        ⚠ пусто — ни одной миграции не закоммичено
+    └── versions/
 
 FRONTEND
 frontend/
