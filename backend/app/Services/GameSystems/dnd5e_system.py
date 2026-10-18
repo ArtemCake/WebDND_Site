@@ -1,6 +1,6 @@
 # backend/app/Services/GameSystems/admin_service.py
 
-from Config.imports import ( Any)
+from Config.imports import (Any)
 from backend.app.Services.GameSystems.i_system import ISystem
 
 
