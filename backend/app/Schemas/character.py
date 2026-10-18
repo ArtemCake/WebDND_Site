@@ -20,15 +20,52 @@ class AbilityScoreRead(AbilityScoreIn):
 # --- Инвентарь листа ---
 
 class InventoryItemIn(BaseModel):
-	equipment_id: UUID
-	quantity: int = Field(default=1, ge=1)
-	is_equipped: bool = False
-	notes: Optional[str] = Field(default=None, max_length=500)
+	item_id: UUID
+	quantity: int = 1
+	custom_name: Optional[str] = None
 
-class InventoryItemRead(InventoryItemIn):
+class InventoryItemUpdate(BaseModel):
+	quantity: Optional[int] = None
+	is_attuned: Optional[bool] = None
+	is_equipped: Optional[bool] = None
+	equipped_slot: Optional[str] = None
+	ammo_count: Optional[int] = None
+	charges_current: Optional[int] = None
+	custom_name: Optional[str] = None
+	notes_json: Optional[dict] = None
+
+class InventoryItemRead(BaseModel):
 	model_config = ConfigDict(from_attributes=True)
+	sheet_id: UUID
+	item_id: UUID
+	quantity: int
+	is_attuned: bool
+	is_equipped: bool
+	equipped_slot: Optional[str]
+	ammo_count: Optional[int]
+	charges_current: Optional[int]
+	custom_name: Optional[str]
 
+# --- Заклинания ---
+
+class SpellOnSheetIn(BaseModel):
+	spell_id: UUID
+	is_known: bool = True
+	is_prepared: bool = False
+
+class SpellOnSheetUpdate(BaseModel):
+	is_known: Optional[bool] = None
+	is_prepared: Optional[bool] = None
+
+class SpellOnSheetRead(BaseModel):
+	model_config = ConfigDict(from_attributes=True)
 	id: UUID
+	spell_id: UUID
+	is_known: bool
+	is_prepared: bool
+
+class SpellSlotsUpdate(BaseModel):
+	slots: dict[str, dict[str, int]]  # {"1": {"max": 4, "used": 1}}
 
 # --- Character: "шаблон" персонажа вне конкретной игры ---
 
@@ -60,6 +97,11 @@ class CharacterRead(BaseModel):
 	experience: int
 	hp_max: int
 	created_at: datetime
+	stats_json: dict
+	saves_json: dict
+	skills_json: dict
+	spell_slots_json: dict
+	spells: list[SpellOnSheetRead]
 
 # --- CharacterSheet: конкретный игровой лист (в партии или НПС) ---
 

@@ -1,12 +1,16 @@
 # backend/app/Services/character_service.py
 
 from Config.imports import (UUID, HTTPException, status, select, AsyncSession, selectinload)
+from backend.app.Database.Models.Content.equipment import Equipment
+from backend.app.Database.Models.Content.magic import Spell
 from backend.app.Database.Models.Gameplay.lobby import Party, Game
 from backend.app.Database.Models.Content.game_systems import GameSystem
 from backend.app.Services.GameSystems.registry import get_system
-from backend.app.Database.Models.Gameplay.characters import (Character, CharacterSheet, CharacterSheetAbilityScore, CharacterInventory)
+from backend.app.Database.Models.Gameplay.characters import (Character, CharacterSheet, CharacterSheetAbilityScore,
+                                                             CharacterInventory, CharacterSheetSpell)
 from backend.app.Database.Models.Content.skills import Skill, SkillCharacteristicMap
-from backend.app.Schemas.character import (CharacterCreate, CharacterUpdate, CharacterSheetCreate, CharacterSheetUpdate)
+from backend.app.Schemas.character import (CharacterCreate, CharacterUpdate, CharacterSheetCreate, CharacterSheetUpdate,
+                                           SpellOnSheetUpdate, SpellOnSheetIn, InventoryItemIn, InventoryItemUpdate)
 
 
 _SHEET_UPDATE_FIELD_MAP = {
@@ -162,3 +166,89 @@ async def update_character_sheet(
 	await session.commit()
 	return sheet
 
+async def add_spell_to_sheet(session, sheet_id: UUID, player_id: UUID, data: SpellOnSheetIn) -> CharacterSheetSpell:
+	sheet = await get_character_sheet(session, sheet_id, player_id)
+	spell = await session.get(Spell, data.spell_id)
+	if spell is None:
+		raise HTTPException(status.HTTP_404_NOT_FOUND, "Заклинание не найдено")
+	existing = await session.scalar(
+		select(CharacterSheetSpell).where(
+			CharacterSheetSpell.sheet_id == sheet.id,
+			CharacterSheetSpell.spell_id == data.spell_id,
+			)
+	)
+	if existing is not None:
+		raise HTTPException(status.HTTP_400_BAD_REQUEST, "Заклинание уже добавлено на лист")
+	link = CharacterSheetSpell(sheet_id=sheet.id, spell_id=data.spell_id, is_known=data.is_known, is_prepared=data.is_prepared)
+	session.add(link)
+	await session.commit()
+	await session.refresh(link)
+	return link
+
+async def update_sheet_spell(session, sheet_id: UUID, spell_link_id: UUID, player_id: UUID, data: SpellOnSheetUpdate) -> CharacterSheetSpell:
+	sheet = await get_character_sheet(session, sheet_id, player_id)
+	link = await session.get(CharacterSheetSpell, spell_link_id)
+	if link is None or link.sheet_id != sheet.id:
+		raise HTTPException(status.HTTP_404_NOT_FOUND, "Заклинание на листе не найдено")
+	for field, value in data.model_dump(exclude_unset=True).items():
+		setattr(link, field, value)
+	await session.commit()
+	return link
+
+async def remove_spell_from_sheet(session, sheet_id: UUID, spell_link_id: UUID, player_id: UUID) -> None:
+	sheet = await get_character_sheet(session, sheet_id, player_id)
+	link = await session.get(CharacterSheetSpell, spell_link_id)
+	if link is None or link.sheet_id != sheet.id:
+		raise HTTPException(status.HTTP_404_NOT_FOUND, "Заклинание на листе не найдено")
+	await session.delete(link)
+	await session.commit()
+
+async def update_spell_slots(session, sheet_id: UUID, player_id: UUID, slots: dict) -> CharacterSheet:
+	sheet = await get_character_sheet(session, sheet_id, player_id)
+	sheet.spell_slots_json = slots
+	await session.commit()
+	await session.refresh(sheet)
+	return sheet
+
+async def add_item_to_inventory(session: AsyncSession, sheet_id: UUID, player_id: UUID, data: InventoryItemIn) -> CharacterInventory:
+	sheet = await get_character_sheet(session, sheet_id, player_id)
+	item = await session.get(Equipment, data.item_id)
+	if item is None:
+		raise HTTPException(status.HTTP_404_NOT_FOUND, "Предмет снаряжения не найден")
+
+	existing = await session.get(CharacterInventory, (sheet.id, data.item_id))
+	if existing is not None:
+		existing.quantity += data.quantity
+		await session.commit()
+		return existing
+
+	entry = CharacterInventory(
+		sheet_id=sheet.id,
+		item_id=data.item_id,
+		quantity=data.quantity,
+		custom_name=data.custom_name,
+	)
+	session.add(entry)
+	await session.commit()
+	await session.refresh(entry)
+	return entry
+
+async def update_inventory_item(
+		session: AsyncSession, sheet_id: UUID, item_id: UUID, player_id: UUID, data: InventoryItemUpdate,
+) -> CharacterInventory:
+	sheet = await get_character_sheet(session, sheet_id, player_id)
+	entry = await session.get(CharacterInventory, (sheet.id, item_id))
+	if entry is None:
+		raise HTTPException(status.HTTP_404_NOT_FOUND, "Предмет в инвентаре не найден")
+	for field, value in data.model_dump(exclude_unset=True).items():
+		setattr(entry, field, value)
+	await session.commit()
+	return entry
+
+async def remove_item_from_inventory(session: AsyncSession, sheet_id: UUID, item_id: UUID, player_id: UUID) -> None:
+	sheet = await get_character_sheet(session, sheet_id, player_id)
+	entry = await session.get(CharacterInventory, (sheet.id, item_id))
+	if entry is None:
+		raise HTTPException(status.HTTP_404_NOT_FOUND, "Предмет в инвентаре не найден")
+	await session.delete(entry)
+	await session.commit()

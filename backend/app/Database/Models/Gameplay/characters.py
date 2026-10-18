@@ -2,7 +2,7 @@
 
 """Модели персонажей игроков и НПС в контексте игры."""
 
-from Config.imports import (Mapped, mapped_column, relationship, JSONB, ARRAY, text,
+from Config.imports import (Mapped, mapped_column, relationship, JSONB, UniqueConstraint, text,
 							String, Text, Integer, Boolean, DateTime, ForeignKey, PG_UUID,
 							datetime, uuid4)
 from backend.app.Database.database import Base
@@ -49,6 +49,8 @@ class CharacterSheet(Base):
 	# {"str": 16, "dex_mod": 2, "proficiency_bonus": 3}
 	saves_json: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default="{}")
 	skills_json: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default="{}")
+	spell_slots_json: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default="{}")
+	# {"1": {"max": 4, "used": 1}, "2": {"max": 3, "used": 0}, ...}
 	hp_current: Mapped[int] = mapped_column(Integer, nullable=False)
 	hp_temp: Mapped[int] = mapped_column(Integer, default=0, nullable=False) # Временные HP
 	death_saves_success: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -65,6 +67,9 @@ class CharacterSheet(Base):
 	ability_scores: Mapped[list["CharacterSheetAbilityScore"]] = relationship( "CharacterSheetAbilityScore", back_populates="sheet", cascade="all, delete-orphan" )
 	party: Mapped["Party | None"] = relationship("Party", back_populates="character_sheets")
 	game: Mapped["Game"] = relationship("Game", back_populates="character_sheets")
+	spells: Mapped[list["CharacterSheetSpell"]] = relationship(
+		"CharacterSheetSpell", back_populates="sheet", cascade="all, delete-orphan", lazy="selectin"
+	)
 
 	def __repr__(self) -> str:
 		return f"<CharacterSheet(id='{self.id}', player_id='{self.player_id}')>"
@@ -98,6 +103,7 @@ class CharacterInventory(Base):
 	def __repr__(self) -> str:
 		return f"<CharacterInventory(sheet='{self.sheet_id}', item='{self.item.name if self.item else 'Unknown'}')>"
 
+# --- НАВЫКИ ПЕРСОНАЖА ---
 class CharacterSheetAbilityScore(Base):
 	"""
 	Конкретное значение характеристики для конкретного листа персонажа.
@@ -116,3 +122,27 @@ class CharacterSheetAbilityScore(Base):
 
 	def __repr__(self) -> str:
 		return f"<CharAbility(sheet='{self.character_sheet_id}', char='{self.characteristic_id}', val={self.value})>"
+
+# --- ЗАКЛИНАНИЯ ПЕРСОНАЖА ---
+class CharacterSheetSpell(Base):
+	"""
+	Заклинание на листе персонажа: known и prepared хранятся раздельно,
+	т.к. у части классов (жрец, друид) список известных шире подготовленных.
+	"""
+	__tablename__ = "character_sheet_spells"
+
+	id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
+	sheet_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("character_sheets.id", ondelete="CASCADE"), nullable=False, index=True)
+	spell_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("spells.id", ondelete="CASCADE"), nullable=False, index=True)
+	is_known: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+	is_prepared: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
+	sheet: Mapped["CharacterSheet"] = relationship("CharacterSheet", back_populates="spells")
+	spell: Mapped["Spell"] = relationship("Spell")
+
+	__table_args__ = (
+		UniqueConstraint("sheet_id", "spell_id", name="uq_character_sheet_spells_sheet_spell"),
+	)
+
+	def __repr__(self) -> str:
+		return f"<CharacterSheetSpell(sheet_id='{self.sheet_id}', spell_id='{self.spell_id}', prepared={self.is_prepared})>"

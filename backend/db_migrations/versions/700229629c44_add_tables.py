@@ -1,8 +1,8 @@
 """add_tables
 
-Revision ID: 0375a741f2a2
+Revision ID: 700229629c44
 Revises: 
-Create Date: 2026-10-18 11:47:26.498969
+Create Date: 2026-10-18 15:00:18.926348
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '0375a741f2a2'
+revision: str = '700229629c44'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -1130,6 +1130,7 @@ def upgrade() -> None:
     sa.Column('stats_json', postgresql.JSONB(astext_type=sa.Text()), server_default='{}', nullable=False),
     sa.Column('saves_json', postgresql.JSONB(astext_type=sa.Text()), server_default='{}', nullable=False),
     sa.Column('skills_json', postgresql.JSONB(astext_type=sa.Text()), server_default='{}', nullable=False),
+    sa.Column('spell_slots_json', postgresql.JSONB(astext_type=sa.Text()), server_default='{}', nullable=False),
     sa.Column('hp_current', sa.Integer(), nullable=False),
     sa.Column('hp_temp', sa.Integer(), nullable=False),
     sa.Column('death_saves_success', sa.Integer(), nullable=False),
@@ -1298,6 +1299,20 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('sheet_id', 'item_id')
     )
     op.create_index(op.f('ix_character_inventory_npc_id'), 'character_inventory', ['npc_id'], unique=False)
+    op.create_table('character_sheet_spells',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('sheet_id', sa.UUID(), nullable=False),
+    sa.Column('spell_id', sa.UUID(), nullable=False),
+    sa.Column('is_known', sa.Boolean(), nullable=False),
+    sa.Column('is_prepared', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['sheet_id'], ['character_sheets.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['spell_id'], ['spells.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('sheet_id', 'spell_id', name='uq_character_sheet_spells_sheet_spell')
+    )
+    op.create_index(op.f('ix_character_sheet_spells_sheet_id'), 'character_sheet_spells', ['sheet_id'], unique=False)
+    op.create_index(op.f('ix_character_sheet_spells_spell_id'), 'character_sheet_spells', ['spell_id'], unique=False)
     op.create_table('map_hexes',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('layer_id', sa.UUID(), nullable=False),
@@ -1415,6 +1430,9 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_map_hexes_terrain_type_id'), table_name='map_hexes')
     op.drop_index(op.f('ix_map_hexes_layer_id'), table_name='map_hexes')
     op.drop_table('map_hexes')
+    op.drop_index(op.f('ix_character_sheet_spells_spell_id'), table_name='character_sheet_spells')
+    op.drop_index(op.f('ix_character_sheet_spells_sheet_id'), table_name='character_sheet_spells')
+    op.drop_table('character_sheet_spells')
     op.drop_index(op.f('ix_character_inventory_npc_id'), table_name='character_inventory')
     op.drop_table('character_inventory')
     op.drop_index(op.f('ix_character_ability_scores_characteristic_id'), table_name='character_ability_scores')
