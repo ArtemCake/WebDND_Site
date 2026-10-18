@@ -7,6 +7,7 @@ import backend.app.Routers.api as api_module
 import backend.app.Routers.web as web_module
 import backend.app.Routers.profile as profile_module
 import backend.app.Routers.character as character_module
+import backend.app.Routers.lobby as lobby_module
 import backend.app.Routers.admin as admin_module
 from Config.logger import setup_logging
 from backend.app.Database.database import AsyncSessionLocal
@@ -264,6 +265,7 @@ app.include_router(web_module.router)
 app.include_router(profile_module.router)
 app.include_router(admin_module.router)
 app.include_router(character_module.router)
+app.include_router(lobby_module.router)
 
 if __name__ == "__main__":
 	uvicorn.run(
