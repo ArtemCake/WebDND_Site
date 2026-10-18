@@ -11,8 +11,11 @@ from backend.app.Services import token_service, dice_service, initiative_service
 from backend.app.Services.lobby_service import is_game_master
 from backend.app.Database.Models.Gameplay.lobby import Session as GameSession
 
-router = APIRouter(prefix="/sessions", tags=["game_state"])
 
+router = APIRouter(
+	prefix="/sessions",
+	tags=["game_state"]
+)
 
 # --- Tokens ---
 
