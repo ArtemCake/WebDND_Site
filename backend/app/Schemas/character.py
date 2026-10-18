@@ -159,3 +159,8 @@ class CharacterSheetRead(BaseModel):
 	inventory: list[InventoryItemRead]
 	spells: list[SpellOnSheetRead]
 	created_at: datetime
+
+	@computed_field
+	@property
+	def proficiency_bonus(self) -> Optional[int]:
+		return self.stats_json.get("proficiency_bonus")
