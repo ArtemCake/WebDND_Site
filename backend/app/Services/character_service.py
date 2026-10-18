@@ -1,14 +1,21 @@
 # backend/app/Services/character_service.py
 
 from Config.imports import (UUID, HTTPException, status, select, AsyncSession, selectinload)
+from backend.app.Database.Models.Gameplay.lobby import Party, Game
+from backend.app.Database.Models.Content.game_systems import GameSystem
+from backend.app.Services.GameSystems.registry import get_system
 from backend.app.Database.Models.Gameplay.characters import (Character, CharacterSheet, CharacterSheetAbilityScore, CharacterInventory)
 from backend.app.Database.Models.Content.skills import Skill, SkillCharacteristicMap
 from backend.app.Schemas.character import (CharacterCreate, CharacterUpdate, CharacterSheetCreate, CharacterSheetUpdate)
-from backend.app.Database.Models.Gameplay.lobby import Party
 
+
+_SHEET_UPDATE_FIELD_MAP = {
+	"death_save_successes": "death_saves_success",
+	"death_save_failures": "death_saves_failure",
+	"conditions": "conditions_json",
+}
 
 # --- Расчётные хелперы (чистые функции, без обращения к БД) ---
-
 def ability_modifier(value: int) -> int:
 	return (value - 10) // 2
 
@@ -48,7 +55,6 @@ async def _ensure_active_party_member(session: AsyncSession, game_id: UUID, user
 		)
 
 # --- CRUD Character (глобальный шаблон персонажа) ---
-
 async def create_character(session: AsyncSession, owner_id: UUID, data: CharacterCreate) -> Character:
 	character = Character(owner_id=owner_id, **data.model_dump())
 	session.add(character)
@@ -82,7 +88,6 @@ async def delete_character(session: AsyncSession, character_id: UUID, owner_id: 
 	await session.commit()
 
 # --- CharacterSheet (лист в рамках конкретной игры) ---
-
 async def create_character_sheet(session, user_id: UUID, data: CharacterSheetCreate) -> CharacterSheet:
 	await _ensure_active_party_member(session, data.game_id, user_id)
 
@@ -91,11 +96,41 @@ async def create_character_sheet(session, user_id: UUID, data: CharacterSheetCre
 		if party is None or party.game_id != data.game_id:
 			raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="party_id не относится к указанной игре")
 
+	game = await session.get(Game, data.game_id)
+	if game is None:
+		raise HTTPException(status.HTTP_404_NOT_FOUND, "Игра не найдена")
+	game_system = await session.get(GameSystem, game.system_id)
+	if game_system is None:
+		raise HTTPException(status.HTTP_404_NOT_FOUND, "Игровая система не найдена")
+	system = get_system(game_system.slug)
+
+	stats_json = system.default_stats_json()
+	stats_json["proficiency_bonus"] = data.proficiency_bonus
+	stats_json = system.validate_stats(stats_json)
+	saves_json = system.validate_saves(system.default_saves_json())
+	skills_json = system.validate_skills(system.default_skills_json())
+
 	sheet = CharacterSheet(
+		player_id=user_id,
 		game_id=data.game_id,
-		base_character_id=data.character_id,   # маппинг: схема → модель
-		**data.model_dump(exclude={"game_id", "character_id"}),
+		base_character_id=data.character_id,
+		party_id=data.party_id,
+		npc_id=data.npc_id,
+		version_note=data.version_note,
+		hp_current=data.hp_current,
+		hp_temp=data.hp_temp,
+		stats_json=stats_json,
+		saves_json=saves_json,
+		skills_json=skills_json,
 	)
+	sheet.ability_scores = [
+		CharacterSheetAbilityScore(
+			characteristic_id=item.characteristic_id,
+			value=system.calculate_ability(item.base_value, item.bonus)[0],
+		)
+		for item in data.ability_scores
+	]
+
 	session.add(sheet)
 	await session.commit()
 	await session.refresh(sheet)
@@ -122,6 +157,8 @@ async def update_character_sheet(
 ) -> CharacterSheet:
 	sheet = await get_character_sheet(session, sheet_id, player_id)
 	for field, value in data.model_dump(exclude_unset=True).items():
-		setattr(sheet, field, value)
+		model_field = _SHEET_UPDATE_FIELD_MAP.get(field, field)
+		setattr(sheet, model_field, value)
 	await session.commit()
 	return sheet
+

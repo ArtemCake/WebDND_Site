@@ -6,7 +6,7 @@ from Config.imports import (BaseModel, Field, ConfigDict, Optional, datetime, UU
 # --- Ability scores (сила, ловкость, телосложение, интеллект, мудрость, харизма) ---
 
 class AbilityScoreIn(BaseModel):
-	characteristic_id: int
+	characteristic_id: UUID
 	base_value: int = Field(ge=1, le=30)
 	bonus: int = Field(default=0, ge=-10, le=10)
 
@@ -43,7 +43,7 @@ class CharacterCreate(BaseModel):
 class CharacterUpdate(BaseModel):
 	name: Optional[str] = Field(default=None, min_length=1, max_length=120)
 	race_id: Optional[UUID] = None
-	background_id: Optional[int] = None
+	background_id: Optional[UUID] = None
 	level: Optional[int] = Field(default=None, ge=1, le=20)
 	experience: Optional[int] = Field(default=None, ge=0)
 	hp_max: Optional[int] = Field(default=None, ge=1)
