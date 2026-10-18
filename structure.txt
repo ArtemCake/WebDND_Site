@@ -39,6 +39,7 @@ backend/
 │   │   ├── admin.py
 │   │   ├── api.py
 │   │   ├── game_state.py
+│   │   ├── content.py
 │   │   ├── character.py
 │   │   ├── lobby.py
 │   │   ├── profile.py
@@ -46,6 +47,7 @@ backend/
 │   ├── Schemas/
 │   ├── __init__.py
 │   │   ├── auth.py
+│   │   ├── content.py
 │   │   ├── character.py
 │   │   ├── maps.py
 │   │   └── lobby.py
@@ -57,6 +59,7 @@ backend/
 │   │   │    └── i_system.py
 │   │   ├── __init__.py
 │   │   ├── admin_service.py
+│   │   ├── content_service.py
 │   │   ├── hex_geometry.py
 │   │   ├── map_hex_service.py
 │   │   ├── dice_service.py

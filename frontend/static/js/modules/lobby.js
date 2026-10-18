@@ -236,11 +236,35 @@ async function leaveGame(gameId) {
 	}
 }
 
+async function loadGameSystems() {
+	const select = document.getElementById('lobby-system-select');
+	if (!select) return;
+
+	try {
+		const resp = await fetch('/game-systems', { credentials: 'include' });
+		if (!resp.ok) {
+			select.innerHTML = '<option value="" disabled selected>Не удалось загрузить</option>';
+			return;
+		}
+		const systems = await resp.json();
+		if (!systems.length) {
+			select.innerHTML = '<option value="" disabled selected>Нет доступных систем</option>';
+			return;
+		}
+		select.innerHTML = systems
+			.map(s => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.name)}</option>`)
+			.join('');
+	} catch (e) {
+		select.innerHTML = '<option value="" disabled selected>Ошибка сети</option>';
+	}
+}
+
 export async function initLobby() {
 	if (!document.getElementById('games-list')) return;
 
 	currentUserId = await fetchCurrentUserId();
 	await loadGames();
+	await loadGameSystems();
 
 	document.body.addEventListener('click', (e) => {
 		const trigger = e.target.closest('[data-lobby-action]');

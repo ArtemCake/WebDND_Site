@@ -38,8 +38,10 @@
 				<textarea name="description" maxlength="2000"></textarea>
 			</label>
 			<label>
-				ID игровой системы (UUID)
-				<input type="text" name="system_id" required placeholder="например, 3fa85f64-5717-4562-b3fc-2c963f66afa6">
+				Игровая система
+				<select name="system_id" id="lobby-system-select" required>
+					<option value="" disabled selected>Загрузка...</option>
+				</select>
 			</label>
 			<label>
 				Приватность
