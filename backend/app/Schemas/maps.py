@@ -66,3 +66,57 @@ class TokenRead(BaseModel):
 
 	class Config:
 		from_attributes = True
+
+class HexGridGenerateIn(BaseModel):
+	rows: int = Field(gt=0, le=200)
+	cols: int = Field(gt=0, le=200)
+
+class MapLayerRead(BaseModel):
+	id: UUID
+	map_id: UUID
+	name: str
+	layer_type: str
+	z_index: int
+
+	class Config:
+		from_attributes = True
+
+class FogOfWarRecalcIn(BaseModel):
+	viewer_token_ids: list[UUID]
+
+class FogOfWarRecalcOut(BaseModel):
+	visible_hex_ids: list[UUID]
+
+class MapCreate(BaseModel):
+	game_id: UUID
+	session_id: Optional[UUID] = None
+	title: str = Field(max_length=255)
+	map_type: str  # 'image_upload' | 'procedural_generation'
+	background_image_url: Optional[str] = Field(default=None, max_length=1000)
+	grid_settings_json: Optional[dict] = None
+	fog_of_war_enabled: bool = True
+	lighting_model: str = "basic"
+
+class MapUpdate(BaseModel):
+	title: Optional[str] = Field(default=None, max_length=255)
+	background_image_url: Optional[str] = Field(default=None, max_length=1000)
+	grid_settings_json: Optional[dict] = None
+	fog_of_war_enabled: Optional[bool] = None
+	lighting_model: Optional[str] = None
+
+class MapRead(BaseModel):
+	id: UUID
+	game_id: UUID
+	session_id: Optional[UUID]
+	title: str
+	map_type: str
+	background_image_url: Optional[str]
+	grid_settings_json: dict
+	fog_of_war_enabled: bool
+	lighting_model: str
+	is_active_in_session: bool
+	created_at: datetime
+	updated_at: datetime
+
+	class Config:
+		from_attributes = True

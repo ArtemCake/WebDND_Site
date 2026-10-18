@@ -103,3 +103,49 @@ async def recalc_fog_of_war(session: AsyncSession, map_id: UUID, viewer_token_id
 
 	await session.commit()
 	return {h.id for h in all_hexes if (h.axial_q, h.axial_r) in visible_coords}
+
+async def create_map(session: AsyncSession, master_id: UUID, data: "MapCreate") -> CampaignMap:
+	if not await is_game_master(session, data.game_id, master_id):
+		raise HTTPException(status.HTTP_403_FORBIDDEN, "Только мастер игры может создавать карты")
+
+	campaign_map = CampaignMap(**data.model_dump())
+	session.add(campaign_map)
+	await session.commit()
+	await session.refresh(campaign_map)
+	return campaign_map
+
+async def list_maps_for_game(session: AsyncSession, game_id: UUID) -> list[CampaignMap]:
+	result = await session.execute(select(CampaignMap).where(CampaignMap.game_id == game_id))
+	return list(result.scalars().all())
+
+async def get_map(session: AsyncSession, map_id: UUID) -> CampaignMap:
+	campaign_map = await session.get(CampaignMap, map_id)
+	if campaign_map is None:
+		raise HTTPException(status.HTTP_404_NOT_FOUND, "Карта не найдена")
+	return campaign_map
+
+async def update_map(session: AsyncSession, map_id: UUID, master_id: UUID, data: "MapUpdate") -> CampaignMap:
+	campaign_map = await _get_map_and_check_master(session, map_id, master_id)
+	for field, value in data.model_dump(exclude_unset=True).items():
+		setattr(campaign_map, field, value)
+	await session.commit()
+	await session.refresh(campaign_map)
+	return campaign_map
+
+async def set_active_map(session: AsyncSession, map_id: UUID, master_id: UUID) -> CampaignMap:
+	"""Делает карту активной в текущей игровой сессии, снимая активность с остальных карт этой игры."""
+	campaign_map = await _get_map_and_check_master(session, map_id, master_id)
+	others_stmt = select(CampaignMap).where(
+		CampaignMap.game_id == campaign_map.game_id, CampaignMap.id != campaign_map.id
+	)
+	for other in (await session.execute(others_stmt)).scalars().all():
+		other.is_active_in_session = False
+	campaign_map.is_active_in_session = True
+	await session.commit()
+	await session.refresh(campaign_map)
+	return campaign_map
+
+async def delete_map(session: AsyncSession, map_id: UUID, master_id: UUID) -> None:
+	campaign_map = await _get_map_and_check_master(session, map_id, master_id)
+	await session.delete(campaign_map)
+	await session.commit()
