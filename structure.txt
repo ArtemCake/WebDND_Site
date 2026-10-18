@@ -38,6 +38,7 @@ backend/
 │   ├── __init__.py
 │   │   ├── admin.py
 │   │   ├── api.py
+│   │   ├── game_state.py
 │   │   ├── character.py
 │   │   ├── lobby.py
 │   │   ├── profile.py

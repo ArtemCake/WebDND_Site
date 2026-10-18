@@ -7,7 +7,9 @@ from backend.app.Services.user_service import get_current_user
 from backend.app.Database.Models.Core.user import User
 from backend.app.Schemas.character import (CharacterCreate, CharacterUpdate, CharacterRead,
                                            CharacterSheetCreate, CharacterSheetUpdate, CharacterSheetRead,
-                                           SpellSlotsUpdate, SpellOnSheetUpdate, SpellOnSheetRead, SpellOnSheetIn)
+                                           SpellSlotsUpdate, SpellOnSheetUpdate, SpellOnSheetRead, SpellOnSheetIn,
+                                           InventoryItemRead, InventoryItemIn, InventoryItemUpdate)
+
 from backend.app.Services import character_service as svc
 
 

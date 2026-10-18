@@ -6,7 +6,8 @@ from backend.app.Core.csrf import enforce_csrf
 from backend.app.Services.user_service import get_current_user
 from backend.app.Database.Models.Core.user import User
 from backend.app.Schemas.lobby import (GameCreate, GameUpdate, GameRead,
-	PartyRead, PartyRoleUpdate,	InviteCreate, InviteRead, InviteClaim)
+                                       PartyRead, PartyRoleUpdate, InviteCreate, InviteRead, InviteClaim,
+                                       SessionCreate, SessionUpdate, SessionRead)
 from backend.app.Services import lobby_service as svc
 
 
@@ -21,7 +22,6 @@ async def list_games(
 		current_user: User = Depends(get_current_user),
 ):
 	return await svc.list_games_for_user(session, current_user.id)
-
 
 @router.post("", response_model=GameRead, status_code=status.HTTP_201_CREATED,
              dependencies=[Depends(enforce_csrf)])
@@ -103,3 +103,51 @@ async def claim_invite(
 		current_user: User = Depends(get_current_user),
 ):
 	return await svc.claim_invite(session, data.token, current_user.id)
+
+# --- Sessions ---
+@router.post("/{game_id}/sessions", response_model=SessionRead, status_code=status.HTTP_201_CREATED,
+             dependencies=[Depends(enforce_csrf)])
+async def start_session(
+		game_id: UUID,
+		data: SessionCreate,
+		session: AsyncSession = Depends(get_async_session),
+		current_user: User = Depends(get_current_user),
+):
+	return await svc.start_session(session, game_id, current_user.id, data)
+
+@router.get("/{game_id}/sessions", response_model=list[SessionRead])
+async def list_sessions(
+		game_id: UUID,
+		session: AsyncSession = Depends(get_async_session),
+		current_user: User = Depends(get_current_user),
+):
+	return await svc.list_sessions(session, game_id, current_user.id)
+
+@router.get("/{game_id}/sessions/active", response_model=SessionRead)
+async def get_active_session(
+		game_id: UUID,
+		session: AsyncSession = Depends(get_async_session),
+		current_user: User = Depends(get_current_user),
+):
+	return await svc.get_active_session(session, game_id, current_user.id)
+
+@router.patch("/{game_id}/sessions/{session_id}", response_model=SessionRead,
+              dependencies=[Depends(enforce_csrf)])
+async def update_session(
+		game_id: UUID,
+		session_id: UUID,
+		data: SessionUpdate,
+		session: AsyncSession = Depends(get_async_session),
+		current_user: User = Depends(get_current_user),
+):
+	return await svc.update_session(session, session_id, current_user.id, data)
+
+@router.post("/{game_id}/sessions/{session_id}/end", response_model=SessionRead,
+             dependencies=[Depends(enforce_csrf)])
+async def end_session(
+		game_id: UUID,
+		session_id: UUID,
+		session: AsyncSession = Depends(get_async_session),
+		current_user: User = Depends(get_current_user),
+):
+	return await svc.end_session(session, session_id, current_user.id)

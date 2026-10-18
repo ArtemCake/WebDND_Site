@@ -9,6 +9,7 @@ import backend.app.Routers.profile as profile_module
 import backend.app.Routers.character as character_module
 import backend.app.Routers.lobby as lobby_module
 import backend.app.Routers.admin as admin_module
+import backend.app.Routers.game_state as game_state_module
 from Config.logger import setup_logging
 from backend.app.Database.database import AsyncSessionLocal
 from backend.app.Services.user_service import get_optional_user, ensure_initial_admin
@@ -266,6 +267,7 @@ app.include_router(profile_module.router)
 app.include_router(admin_module.router)
 app.include_router(character_module.router)
 app.include_router(lobby_module.router)
+app.include_router(game_state_module.router)
 
 if __name__ == "__main__":
 	uvicorn.run(
