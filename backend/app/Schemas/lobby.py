@@ -87,7 +87,6 @@ class DiceRollIn(BaseModel):
 	context_type: Optional[str] = None
 	context_target_id: Optional[UUID] = None
 
-
 class DiceRollRead(BaseModel):
 	id: UUID
 	session_id: Optional[UUID]
@@ -102,6 +101,25 @@ class DiceRollRead(BaseModel):
 	context_type: Optional[str]
 	context_target_id: Optional[UUID]
 	created_at: datetime
+
+	class Config:
+		from_attributes = True
+
+class SessionCreate(BaseModel):
+	title: Optional[str] = Field(default=None, max_length=255)
+
+class SessionUpdate(BaseModel):
+	title: Optional[str] = Field(default=None, max_length=255)
+	summary_log: Optional[str] = None
+
+class SessionRead(BaseModel):
+	id: UUID
+	game_id: UUID
+	title: Optional[str]
+	summary_log: Optional[str]
+	start_time: datetime
+	end_time: Optional[datetime]
+	is_active: bool
 
 	class Config:
 		from_attributes = True

@@ -1,8 +1,8 @@
 # backend/app/Services/lobby_service.py
 
 from Config.imports import (AsyncSession, HTTPException, status, secrets, UUID, select)
-from backend.app.Database.Models.Gameplay.lobby import Game, Party, Invite
-from backend.app.Schemas.lobby import GameCreate, GameUpdate, InviteCreate
+from backend.app.Schemas.lobby import GameCreate, GameUpdate, InviteCreate, SessionCreate, SessionUpdate
+from backend.app.Database.Models.Gameplay.lobby import Game, Party, Invite, Session as GameSession
 
 
 async def list_games_for_user(session: AsyncSession, user_id: UUID) -> list[Game]:
@@ -127,3 +127,56 @@ async def claim_invite(session: AsyncSession, token: str, user_id: UUID) -> Part
 async def is_game_master(session: AsyncSession, game_id: UUID, user_id: UUID) -> bool:
 	game = await session.get(Game, game_id)
 	return game is not None and game.master_id == user_id
+
+async def start_session(session: AsyncSession, game_id: UUID, master_id: UUID, data: SessionCreate) -> GameSession:
+	await _require_master(session, game_id, master_id)
+
+	active_stmt = select(GameSession).where(GameSession.game_id == game_id, GameSession.is_active.is_(True))
+	if (await session.execute(active_stmt)).scalar_one_or_none() is not None:
+		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="В этой игре уже есть активная сессия")
+
+	game_session = GameSession(game_id=game_id, **data.model_dump())
+	session.add(game_session)
+	await session.commit()
+	await session.refresh(game_session)
+	return game_session
+
+async def list_sessions(session: AsyncSession, game_id: UUID, user_id: UUID) -> list[GameSession]:
+	await get_game(session, game_id, user_id)  # проверка доступа (мастер или участник)
+	result = await session.execute(
+		select(GameSession).where(GameSession.game_id == game_id).order_by(GameSession.start_time.desc())
+	)
+	return list(result.scalars().all())
+
+async def get_active_session(session: AsyncSession, game_id: UUID, user_id: UUID) -> GameSession:
+	await get_game(session, game_id, user_id)
+	result = await session.execute(
+		select(GameSession).where(GameSession.game_id == game_id, GameSession.is_active.is_(True))
+	)
+	game_session = result.scalar_one_or_none()
+	if game_session is None:
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Активная сессия не найдена")
+	return game_session
+
+async def update_session(session: AsyncSession, session_id: UUID, master_id: UUID, data: SessionUpdate) -> GameSession:
+	game_session = await session.get(GameSession, session_id)
+	if game_session is None:
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Сессия не найдена")
+	await _require_master(session, game_session.game_id, master_id)
+	for field, value in data.model_dump(exclude_unset=True).items():
+		setattr(game_session, field, value)
+	await session.commit()
+	await session.refresh(game_session)
+	return game_session
+
+async def end_session(session: AsyncSession, session_id: UUID, master_id: UUID) -> GameSession:
+	from datetime import datetime, timezone
+	game_session = await session.get(GameSession, session_id)
+	if game_session is None:
+		raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Сессия не найдена")
+	await _require_master(session, game_session.game_id, master_id)
+	game_session.is_active = False
+	game_session.end_time = datetime.now(timezone.utc)
+	await session.commit()
+	await session.refresh(game_session)
+	return game_session
