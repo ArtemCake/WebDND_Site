@@ -1,0 +1,145 @@
+<!-- frontend/templates/admin/game_systems.html -->
+
+{% extends "base.html" %}
+
+{% block title %}Игровые системы — {{ project_name }}{% endblock %}
+
+{% block content %}
+<section class="admin-page" data-game-systems-admin>
+	<h1 class="profile-heading">Игровые системы</h1>
+	
+	<p>
+		<a href="/admin/" class="btn btn-outline-primary">
+			В админ-панель
+		</a>
+	</p>
+	
+	<p class="profile-note">
+		Активные системы доступны при создании игры.
+		Деактивация не удаляет существующие игры и связанный контент.
+	</p>
+	
+	<div
+			data-systems-message
+			role="status"
+			aria-live="polite"
+			aria-atomic="true"
+	></div>
+	
+	<section aria-labelledby="system-form-title">
+		<h2 id="system-form-title" data-system-form-title>
+			Новая игровая система
+		</h2>
+		
+		<form data-system-form>
+			<fieldset data-system-fields>
+				<legend>Параметры системы</legend>
+				
+				<p>
+					<label for="system-name">Название</label>
+					<input
+							id="system-name"
+							name="name"
+							type="text"
+							maxlength="100"
+							required
+					>
+				</p>
+				
+				<p>
+					<label for="system-slug">Код системы (slug)</label>
+					<input
+							id="system-slug"
+							name="slug"
+							type="text"
+							maxlength="100"
+							pattern="[a-z0-9]+([-_][a-z0-9]+)*"
+							aria-describedby="system-slug-help"
+							autocomplete="off"
+							spellcheck="false"
+							required
+					>
+					<small id="system-slug-help" class="profile-note">
+						Строчные латинские буквы, цифры, дефисы и
+						подчёркивания. Например: dnd-5e.
+					</small>
+				</p>
+				
+				<p>
+					<label for="system-description">Описание</label>
+					<textarea
+							id="system-description"
+							name="description"
+							rows="4"
+					></textarea>
+				</p>
+				
+				<p>
+					<label for="system-engine">Версия движка правил</label>
+					<input
+							id="system-engine"
+							name="rules_engine_version"
+							type="text"
+							value="1.0"
+							maxlength="20"
+							required
+					>
+				</p>
+				
+				<p>
+					<label>
+						<input
+								name="is_active"
+								type="checkbox"
+								checked
+						>
+						Доступна для новых игр
+					</label>
+				</p>
+				
+				<button
+						type="submit"
+						class="btn btn-primary"
+						data-system-submit
+				>
+					Создать систему
+				</button>
+				
+				<button
+						type="button"
+						class="btn btn-outline-primary"
+						data-system-cancel
+						hidden
+				>
+					Отменить редактирование
+				</button>
+			</fieldset>
+		</form>
+	</section>
+	
+	<section aria-labelledby="systems-list-title">
+		<h2 id="systems-list-title">Справочник систем</h2>
+		
+		<button
+				type="button"
+				class="btn btn-outline-primary"
+				data-systems-refresh
+		>
+			Обновить список
+		</button>
+		
+		<p class="profile-note" data-systems-empty>
+			Список ещё не загружен.
+		</p>
+		
+		<div class="admin-sections" data-systems-list></div>
+	</section>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script
+		type="module"
+		src="{{ static_url('js/modules/admin-game-systems.js') }}"
+></script>
+{% endblock %}

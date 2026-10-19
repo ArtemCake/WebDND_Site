@@ -193,7 +193,6 @@ async def admin_list_game_systems(
 ):
 	return await content_service.list_all_systems(session)
 
-
 # GET /admin/game-systems/{system_id}
 @router.get(
 	"/game-systems/{system_id}",
@@ -233,12 +232,7 @@ async def admin_create_game_system(
 	)
 
 # PATCH /admin/game-systems/{system_id}
-@router.patch(
-	"/game-systems/{system_id}",
-	response_model=GameSystemAdminRead,
-	operation_id="adminUpdateGameSystem",
-	dependencies=[Depends(enforce_csrf)],
-)
+@router.patch("/game-systems/{system_id}",response_model=GameSystemAdminRead,operation_id="adminUpdateGameSystem",dependencies=[Depends(enforce_csrf)])
 async def admin_update_game_system(
 		system_id: UUID,
 		data: GameSystemUpdate,
@@ -252,3 +246,29 @@ async def admin_update_game_system(
 		system_id,
 		data,
 	)
+
+# GET /admin/game-systems
+@router.get("/game-systems",response_class=HTMLResponse,name="admin_game_systems_get",operation_id="adminGameSystemsPage")
+async def admin_game_systems_page(
+		request: Request,
+		user: User = Depends(
+			require_permission(AdminPermission.CONTENT)
+		),
+		csrf_protect: CsrfProtect = Depends(),
+):
+	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+
+	context = {
+		"user": user,
+		"project_name": settings.PROJECT_NAME,
+		"csrf_token": csrf_token,
+	}
+
+	response = request.app.state.templates.TemplateResponse(
+		request=request,
+		name="admin/game_systems.html",
+		context=context,
+	)
+	csrf_protect.set_csrf_cookie(signed_token, response)
+	return response
+

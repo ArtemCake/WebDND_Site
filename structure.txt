@@ -126,6 +126,7 @@ frontend/
 │   │   └── session_dice.html
 │   ├── admin/
 │   │   ├── audit.html
+│   │   ├── game_systems.html
 │   │   ├── dashboard.html
 │   │   ├── reports.html
 │   │   └── users.html
@@ -211,6 +212,7 @@ frontend/
             ├── session-dice.js
             ├── game-state-api.js
             ├── delete-account.js
+            ├── admin-game-systems.js
             ├── map.js
             ├── lobby.js
             ├── dice-roller.js

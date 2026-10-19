@@ -23,7 +23,10 @@
 		</a>
 		{% endif %}
 		{% if 'content' in user.admin_permissions %}
-		<div class="admin-card admin-card--disabled"><strong>Контент</strong><p>Модерация справочников — раздел в разработке.</p></div>
+		<a class="admin-card" href="/admin/game-systems">
+			<strong>Контент</strong>
+			<p>Игровые системы: создание, редактирование и управление доступностью.</p>
+		</a>
 		{% endif %}
 		{% if 'system' in user.admin_permissions %}
 		<div class="admin-card admin-card--disabled"><strong>Система</strong><p>Системные события — раздел в разработке.</p></div>
