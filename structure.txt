@@ -120,6 +120,7 @@ frontend/
 │   ├── reset_password.html
 │   ├── not_found.html
 │   ├── profile.html
+│   ├── game_play.html
 │   ├── register.html
 │   ├── partials/
 │   │   └── session_dice.html

@@ -1,0 +1,66 @@
+<!-- frontend/templates/game_play.html -->
+
+{% extends "base.html" %}
+
+{% block title %}Игровая сессия — WorldLoom{% endblock %}
+
+{% block content %}
+<section class="lobby-page">
+	<header class="lobby-page__header">
+		<h1>Игровая сессия</h1>
+		<a
+				href="{{ request.url_for('games_page_get') }}"
+				class="btn btn-outline-primary"
+		>
+			К списку игр
+		</a>
+	</header>
+	
+	<section aria-labelledby="game-sessions-title">
+		<h2 id="game-sessions-title">Сессии игры</h2>
+		
+		{% if game_sessions %}
+		<ul>
+			{% for item in game_sessions %}
+			<li>
+				<a
+						href="{{ request.url_for('game_play_page_get', game_id=game_id) }}?session_id={{ item.id }}"
+						{% if selected_session and selected_session.id == item.id %}
+						aria-current="page"
+						{% endif %}
+				>
+					{{ item.title or "Без названия" }}
+				</a>
+				<span>
+					— {{ "активна" if item.is_active else "завершена" }}
+				</span>
+			</li>
+			{% endfor %}
+		</ul>
+		{% else %}
+		<p>В этой игре пока нет сессий.</p>
+		{% endif %}
+	</section>
+	
+	{% if selected_session %}
+	<section aria-labelledby="selected-session-title">
+		<h2 id="selected-session-title">
+			{{ selected_session.title or "Сессия без названия" }}
+		</h2>
+		
+		{% if selected_session.summary_log %}
+		<h3>Итоги сессии</h3>
+		<p>{{ selected_session.summary_log }}</p>
+		{% endif %}
+		
+		{% if selected_session.is_active %}
+		{% include "partials/session_dice.html" %}
+		{% else %}
+		<p>Эта сессия завершена. Новые броски здесь недоступны.</p>
+		{% endif %}
+	</section>
+	{% elif game_sessions %}
+	<p>Активной сессии нет. Выберите завершённую из списка.</p>
+	{% endif %}
+</section>
+{% endblock %}

@@ -1,7 +1,7 @@
 # backend/app/Routers/lobby.py
 
 from Config.imports import (APIRouter, Depends, status, AsyncSession, UUID,
-                            Request, HTMLResponse, CsrfProtect)
+                            Request, HTMLResponse, CsrfProtect, HTTPException)
 from backend.app.Database.database import get_async_session
 from backend.app.Core.csrf import enforce_csrf
 from backend.app.Services.user_service import get_current_user
@@ -167,3 +167,56 @@ async def end_session(
 		current_user: User = Depends(get_current_user),
 ):
 	return await svc.end_session(session, session_id, current_user.id)
+
+# GET /games/{game_id}/play
+@router.get(
+	"/{game_id}/play",
+	response_class=HTMLResponse,
+	name="game_play_page_get",
+	operation_id="getGamePlayPage",
+)
+async def get_game_play_page(
+		request: Request,
+		game_id: UUID,
+		session_id: UUID | None = None,
+		session: AsyncSession = Depends(get_async_session),
+		user: User = Depends(get_current_user),
+		csrf_protect: CsrfProtect = Depends(),
+):
+	# Сервис проверяет доступ пользователя к игре.
+	game_sessions = await svc.list_sessions(session, game_id, user.id)
+
+	if session_id is not None:
+		selected_session = next(
+			(item for item in game_sessions if item.id == session_id),
+			None,
+		)
+		if selected_session is None:
+			raise HTTPException(
+				status_code=status.HTTP_404_NOT_FOUND,
+				detail="Сессия этой игры не найдена",
+			)
+	else:
+		selected_session = next(
+			(item for item in game_sessions if item.is_active),
+			None,
+		)
+
+	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+	context = {
+		"user": user,
+		"csrf_token": csrf_token,
+		"game_id": game_id,
+		"game_sessions": game_sessions,
+		"selected_session": selected_session,
+		"session_id": selected_session.id if selected_session else None,
+	}
+
+	templates = request.app.state.templates
+	response = templates.TemplateResponse(
+		request,
+		"game_play.html",
+		context,
+	)
+	csrf_protect.set_csrf_cookie(signed_token, response)
+	return response
