@@ -121,6 +121,8 @@ frontend/
 │   ├── not_found.html
 │   ├── profile.html
 │   ├── register.html
+│   ├── partials/
+│   │   └── session_dice.html
 │   ├── admin/
 │   │   ├── audit.html
 │   │   ├── dashboard.html
@@ -157,6 +159,8 @@ frontend/
     │       │   ├── _admin.scss
     │       │   ├── _landing.scss
     │       │   ├── _legal.scss
+    │       │   ├── _session-dice.scss
+    │       │   ├── _lobby.scss
     │       │   └── _profile.scss
     │       └── toast/_toast.scss
     ├── docs/                       (исходники .md — рендерятся в templates/docs/*.html)
@@ -203,6 +207,8 @@ frontend/
             ├── admin.js
             ├── auth.js
             ├── cookie-banner.js
+            ├── session-dice.js
+            ├── game-state-api.js
             ├── delete-account.js
             ├── map.js
             ├── lobby.js
