@@ -28,6 +28,8 @@ from typing import Literal
 from abc import ABC, abstractmethod
 from sqlalchemy import select, delete
 from enum import Enum, StrEnum
+from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
 from cryptography.fernet import Fernet, InvalidToken
 from datetime import datetime, timedelta
 from functools import lru_cache
