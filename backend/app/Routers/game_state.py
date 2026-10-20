@@ -1,6 +1,6 @@
 # backend/app/Routers/game_state.py
 
-from Config.imports import (APIRouter, Depends, status, AsyncSession, UUID, HTTPException)
+from Config.imports import (APIRouter, Depends, status, AsyncSession, UUID)
 from backend.app.Database.database import get_async_session
 from backend.app.Core.csrf import enforce_csrf
 from backend.app.Services.user_service import get_current_user
@@ -8,8 +8,6 @@ from backend.app.Database.Models.Core.user import User
 from backend.app.Schemas.maps import TokenCreate, TokenUpdate, TokenMove, TokenRead
 from backend.app.Schemas.lobby import DiceRollIn, DiceRollRead
 from backend.app.Services import token_service, dice_service, initiative_service
-from backend.app.Services.lobby_service import is_game_master
-from backend.app.Database.Models.Gameplay.lobby import Session as GameSession
 
 
 router = APIRouter(
@@ -28,13 +26,17 @@ async def create_token(
 ):
 	return await token_service.create_token(session, current_user.id, data)
 
+# GET /sessions/{session_id}/tokens
 @router.get("/{session_id}/tokens", response_model=list[TokenRead], operation_id="listTokens")
-async def list_tokens(
-		session_id: UUID,
+async def list_tokens(session_id: UUID,
 		session: AsyncSession = Depends(get_async_session),
 		current_user: User = Depends(get_current_user),
 ):
-	return await token_service.list_tokens_for_session(session, session_id)
+	return await token_service.list_tokens_for_session(
+		session,
+		session_id,
+		current_user.id,
+	)
 
 @router.patch("/tokens/{token_id}", response_model=TokenRead, operation_id="updateToken",
               dependencies=[Depends(enforce_csrf)])
@@ -110,14 +112,15 @@ async def roll_dice(
 ):
 	return await dice_service.roll_dice(session, session_id, current_user.id, party_id, data)
 
-@router.get("/{session_id}/rolls", response_model=list[DiceRollRead], operation_id="listRolls")
+# GET /sessions/{session_id}/rolls
+@router.get("/{session_id}/rolls",response_model=list[DiceRollRead],operation_id="listRolls")
 async def list_rolls(
 		session_id: UUID,
 		session: AsyncSession = Depends(get_async_session),
 		current_user: User = Depends(get_current_user),
 ):
-	game_session = await session.get(GameSession, session_id)
-	if game_session is None:
-		raise HTTPException(status.HTTP_404_NOT_FOUND, "Сессия не найдена")
-	viewer_is_master = await is_game_master(session, game_session.game_id, current_user.id)
-	return await dice_service.list_session_rolls(session, session_id, viewer_is_master)
+	return await dice_service.list_session_rolls(
+		session,
+		session_id,
+		current_user.id,
+	)

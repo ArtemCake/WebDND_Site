@@ -9,7 +9,7 @@ async def list_games_for_user(session: AsyncSession, user_id: UUID) -> list[Game
 	result = await session.execute(
 		select(Game)
 		.join(Party, Party.game_id == Game.id)
-		.where(Party.user_id == user_id, Party.is_active.is_(True))
+		.where(Party.user_id == user_id, Party.is_active.is_(True), Party.role_in_game != "banned")
 	)
 	return list(result.scalars().all())
 
@@ -37,12 +37,49 @@ async def _require_master(session: AsyncSession, game_id: UUID, user_id: UUID) -
 
 async def get_game(session: AsyncSession, game_id: UUID, user_id: UUID) -> Game:
 	game = await _get_game_or_404(session, game_id)
-	member = await session.execute(
-		select(Party).where(Party.game_id == game_id, Party.user_id == user_id)
-	)
-	if member.scalar_one_or_none() is None and game.master_id != user_id:
-		raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Нет доступа к этой игре")
+
+	if game.master_id == user_id:
+		return game
+
+	member_id = (
+		await session.execute(
+			select(Party.id)
+			.where(
+				Party.game_id == game_id,
+				Party.user_id == user_id,
+				Party.is_active.is_(True),
+				Party.role_in_game != "banned",
+				)
+			.limit(1)
+		)
+	).scalar_one_or_none()
+
+	if member_id is None:
+		raise HTTPException(
+			status_code=status.HTTP_403_FORBIDDEN,
+			detail="Нет доступа к этой игре",
+		)
+
 	return game
+
+async def get_session_for_user(session: AsyncSession, session_id: UUID,	user_id: UUID,	*,	require_active: bool = False) -> GameSession:
+	game_session = await session.get(GameSession, session_id)
+
+	if game_session is None:
+		raise HTTPException(
+			status_code=status.HTTP_404_NOT_FOUND,
+			detail="Сессия не найдена",
+		)
+
+	await get_game(session, game_session.game_id, user_id)
+
+	if require_active and not game_session.is_active:
+		raise HTTPException(
+			status_code=status.HTTP_409_CONFLICT,
+			detail="Игровая сессия завершена",
+		)
+
+	return game_session
 
 async def update_game(session: AsyncSession, game_id: UUID, master_id: UUID, data: GameUpdate) -> Game:
 	game = await _require_master(session, game_id, master_id)

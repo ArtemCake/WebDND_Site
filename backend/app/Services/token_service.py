@@ -3,7 +3,7 @@
 from Config.imports import (UUID, HTTPException, status, select, AsyncSession)
 from backend.app.Database.Models.Gameplay.maps import Token, MapHex
 from backend.app.Database.Models.Gameplay.lobby import Session as GameSession
-from backend.app.Services.lobby_service import is_game_master
+from backend.app.Services.lobby_service import (get_game, get_session_for_user, is_game_master)
 from backend.app.Schemas.maps import TokenCreate, TokenUpdate, TokenMove
 
 
@@ -13,12 +13,32 @@ async def _get_token_or_404(session: AsyncSession, token_id: UUID) -> Token:
 		raise HTTPException(status.HTTP_404_NOT_FOUND, "Токен не найден")
 	return token
 
-async def _can_control_token(session: AsyncSession, token: Token, user_id: UUID, game_session: GameSession) -> bool:
+async def _can_control_token(session: AsyncSession, token: Token, user_id: UUID, game_session: GameSession | None) -> bool:
+	if game_session is None:
+		raise HTTPException(
+			status_code=status.HTTP_404_NOT_FOUND,
+			detail="Игровая сессия не найдена",
+		)
+
+	game = await get_game(
+		session,
+		game_session.game_id,
+		user_id,
+	)
+
+	if game.master_id == user_id:
+		return True
+
+	if not token.is_visible_to_players:
+		return False
+
 	if token.owner_id == user_id:
 		return True
-	if token.controlled_by_ids and user_id in token.controlled_by_ids:
-		return True
-	return await is_game_master(session, game_session.game_id, user_id)
+
+	return (
+			token.controlled_by_ids is not None
+			and user_id in token.controlled_by_ids
+	)
 
 async def create_token(session: AsyncSession, master_id: UUID, data: TokenCreate) -> Token:
 	game_session = await session.get(GameSession, data.session_id)
@@ -70,6 +90,23 @@ async def delete_token(session: AsyncSession, token_id: UUID, master_id: UUID) -
 	await session.delete(token)
 	await session.commit()
 
-async def list_tokens_for_session(session: AsyncSession, session_id: UUID) -> list[Token]:
-	result = await session.execute(select(Token).where(Token.session_id == session_id))
+async def list_tokens_for_session(session: AsyncSession, session_id: UUID, viewer_id: UUID) -> list[Token]:
+	game_session = await get_session_for_user(
+		session,
+		session_id,
+		viewer_id,
+	)
+
+	viewer_is_master = await is_game_master(
+		session,
+		game_session.game_id,
+		viewer_id,
+	)
+
+	stmt = select(Token).where(Token.session_id == session_id)
+
+	if not viewer_is_master:
+		stmt = stmt.where(Token.is_visible_to_players.is_(True))
+
+	result = await session.execute(stmt)
 	return list(result.scalars().all())
