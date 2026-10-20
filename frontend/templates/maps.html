@@ -52,10 +52,76 @@
 		<h2>{{ selected_game.title }}</h2>
 		
 		{% if can_manage_maps %}
-		<p>
-			Карты кампании. Создание и редактор карты
-			будут подключены следующим этапом.
-		</p>
+		<section aria-labelledby="maps-create-heading">
+			<h3 id="maps-create-heading">Создать карту</h3>
+			
+			<p>
+				Карта создаётся для выбранной игры, без привязки
+				к отдельной сессии. Сейчас доступна основа
+				для карты с фоновым изображением.
+			</p>
+			
+			<div
+					id="maps-create-message"
+					role="status"
+					aria-live="polite"
+			></div>
+			
+			<form					id="maps-create-form"
+					action="/maps"
+					method="post">
+				<input
+						type="hidden"
+						name="game_id"
+						value="{{ selected_game.id }}">
+				
+				<p>
+					<label for="maps-create-title">Название карты</label>
+					<input
+							id="maps-create-title"
+							name="title"
+							type="text"
+							maxlength="255"
+							required>
+				</p>
+				
+				<p>
+					<label for="maps-create-background">
+						URL фонового изображения — необязательно
+					</label>
+					<input
+							id="maps-create-background"
+							name="background_image_url"
+							type="url"
+							maxlength="1000"
+							aria-describedby="maps-create-background-help">
+				</p>
+				
+				<p id="maps-create-background-help">
+					Это адрес изображения, а не загрузка файла с устройства.
+					Отображение фона будет подключено в редакторе карты.
+				</p>
+				
+				<p>
+					<label>
+						<input
+								name="fog_of_war_enabled"
+								type="checkbox"
+								checked
+						>
+						Включить туман войны
+					</label>
+				</p>
+				
+				<button type="submit" class="btn btn-primary">
+					Создать карту
+				</button>
+			</form>
+			
+			<noscript>
+				<p>Для отправки этой формы необходим JavaScript.</p>
+			</noscript>
+		</section>
 		
 		<div class="lobby-grid">
 			{% for campaign_map in campaign_maps %}

@@ -2,7 +2,8 @@
 
 from Config.imports import (UUID, HTTPException, status, select, AsyncSession)
 from backend.app.Database.Models.Gameplay.maps import CampaignMap, MapLayer, MapHex, Token
-from backend.app.Services.lobby_service import is_game_master
+from backend.app.Services import lobby_service
+from backend.app.Services.lobby_service import (is_game_master, get_session_for_user)
 from backend.app.Services.hex_geometry import offset_to_axial_oddr, axial_distance, hex_line_draw
 
 
@@ -106,9 +107,52 @@ async def recalc_fog_of_war(session: AsyncSession, map_id: UUID, viewer_token_id
 
 async def create_map(session: AsyncSession, master_id: UUID, data: "MapCreate") -> CampaignMap:
 	if not await is_game_master(session, data.game_id, master_id):
-		raise HTTPException(status.HTTP_403_FORBIDDEN, "Только мастер игры может создавать карты")
+		raise HTTPException(
+			status_code=status.HTTP_403_FORBIDDEN,
+			detail="Только мастер игры может создавать карты",
+		)
 
-	campaign_map = CampaignMap(**data.model_dump())
+	title = data.title.strip()
+
+	if not title:
+		raise HTTPException(
+			status_code=status.HTTP_400_BAD_REQUEST,
+			detail="Укажите название карты",
+		)
+
+	if data.map_type == "procedural_generation":
+		raise HTTPException(
+			status_code=status.HTTP_400_BAD_REQUEST,
+			detail=(
+				"Создание процедурных карт пока не подключено. "
+				"Используйте карту на основе изображения"
+			),
+		)
+
+	if data.map_type != "image_upload":
+		raise HTTPException(
+			status_code=status.HTTP_400_BAD_REQUEST,
+			detail="Неизвестный тип карты",
+		)
+
+	if data.session_id is not None:
+		game_session = await get_session_for_user(
+			session,
+			data.session_id,
+			master_id,
+		)
+
+		if game_session.game_id != data.game_id:
+			raise HTTPException(
+				status_code=status.HTTP_400_BAD_REQUEST,
+				detail="Сессия не принадлежит указанной игре",
+			)
+
+	values = data.model_dump()
+	values["title"] = title
+	values["grid_settings_json"] = data.grid_settings_json or {}
+
+	campaign_map = CampaignMap(**values)
 	session.add(campaign_map)
 	await session.commit()
 	await session.refresh(campaign_map)
@@ -149,3 +193,16 @@ async def delete_map(session: AsyncSession, map_id: UUID, master_id: UUID) -> No
 	campaign_map = await _get_map_and_check_master(session, map_id, master_id)
 	await session.delete(campaign_map)
 	await session.commit()
+
+async def _require_maps_master(session: AsyncSession, game_id: UUID, user_id: UUID) -> None:
+	game = await lobby_service.get_game(
+		session,
+		game_id,
+		user_id,
+	)
+
+	if game.master_id != user_id:
+		raise HTTPException(
+			status_code=status.HTTP_403_FORBIDDEN,
+			detail="Каталог карт доступен только мастеру игры",
+		)
