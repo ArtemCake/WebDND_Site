@@ -1,10 +1,10 @@
 # backend/app/Services/token_service.py
 
 from Config.imports import (UUID, HTTPException, status, select, AsyncSession)
-from backend.app.Database.Models.Gameplay.maps import Token, MapHex
 from backend.app.Database.Models.Gameplay.lobby import Session as GameSession
 from backend.app.Services.lobby_service import (get_game, get_session_for_user, is_game_master)
 from backend.app.Schemas.maps import TokenCreate, TokenUpdate, TokenMove
+from backend.app.Database.Models.Gameplay.maps import (Token, MapHex, MapLayer, CampaignMap)
 
 
 async def _get_token_or_404(session: AsyncSession, token_id: UUID) -> Token:
@@ -53,16 +53,89 @@ async def create_token(session: AsyncSession, master_id: UUID, data: TokenCreate
 	await session.refresh(token)
 	return token
 
-async def move_token(session: AsyncSession, token_id: UUID, mover_id: UUID, data: TokenMove) -> Token:
+async def move_token(session: AsyncSession,	token_id: UUID,	mover_id: UUID,	data: TokenMove) -> Token:
 	token = await _get_token_or_404(session, token_id)
 	game_session = await session.get(GameSession, token.session_id)
-	if not await _can_control_token(session, token, mover_id, game_session):
-		raise HTTPException(status.HTTP_403_FORBIDDEN, "Вы не можете перемещать этот токен")
+
+	if not await _can_control_token(
+			session,
+			token,
+			mover_id,
+			game_session,
+	):
+		raise HTTPException(
+			status_code=status.HTTP_403_FORBIDDEN,
+			detail="Вы не можете перемещать этот токен",
+		)
+
+	# _can_control_token() уже отклоняет отсутствующую сессию.
+	# Здесь проверяем допустимость текущей карты токена.
+	if token.current_map_id is not None:
+		current_map = await session.get(
+			CampaignMap,
+			token.current_map_id,
+		)
+
+		if current_map is None:
+			raise HTTPException(
+				status_code=status.HTTP_404_NOT_FOUND,
+				detail="Текущая карта токена не найдена",
+			)
+
+		if current_map.game_id != game_session.game_id:
+			raise HTTPException(
+				status_code=status.HTTP_409_CONFLICT,
+				detail="Карта токена не принадлежит игре его сессии",
+			)
+
+		if (
+				current_map.session_id is not None
+				and current_map.session_id != game_session.id
+		):
+			raise HTTPException(
+				status_code=status.HTTP_409_CONFLICT,
+				detail="Карта токена привязана к другой игровой сессии",
+			)
+
+	target_hex = None
 
 	if data.hex_id is not None:
+		if token.current_map_id is None:
+			raise HTTPException(
+				status_code=status.HTTP_409_CONFLICT,
+				detail=(
+					"Перед перемещением на гекс "
+					"необходимо назначить токену карту"
+				),
+			)
+
 		target_hex = await session.get(MapHex, data.hex_id)
+
 		if target_hex is None:
-			raise HTTPException(status.HTTP_404_NOT_FOUND, "Указанный гекс не найден")
+			raise HTTPException(
+				status_code=status.HTTP_404_NOT_FOUND,
+				detail="Указанный гекс не найден",
+			)
+
+		target_layer = await session.get(
+			MapLayer,
+			target_hex.layer_id,
+		)
+
+		if target_layer is None:
+			raise HTTPException(
+				status_code=status.HTTP_409_CONFLICT,
+				detail="Слой целевого гекса не найден",
+			)
+
+		if target_layer.map_id != token.current_map_id:
+			raise HTTPException(
+				status_code=status.HTTP_400_BAD_REQUEST,
+				detail="Целевой гекс не принадлежит текущей карте токена",
+			)
+
+	# Меняем положение только после успешного завершения проверок.
+	if target_hex is not None:
 		token.current_hex_id = target_hex.id
 
 	token.grid_x = data.grid_x
