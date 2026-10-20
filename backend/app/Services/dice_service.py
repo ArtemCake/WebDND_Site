@@ -8,9 +8,22 @@ from backend.app.Services.lobby_service import (get_session_for_user, is_game_ma
 from backend.app.Schemas.lobby import DiceRollIn
 
 
+MAX_FORMULA_LENGTH = 64
+MAX_DICE_COUNT = 100
+MAX_DICE_SIDES = 1000
+MAX_MODIFIER_ABS = 10_000
 _FORMULA_RE = re.compile(r"^(\d+)d(\d+)([+-]\d+)?$")
 
 def _parse_formula(formula: str) -> tuple[int, int, int]:
+	if len(formula) > MAX_FORMULA_LENGTH:
+		raise HTTPException(
+			status_code=status.HTTP_400_BAD_REQUEST,
+			detail=(
+				"Формула броска слишком длинная: "
+				f"допускается не более {MAX_FORMULA_LENGTH} символов"
+			),
+		)
+
 	match = _FORMULA_RE.fullmatch(formula.strip().lower())
 
 	if match is None:
@@ -24,16 +37,31 @@ def _parse_formula(formula: str) -> tuple[int, int, int]:
 	sides = int(sides_text)
 	modifier = int(modifier_text) if modifier_text else 0
 
-	if count < 1:
+	if not 1 <= count <= MAX_DICE_COUNT:
 		raise HTTPException(
 			status_code=status.HTTP_400_BAD_REQUEST,
-			detail="Количество костей должно быть не меньше 1",
+			detail=(
+				"Количество костей должно быть "
+				f"от 1 до {MAX_DICE_COUNT}"
+			),
 		)
 
-	if sides < 1:
+	if not 1 <= sides <= MAX_DICE_SIDES:
 		raise HTTPException(
 			status_code=status.HTTP_400_BAD_REQUEST,
-			detail="Количество граней должно быть не меньше 1",
+			detail=(
+				"Количество граней должно быть "
+				f"от 1 до {MAX_DICE_SIDES}"
+			),
+		)
+
+	if abs(modifier) > MAX_MODIFIER_ABS:
+		raise HTTPException(
+			status_code=status.HTTP_400_BAD_REQUEST,
+			detail=(
+				"Модификатор должен быть "
+				f"от {-MAX_MODIFIER_ABS} до {MAX_MODIFIER_ABS}"
+			),
 		)
 
 	return count, sides, modifier
