@@ -114,6 +114,7 @@ frontend/
 │   ├── base.html
 │   ├── index.html
 │   ├── login.html
+│   ├── maps.html
 │   ├── menu.html
 │   ├── forgot_password.html
 │   ├── password_reset.html

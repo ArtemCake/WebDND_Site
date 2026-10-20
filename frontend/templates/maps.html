@@ -1,0 +1,105 @@
+<!-- frontend/templates/maps.html -->
+
+{% extends "base.html" %}
+
+{% block title %}Карты — WorldLoom{% endblock %}
+
+{% block content %}
+<section class="lobby-page">
+	<header class="lobby-page__header">
+		<h1>Карты</h1>
+	</header>
+	
+	<form action="/maps" method="get">
+		<label for="maps-game-select">Игра</label>
+		
+		<select id="maps-game-select" name="game_id" required>
+			<option value="" disabled
+			        {% if not selected_game %}selected{% endif %}>
+				Выберите игру
+			</option>
+			
+			{% for game in games %}
+			<option
+					value="{{ game.id }}"
+					{% if selected_game and selected_game.id == game.id %}
+					selected
+					{% endif %}
+			>
+				{{ game.title }}
+			</option>
+			{% endfor %}
+		</select>
+		
+		<button
+				type="submit"
+				class="btn btn-primary"
+				{% if not games %}disabled{% endif %}
+		>
+			Показать карты
+		</button>
+	</form>
+	
+	{% if not games %}
+	<p class="lobby-empty">
+		В списке пока нет доступных игр.
+		<a href="/games">Перейти к играм</a>
+	</p>
+	{% endif %}
+	
+	{% if selected_game %}
+	<section>
+		<h2>{{ selected_game.title }}</h2>
+		
+		{% if can_manage_maps %}
+		<p>
+			Карты кампании. Создание и редактор карты
+			будут подключены следующим этапом.
+		</p>
+		
+		<div class="lobby-grid">
+			{% for campaign_map in campaign_maps %}
+			<article>
+				<h3>{{ campaign_map.title }}</h3>
+				
+				<p>
+					Тип:
+					{% if campaign_map.map_type == "image_upload" %}
+					Карта на основе изображения
+					{% elif campaign_map.map_type == "procedural_generation" %}
+					Процедурная карта
+					{% else %}
+					{{ campaign_map.map_type }}
+					{% endif %}
+				</p>
+				
+				<p>
+					Туман войны:
+					{{ "включён" if campaign_map.fog_of_war_enabled else "выключен" }}
+				</p>
+				
+				<p>
+					Статус:
+					{{ "активна" if campaign_map.is_active_in_session else "не активна" }}
+				</p>
+			</article>
+			{% else %}
+			<p class="lobby-empty">
+				В этой игре пока нет карт.
+			</p>
+			{% endfor %}
+		</div>
+		{% else %}
+		<p>
+			Каталог карт кампании доступен мастеру.
+			Показ игровой карты участникам пока не подключён.
+		</p>
+		{% endif %}
+	</section>
+	{% elif games %}
+	<p class="lobby-empty">
+		Выберите игру, чтобы открыть её раздел карт.
+	</p>
+	{% endif %}
+</section>
+{% endblock %}
