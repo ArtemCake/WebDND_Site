@@ -13,6 +13,33 @@ async def _get_token_or_404(session: AsyncSession, token_id: UUID) -> Token:
 		raise HTTPException(status.HTTP_404_NOT_FOUND, "Токен не найден")
 	return token
 
+async def _validate_token_map_for_session(session: AsyncSession, map_id: UUID | None, game_session: GameSession) -> None:
+	if map_id is None:
+		return
+
+	campaign_map = await session.get(CampaignMap, map_id)
+
+	if campaign_map is None:
+		raise HTTPException(
+			status_code=status.HTTP_404_NOT_FOUND,
+			detail="Указанная карта не найдена",
+		)
+
+	if campaign_map.game_id != game_session.game_id:
+		raise HTTPException(
+			status_code=status.HTTP_400_BAD_REQUEST,
+			detail="Карта не принадлежит игре этой сессии",
+		)
+
+	if (
+			campaign_map.session_id is not None
+			and campaign_map.session_id != game_session.id
+	):
+		raise HTTPException(
+			status_code=status.HTTP_400_BAD_REQUEST,
+			detail="Карта привязана к другой игровой сессии",
+		)
+
 async def _can_control_token(session: AsyncSession, token: Token, user_id: UUID, game_session: GameSession | None) -> bool:
 	if game_session is None:
 		raise HTTPException(
@@ -42,12 +69,34 @@ async def _can_control_token(session: AsyncSession, token: Token, user_id: UUID,
 
 async def create_token(session: AsyncSession, master_id: UUID, data: TokenCreate) -> Token:
 	game_session = await session.get(GameSession, data.session_id)
-	if game_session is None:
-		raise HTTPException(status.HTTP_404_NOT_FOUND, "Игровая сессия не найдена")
-	if not await is_game_master(session, game_session.game_id, master_id):
-		raise HTTPException(status.HTTP_403_FORBIDDEN, "Только мастер игры может создавать токены")
 
-	token = Token(owner_id=master_id, **data.model_dump())
+	if game_session is None:
+		raise HTTPException(
+			status_code=status.HTTP_404_NOT_FOUND,
+			detail="Игровая сессия не найдена",
+		)
+
+	if not await is_game_master(
+			session,
+			game_session.game_id,
+			master_id,
+	):
+		raise HTTPException(
+			status_code=status.HTTP_403_FORBIDDEN,
+			detail="Только мастер игры может создавать токены",
+		)
+
+	await _validate_token_map_for_session(
+		session,
+		data.current_map_id,
+		game_session,
+	)
+
+	token = Token(
+		owner_id=master_id,
+		**data.model_dump(),
+	)
+
 	session.add(token)
 	await session.commit()
 	await session.refresh(token)
@@ -147,10 +196,50 @@ async def move_token(session: AsyncSession,	token_id: UUID,	mover_id: UUID,	data
 async def update_token(session: AsyncSession, token_id: UUID, master_id: UUID, data: TokenUpdate) -> Token:
 	token = await _get_token_or_404(session, token_id)
 	game_session = await session.get(GameSession, token.session_id)
-	if not await is_game_master(session, game_session.game_id, master_id):
-		raise HTTPException(status.HTTP_403_FORBIDDEN, "Только мастер игры может редактировать свойства токена")
-	for field, value in data.model_dump(exclude_unset=True).items():
+
+	if game_session is None:
+		raise HTTPException(
+			status_code=status.HTTP_404_NOT_FOUND,
+			detail="Игровая сессия не найдена",
+		)
+
+	if not await is_game_master(
+			session,
+			game_session.game_id,
+			master_id,
+	):
+		raise HTTPException(
+			status_code=status.HTTP_403_FORBIDDEN,
+			detail=(
+				"Только мастер игры может "
+				"редактировать свойства токена"
+			),
+		)
+
+	changes = data.model_dump(exclude_unset=True)
+	reset_current_hex = False
+
+	if "current_map_id" in changes:
+		new_map_id = changes["current_map_id"]
+
+		await _validate_token_map_for_session(
+			session,
+			new_map_id,
+			game_session,
+		)
+
+		reset_current_hex = (
+				new_map_id != token.current_map_id
+				or new_map_id is None
+		)
+
+	# Изменяем объект только после проверки назначаемой карты.
+	for field, value in changes.items():
 		setattr(token, field, value)
+
+	if reset_current_hex:
+		token.current_hex_id = None
+
 	await session.commit()
 	await session.refresh(token)
 	return token
