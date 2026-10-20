@@ -85,13 +85,63 @@ async def list_maps_for_game(game_id: UUID,	session: AsyncSession = Depends(get_
 	await svc._require_maps_master(session, game_id, current_user.id)
 	return await svc.list_maps_for_game(session, game_id)
 
-@router.get("/{map_id}", response_model=MapRead, operation_id="getMap")
-async def get_map(
-		map_id: UUID,
-		session: AsyncSession = Depends(get_async_session),
+@router.get("/create", response_class=HTMLResponse, name="map_create_page_get", operation_id="getMapCreatePage")
+async def get_map_create_page(request: Request,	game_id: UUID,	session: AsyncSession = Depends(get_async_session),
+		user: User = Depends(get_current_user),	csrf_protect: CsrfProtect = Depends(),
+):
+	selected_game = await lobby_service.get_game(session, game_id, user.id)
+
+	if selected_game.master_id != user.id:
+		raise HTTPException(
+			status_code=status.HTTP_403_FORBIDDEN,
+			detail="Только мастер игры может создавать карты",
+		)
+
+	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+
+	context = {
+		"user": user,
+		"csrf_token": csrf_token,
+		"selected_game": selected_game,
+	}
+
+	response = request.app.state.templates.TemplateResponse(
+		request,
+		"map_create.html",
+		context,
+	)
+
+	csrf_protect.set_csrf_cookie(signed_token, response)
+	return response
+
+@router.get("/{map_id}/view", response_class=HTMLResponse, name="map_view_page_get", operation_id="getMapViewPage")
+async def get_map_view_page(request: Request, map_id: UUID, session: AsyncSession = Depends(get_async_session),
+		user: User = Depends(get_current_user), csrf_protect: CsrfProtect = Depends(),
+):
+	campaign_map = await svc._get_map_and_check_master(session, map_id,	user.id)
+
+	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+
+	context = {
+		"user": user,
+		"csrf_token": csrf_token,
+		"campaign_map": campaign_map,
+	}
+
+	response = request.app.state.templates.TemplateResponse(
+		request,
+		"map_view.html",
+		context,
+	)
+
+	csrf_protect.set_csrf_cookie(signed_token, response)
+	return response
+
+@router.get("/{map_id}",response_model=MapRead,operation_id="getMap")
+async def get_map(map_id: UUID,	session: AsyncSession = Depends(get_async_session),
 		current_user: User = Depends(get_current_user),
 ):
-	return await svc.get_map(session, map_id)
+	return await svc._get_map_and_check_master(session,map_id,current_user.id)
 
 @router.patch("/{map_id}", response_model=MapRead, operation_id="updateMap", dependencies=[Depends(enforce_csrf)])
 async def update_map(map_id: UUID, data: MapUpdate,	session: AsyncSession = Depends(get_async_session),

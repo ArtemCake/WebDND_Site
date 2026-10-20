@@ -1,0 +1,71 @@
+<!-- frontend/templates/map_view.html -->
+
+{% extends "base.html" %}
+
+{% block title %}{{ campaign_map.title }} — WorldLoom{% endblock %}
+
+{% block content %}
+<section class="lobby-page">
+	<header class="lobby-page__header">
+		<h1>{{ campaign_map.title }}</h1>
+		
+		<a href="/maps?game_id={{ campaign_map.game_id }}">
+			К списку карт
+		</a>
+	</header>
+	
+	<details>
+		<summary>Сведения о карте</summary>
+		
+		<p>
+			Тип:
+			{% if campaign_map.map_type == "image_upload" %}
+			Карта на основе изображения
+			{% elif campaign_map.map_type == "procedural_generation" %}
+			Процедурная карта
+			{% else %}
+			{{ campaign_map.map_type }}
+			{% endif %}
+		</p>
+		
+		<p>
+			Туман войны:
+			{{ "включён" if campaign_map.fog_of_war_enabled else "выключен" }}
+		</p>
+		
+		<p>
+			Статус:
+			{{ "активна" if campaign_map.is_active_in_session else "не активна" }}
+		</p>
+	</details>
+	
+	<section
+			id="map-view-root"
+			data-background-url="{{ campaign_map.background_image_url or '' }}"
+			aria-labelledby="map-background-heading"
+	>
+		<h2 id="map-background-heading">Фон карты</h2>
+		
+		<p id="map-view-message" role="status" aria-live="polite">
+			Подготовка просмотра…
+		</p>
+		
+		<img
+				id="map-view-background"
+				alt="Фоновое изображение карты «{{ campaign_map.title }}»"
+				referrerpolicy="no-referrer"
+				style="max-width: 100%; height: auto;"
+				hidden
+		>
+		
+		<noscript>
+			<p>Для загрузки фонового изображения необходим JavaScript.</p>
+		</noscript>
+	</section>
+	
+	<p>
+		Это предварительный просмотр фона для мастера.
+		Гексы, токены и маска тумана войны здесь пока не отображаются.
+	</p>
+</section>
+{% endblock %}

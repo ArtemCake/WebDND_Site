@@ -16,6 +16,7 @@ import { Dnd5eSystem } from './modules/systems/Dnd5eSystem.js';
 import { initLobby } from './modules/lobby.js';
 import { initSessionDice } from './modules/session-dice.js';
 import { initMaps } from './modules/maps.js';
+import { initMapView } from './modules/map-view.js';
 
 // --- ТОЧКА ВХОДА ПРИЛОЖЕНИЯ ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -62,6 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initLobby();
     initSessionDice();
     initMaps();
+    initMapView();
 
     // 3. Инициализация игровой карты (Canvas + PixiJS)
     const canvasRoot = document.getElementById('game-canvas-root');

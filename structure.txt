@@ -121,6 +121,8 @@ frontend/
 │   ├── reset_password.html
 │   ├── not_found.html
 │   ├── profile.html
+│   ├── map_create.html
+│   ├── map_view.html
 │   ├── game_play.html
 │   ├── register.html
 │   ├── partials/
@@ -211,6 +213,7 @@ frontend/
             ├── auth.js
             ├── cookie-banner.js
             ├── maps.js
+            ├── map-view.js
             ├── session-dice.js
             ├── game-state-api.js
             ├── delete-account.js

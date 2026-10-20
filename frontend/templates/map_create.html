@@ -1,0 +1,92 @@
+<!-- frontend/templates/map_create.html -->
+
+{% extends "base.html" %}
+
+{% block title %}Создание карты — WorldLoom{% endblock %}
+
+{% block content %}
+<section class="lobby-page">
+	<header class="lobby-page__header">
+		<h1>Создание карты</h1>
+		<a href="/maps?game_id={{ selected_game.id }}">
+			К списку карт
+		</a>
+	</header>
+	
+	<p>
+		Игра: <strong>{{ selected_game.title }}</strong>.
+		Карта создаётся без привязки к отдельной сессии.
+	</p>
+	
+	<div
+			id="maps-create-message"
+			role="status"
+			aria-live="polite"
+	></div>
+	
+	<form
+			id="maps-create-form"
+			action="/maps"
+			method="post"
+	>
+		<input
+				type="hidden"
+				name="game_id"
+				value="{{ selected_game.id }}"
+		>
+		
+		<p>
+			<label for="maps-create-title">Название карты</label>
+			<input
+					id="maps-create-title"
+					name="title"
+					type="text"
+					maxlength="255"
+					required
+			>
+		</p>
+		
+		<p>
+			<label for="maps-create-background">
+				URL фонового изображения — необязательно
+			</label>
+			<input
+					id="maps-create-background"
+					name="background_image_url"
+					type="url"
+					pattern="https?://.*"
+					maxlength="1000"
+					aria-describedby="maps-create-background-help"
+			>
+		</p>
+		
+		<p id="maps-create-background-help">
+			Укажите прямой HTTP- или HTTPS-адрес изображения.
+			Это ссылка на фон, а не загрузка файла с устройства.
+		</p>
+		
+		<p>
+			<label>
+				<input
+						name="fog_of_war_enabled"
+						type="checkbox"
+						checked
+				>
+				Включить туман войны
+			</label>
+		</p>
+		
+		<button type="submit" class="btn btn-primary">
+			Создать карту
+		</button>
+		
+		<a href="/maps?game_id={{ selected_game.id }}">
+			Отмена
+		</a>
+	</form>
+	
+	<noscript>
+		<p>Для отправки этой формы необходим JavaScript.</p>
+	</noscript>
+</section>
+{% endblock %}

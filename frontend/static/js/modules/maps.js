@@ -120,25 +120,49 @@ async function submitCreateMap(form) {
 			return;
 		}
 
-		showCreateMessage('Карта создана. Обновляем список.');
+				form.dataset.created = 'true';
 
-		const pageUrl = new URL('/maps', window.location.origin);
-		pageUrl.searchParams.set('game_id', gameId);
-		window.location.assign(pageUrl.href);
+        		if (submitButton) {
+        			submitButton.textContent = 'Карта создана';
+        		}
+
+        		const mapId = data?.id;
+        		const uuidPattern =
+        			/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+        		if (typeof mapId !== 'string' || !uuidPattern.test(mapId)) {
+        			showCreateMessage(
+        				'Сервер подтвердил создание, но не вернул корректный '
+        				+ 'идентификатор карты. Перейдите к списку карт '
+        				+ 'по ссылке выше. Повторно отправлять форму не нужно.'
+        			);
+        			return;
+        		}
+
+        		showCreateMessage('Карта создана. Открываем просмотр.');
+
+        		const pageUrl = new URL(
+        			`/maps/${encodeURIComponent(mapId)}/view`,
+        			window.location.origin
+        		);
+
+        		window.location.assign(pageUrl.href);
 	} catch (error) {
 		showCreateMessage(
 			'Не удалось получить ответ сервера. Перед повторной '
 			+ 'отправкой обновите список: карта могла сохраниться.',
 			true
 		);
-	} finally {
-		delete form.dataset.submitting;
+		} finally {
+    		if (form.dataset.created !== 'true') {
+    			delete form.dataset.submitting;
 
-		if (submitButton) {
-			submitButton.disabled = false;
-			submitButton.textContent = originalButtonText;
-		}
-	}
+    			if (submitButton) {
+    				submitButton.disabled = false;
+    				submitButton.textContent = originalButtonText;
+    			}
+    		}
+    	}
 }
 
 export function initMaps() {

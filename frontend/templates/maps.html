@@ -14,8 +14,11 @@
 		<label for="maps-game-select">Игра</label>
 		
 		<select id="maps-game-select" name="game_id" required>
-			<option value="" disabled
-			        {% if not selected_game %}selected{% endif %}>
+			<option
+					value=""
+					disabled
+					{% if not selected_game %}selected{% endif %}
+			>
 				Выберите игру
 			</option>
 			
@@ -48,81 +51,23 @@
 	{% endif %}
 	
 	{% if selected_game %}
-	<section>
-		<h2>{{ selected_game.title }}</h2>
+	<section aria-labelledby="maps-catalog-heading">
+		<header class="lobby-page__header">
+			<h2 id="maps-catalog-heading">
+				{{ selected_game.title }}
+			</h2>
+			
+			{% if can_manage_maps %}
+			<a
+					href="/maps/create?game_id={{ selected_game.id }}"
+					class="btn btn-primary"
+			>
+				Создать карту
+			</a>
+			{% endif %}
+		</header>
 		
 		{% if can_manage_maps %}
-		<section aria-labelledby="maps-create-heading">
-			<h3 id="maps-create-heading">Создать карту</h3>
-			
-			<p>
-				Карта создаётся для выбранной игры, без привязки
-				к отдельной сессии. Сейчас доступна основа
-				для карты с фоновым изображением.
-			</p>
-			
-			<div
-					id="maps-create-message"
-					role="status"
-					aria-live="polite"
-			></div>
-			
-			<form					id="maps-create-form"
-					action="/maps"
-					method="post">
-				<input
-						type="hidden"
-						name="game_id"
-						value="{{ selected_game.id }}">
-				
-				<p>
-					<label for="maps-create-title">Название карты</label>
-					<input
-							id="maps-create-title"
-							name="title"
-							type="text"
-							maxlength="255"
-							required>
-				</p>
-				
-				<p>
-					<label for="maps-create-background">
-						URL фонового изображения — необязательно
-					</label>
-					<input
-							id="maps-create-background"
-							name="background_image_url"
-							type="url"
-							maxlength="1000"
-							aria-describedby="maps-create-background-help">
-				</p>
-				
-				<p id="maps-create-background-help">
-					Это адрес изображения, а не загрузка файла с устройства.
-					Отображение фона будет подключено в редакторе карты.
-				</p>
-				
-				<p>
-					<label>
-						<input
-								name="fog_of_war_enabled"
-								type="checkbox"
-								checked
-						>
-						Включить туман войны
-					</label>
-				</p>
-				
-				<button type="submit" class="btn btn-primary">
-					Создать карту
-				</button>
-			</form>
-			
-			<noscript>
-				<p>Для отправки этой формы необходим JavaScript.</p>
-			</noscript>
-		</section>
-		
 		<div class="lobby-grid">
 			{% for campaign_map in campaign_maps %}
 			<article>
@@ -148,10 +93,18 @@
 					Статус:
 					{{ "активна" if campaign_map.is_active_in_session else "не активна" }}
 				</p>
+				
+				<a
+						href="/maps/{{ campaign_map.id }}/view"
+						class="btn btn-primary"
+				>
+					Открыть
+				</a>
 			</article>
 			{% else %}
 			<p class="lobby-empty">
 				В этой игре пока нет карт.
+				Для добавления нажмите «Создать карту».
 			</p>
 			{% endfor %}
 		</div>
