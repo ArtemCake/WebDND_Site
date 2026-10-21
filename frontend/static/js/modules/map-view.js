@@ -21,17 +21,20 @@ export function initMapView() {
 	let parsedUrl;
 
 	try {
-				parsedUrl = new URL(backgroundUrl, window.location.origin);
+		parsedUrl = new URL(backgroundUrl, window.location.origin);
 
-		message.textContent =
-        	'Не удалось показать фон: адрес изображения '
-        	+ 'должен вести на этот сайт.';
-        return;
-
+		if (
+			!['http:', 'https:'].includes(parsedUrl.protocol)
+			|| parsedUrl.origin !== window.location.origin
+			|| parsedUrl.username
+			|| parsedUrl.password
+		) {
+			throw new Error('Unsupported background URL');
+		}
 	} catch {
 		message.textContent =
-			'Не удалось показать фон: нужен корректный HTTP- '
-			+ 'или HTTPS-адрес без имени пользователя и пароля.';
+			'Не удалось показать фон: нужен корректный адрес '
+			+ 'изображения на этом сайте.';
 		return;
 	}
 
