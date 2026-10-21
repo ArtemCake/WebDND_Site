@@ -1,0 +1,88 @@
+<!-- frontend/templates/maps/map_management.html -->
+
+<section
+		id="map-management"
+		data-map-id="{{ campaign_map.id }}"
+		data-source-game-id="{{ campaign_map.game_id }}"
+		aria-labelledby="map-management-heading"
+>
+	<h2 id="map-management-heading">Управление картой</h2>
+	
+	<div
+			id="map-management-message"
+			role="status"
+			aria-live="polite"
+	></div>
+	
+	<p>
+		Статус:
+		<strong>
+			{{ "активна" if campaign_map.is_active_in_session else "не активна" }}
+		</strong>
+	</p>
+	
+	<p>
+		<button
+				type="button"
+				class="btn btn-primary"
+				data-map-action="{{ 'deactivate' if campaign_map.is_active_in_session else 'activate' }}"
+		>
+			{{ "Деактивировать" if campaign_map.is_active_in_session else "Активировать" }}
+		</button>
+	</p>
+	
+	<p>
+		Активность действует на уровне игры.
+		При активации этой карты остальные карты игры
+		станут неактивными.
+	</p>
+	
+	{% if target_games %}
+	<p>
+		<label for="map-destination-game">Другая игра</label>
+		<select id="map-destination-game">
+			<option value="" selected disabled>Выберите игру</option>
+			{% for game in target_games %}
+			<option value="{{ game.id }}">{{ game.title }}</option>
+			{% endfor %}
+		</select>
+	</p>
+	
+	<p>
+		<button
+				type="button"
+				class="btn btn-primary"
+				data-map-action="copy"
+		>
+			Копировать в выбранную игру
+		</button>
+		
+		<button
+				type="button"
+				class="btn btn-outline-primary"
+				data-map-action="move"
+		>
+			Перенести в выбранную игру
+		</button>
+	</p>
+	
+	<p>
+		Копия включает фон, настройки, слои и сетку,
+		но не токены, объекты, аудиозоны и исследованные области.
+		Она создаётся неактивной и без привязки к сессии.
+	</p>
+	
+	<p>
+		При переносе оригинал станет неактивным
+		и отвяжется от прежней сессии.
+		Состояние сетки и тумана сохранится.
+		Перенос с токенами, объектами или аудиозонами
+		в этой версии недоступен.
+	</p>
+	{% else %}
+	<p>
+		Нет других игр, в которых вы являетесь мастером.
+		Для копирования или переноса нужна другая такая игра.
+	</p>
+	{% endif %}
+</section>

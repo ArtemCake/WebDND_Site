@@ -8,16 +8,35 @@ from backend.app.Database.Models.Gameplay.maps import (Token, MapHex, MapLayer, 
 
 
 async def _get_token_or_404(session: AsyncSession, token_id: UUID) -> Token:
-	token = await session.get(Token, token_id)
+	token = (
+		await session.execute(
+			select(Token)
+			.where(Token.id == token_id)
+			.with_for_update(of=Token)
+			.execution_options(populate_existing=True)
+		)
+	).scalar_one_or_none()
+
 	if token is None:
-		raise HTTPException(status.HTTP_404_NOT_FOUND, "Токен не найден")
+		raise HTTPException(
+			status.HTTP_404_NOT_FOUND,
+			"Токен не найден",
+		)
+
 	return token
 
 async def _validate_token_map_for_session(session: AsyncSession, map_id: UUID | None, game_session: GameSession) -> None:
 	if map_id is None:
 		return
 
-	campaign_map = await session.get(CampaignMap, map_id)
+	campaign_map = (
+		await session.execute(
+			select(CampaignMap)
+			.where(CampaignMap.id == map_id)
+			.with_for_update()
+			.execution_options(populate_existing=True)
+		)
+	).scalar_one_or_none()
 
 	if campaign_map is None:
 		raise HTTPException(
@@ -116,35 +135,7 @@ async def move_token(session: AsyncSession,	token_id: UUID,	mover_id: UUID,	data
 			status_code=status.HTTP_403_FORBIDDEN,
 			detail="Вы не можете перемещать этот токен",
 		)
-
-	# _can_control_token() уже отклоняет отсутствующую сессию.
-	# Здесь проверяем допустимость текущей карты токена.
-	if token.current_map_id is not None:
-		current_map = await session.get(
-			CampaignMap,
-			token.current_map_id,
-		)
-
-		if current_map is None:
-			raise HTTPException(
-				status_code=status.HTTP_404_NOT_FOUND,
-				detail="Текущая карта токена не найдена",
-			)
-
-		if current_map.game_id != game_session.game_id:
-			raise HTTPException(
-				status_code=status.HTTP_409_CONFLICT,
-				detail="Карта токена не принадлежит игре его сессии",
-			)
-
-		if (
-				current_map.session_id is not None
-				and current_map.session_id != game_session.id
-		):
-			raise HTTPException(
-				status_code=status.HTTP_409_CONFLICT,
-				detail="Карта токена привязана к другой игровой сессии",
-			)
+	await _validate_token_map_for_session(session, token.current_map_id, game_session)
 
 	target_hex = None
 

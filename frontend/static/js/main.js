@@ -4,21 +4,23 @@
 // --- ИМПОРТ МОДУЛЕЙ ---
 import { initGlobalUI } from './modules/ui.js';
 import { setupAuthHandlers, protectPrivateRoutes } from './modules/auth.js';
-import { GameMap } from './modules/map.js';
+import { GameMap } from './modules/maps/map.js';
 import { initCookieBanner } from './modules/cookie-banner.js';
 import { initDeleteAccountModal } from './modules/delete-account.js';
-import { initAdminPanel } from './modules/admin.js';
+import { initAdminPanel } from './modules/admin/admin.js';
 import './modules/UI/avatar-preview.js';
 import { initNetworkErrorHandlers } from './modules/network-error-handler.js';
-import { initDiceRollers } from './modules/dice-roller.js';
+import { initDiceRollers } from './modules/games/dice-roller.js';
 import { AppConfig } from './config/appConfig.js';
 import { Dnd5eSystem } from './modules/systems/Dnd5eSystem.js';
-import { initLobby } from './modules/lobby.js';
-import { initSessionDice } from './modules/session-dice.js';
-import { initMaps } from './modules/maps.js';
-import { initMapView } from './modules/map-view.js';
-import { initMapDelete } from './modules/map-delete.js';
-import { initMapEdit } from './modules/map-edit.js';
+import { initLobby } from './modules/games/lobby.js';
+import { initSessionDice } from './modules/games/session-dice.js';
+import { initMaps } from './modules/maps/maps.js';
+import { initMapView } from './modules/maps/map-view.js';
+import { initMapDelete } from './modules/maps/map-delete.js';
+import { initMapEdit } from './modules/maps/map-edit.js';
+import { initMapManagement } from './modules/maps/map-management.js';
+
 
 // --- ТОЧКА ВХОДА ПРИЛОЖЕНИЯ ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -68,6 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initMapView();
     initMapDelete();
     initMapEdit();
+    initMapManagement();
 
     // 3. Инициализация игровой карты (Canvas + PixiJS)
     const canvasRoot = document.getElementById('game-canvas-root');

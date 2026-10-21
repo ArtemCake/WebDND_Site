@@ -60,6 +60,7 @@ backend/
 │   │   │    └── i_system.py
 │   │   ├── __init__.py
 │   │   ├── admin_service.py
+│   │   ├── map_management_service.py
 │   │   ├── content_service.py
 │   │   ├── map_image_service.py
 │   │   ├── hex_geometry.py
@@ -115,18 +116,22 @@ frontend/
 │   ├── base.html
 │   ├── index.html
 │   ├── login.html
-│   ├── maps.html
 │   ├── menu.html
-│   ├── map_edit.html
 │   ├── forgot_password.html
 │   ├── password_reset.html
 │   ├── reset_password.html
 │   ├── not_found.html
 │   ├── profile.html
-│   ├── map_create.html
-│   ├── map_view.html
-│   ├── game_play.html
 │   ├── register.html
+│   ├── games/
+│   │   ├── game_play.html
+│   │   └── games.html
+│   ├── maps/
+│   │   ├── maps.html
+│   │   ├── map_create.html
+│   │   ├── map_view.html
+│   │   ├── map_management.html
+│   │   └── map_edit.html
 │   ├── partials/
 │   │   └── session_dice.html
 │   ├── admin/
@@ -211,20 +216,25 @@ frontend/
         ├── config/
         │   └── appConfig.js
         └── modules/
-            ├── admin.js
+            ├── maps/
+            │   ├── map.js
+            │   ├── map-delete.js
+            │   ├── map-edit.js
+            │   ├── map-management.js
+            │   ├── map-operation-state.js
+            │   ├── maps.js
+            │   └── map-view.js
+            ├── games/
+            │   ├── dice-roller.js
+            │   ├── game-state-api.js
+            │   ├── lobby.js
+            │   └── session-dice.js
+            ├── admin/
+            │   ├── admin.js
+            │   └── admin-game-systems.js
             ├── auth.js
             ├── cookie-banner.js
-            ├── map-edit.js
-            ├── map-delete.js
-            ├── maps.js
-            ├── map-view.js
-            ├── session-dice.js
-            ├── game-state-api.js
             ├── delete-account.js
-            ├── admin-game-systems.js
-            ├── map.js
-            ├── lobby.js
-            ├── dice-roller.js
             ├── mfa-setup.js
             ├── network-error-handler.js
             ├── ui.js

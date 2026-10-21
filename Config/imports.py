@@ -42,6 +42,7 @@ from contextlib import asynccontextmanager
 from starlette.middleware.sessions import SessionMiddleware
 from logging.handlers import TimedRotatingFileHandler, QueueHandler, QueueListener
 from asyncio import Lock
+from copy import deepcopy
 from collections import defaultdict, deque
 
 # --- База данных (SQLAlchemy) ---

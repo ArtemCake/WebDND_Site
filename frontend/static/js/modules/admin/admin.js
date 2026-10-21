@@ -1,4 +1,4 @@
-// frontend/static/js/modules/admin.js
+// frontend/static/js/modules/admin/admin.js
 
 /**
  * @fileoverview Админ-панель: модалка управления пользователем (роли, права,

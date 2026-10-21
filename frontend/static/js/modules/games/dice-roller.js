@@ -1,6 +1,6 @@
 // frontend/static/js/modules/dice-roller.js
 
-import { AppConfig } from '../config/appConfig.js';
+import { AppConfig } from './../../config/appConfig.js';
 
 export function initDiceRollers(gameSystem) {
 	document.body.addEventListener('click', (e) => {

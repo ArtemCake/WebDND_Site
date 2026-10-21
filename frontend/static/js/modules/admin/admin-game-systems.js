@@ -1,4 +1,4 @@
-// frontend/static/js/modules/admin-game-systems.js
+// frontend/static/js/modules/admin/admin-game-systems.js
 
 const root = document.querySelector('[data-game-systems-admin]');
 

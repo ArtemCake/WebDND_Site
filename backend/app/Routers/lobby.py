@@ -25,7 +25,7 @@ async def get_games_page(request: Request, user: User = Depends(get_current_user
 		"csrf_token": csrf_token,
 	}
 	templates = request.app.state.templates
-	response = templates.TemplateResponse(request, "games.html", context)
+	response = templates.TemplateResponse(request, "games/games.html", context)
 	csrf_protect.set_csrf_cookie(signed_token, response)
 	return response
 
@@ -215,7 +215,7 @@ async def get_game_play_page(
 	templates = request.app.state.templates
 	response = templates.TemplateResponse(
 		request,
-		"game_play.html",
+		"games/game_play.html",
 		context,
 	)
 	csrf_protect.set_csrf_cookie(signed_token, response)

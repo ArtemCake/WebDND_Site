@@ -1,8 +1,8 @@
 // frontend/static/js/modules/map.js
 
 import * as PIXI from 'pixi.js';
-import { DisplayObjectPool } from './pixi/DisplayObjectPool.js';
-import { TokenFactory } from './pixi/TokenFactory.js';
+import { DisplayObjectPool } from './../pixi/DisplayObjectPool.js';
+import { TokenFactory } from './../pixi/TokenFactory.js';
 
 export class GameMap {
     constructor(canvasId) {

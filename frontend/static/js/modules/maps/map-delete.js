@@ -1,5 +1,7 @@
 // frontend/static/js/modules/map-delete.js
 
+import { acquireMapOperation } from './map-operation-state.js';
+
 function showDeleteMessage(text, isError = false) {
 	const box = document.getElementById('maps-delete-message');
 	if (!box) return;
@@ -34,6 +36,9 @@ async function deleteMap(button) {
 		);
 		return;
 	}
+
+	const releaseOperation = acquireMapOperation();
+    if (!releaseOperation) return;
 
 	const originalText = button.textContent;
 	button.dataset.submitting = 'true';
@@ -73,13 +78,14 @@ async function deleteMap(button) {
 			+ 'перед повторной попыткой: карта могла быть удалена.',
 			true
 		);
-	} finally {
-		if (button.dataset.deleted !== 'true') {
-			delete button.dataset.submitting;
-			button.disabled = false;
-			button.textContent = originalText;
-		}
-	}
+		} finally {
+    		if (button.dataset.deleted !== 'true') {
+    			releaseOperation();
+    			delete button.dataset.submitting;
+    			button.disabled = false;
+    			button.textContent = originalText;
+    		}
+    	}
 }
 
 export function initMapDelete() {

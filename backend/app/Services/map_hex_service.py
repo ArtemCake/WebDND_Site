@@ -5,6 +5,7 @@ from backend.app.Database.Models.Gameplay.maps import CampaignMap, MapLayer, Map
 from backend.app.Services import lobby_service
 from backend.app.Services import map_image_service
 from backend.app.Services.lobby_service import (is_game_master, get_session_for_user)
+from backend.app.Services import map_management_service
 from backend.app.Services.hex_geometry import offset_to_axial_oddr, axial_distance, hex_line_draw
 
 
@@ -41,7 +42,7 @@ async def _get_map_and_check_master(session: AsyncSession, map_id: UUID, master_
 
 async def generate_hex_grid(session: AsyncSession, map_id: UUID, master_id: UUID, rows: int, cols: int) -> MapLayer:
 	"""Накладывает гекс-сетку поверх карты — работает и для image_upload, и для procedural_generation."""
-	campaign_map = await _get_map_and_check_master(session, map_id, master_id)
+	campaign_map = await _get_map_and_check_master(session, map_id, master_id, for_update=True)
 
 	existing_stmt = select(MapLayer).where(MapLayer.map_id == campaign_map.id, MapLayer.layer_type == "vector_tiles")
 	if (await session.execute(existing_stmt)).scalar_one_or_none() is not None:
@@ -86,7 +87,14 @@ def _has_line_of_sight(origin: tuple[int, int], target: tuple[int, int],
 
 async def recalc_fog_of_war(session: AsyncSession, map_id: UUID, viewer_token_ids: list[UUID]) -> set[UUID]:
 	"""Пересчитывает MapHex.is_visible_to_players/explored_by_players по токенам-наблюдателям."""
-	campaign_map = await session.get(CampaignMap, map_id)
+	campaign_map = (
+		await session.execute(
+			select(CampaignMap)
+			.where(CampaignMap.id == map_id)
+			.with_for_update()
+			.execution_options(populate_existing=True)
+		)
+	).scalar_one_or_none()
 	if campaign_map is None:
 		raise HTTPException(status.HTTP_404_NOT_FOUND, "Карта не найдена")
 
@@ -286,17 +294,7 @@ async def update_map(session: AsyncSession, map_id: UUID, master_id: UUID, data:
 	return campaign_map
 
 async def set_active_map(session: AsyncSession, map_id: UUID, master_id: UUID) -> CampaignMap:
-	"""Делает карту активной в текущей игровой сессии, снимая активность с остальных карт этой игры."""
-	campaign_map = await _get_map_and_check_master(session, map_id, master_id)
-	others_stmt = select(CampaignMap).where(
-		CampaignMap.game_id == campaign_map.game_id, CampaignMap.id != campaign_map.id
-	)
-	for other in (await session.execute(others_stmt)).scalars().all():
-		other.is_active_in_session = False
-	campaign_map.is_active_in_session = True
-	await session.commit()
-	await session.refresh(campaign_map)
-	return campaign_map
+	return await map_management_service.set_map_activity(session, map_id, master_id, active=True)
 
 async def delete_map(session: AsyncSession, map_id: UUID, master_id: UUID) -> None:
 	campaign_map = await _get_map_and_check_master(session, map_id, master_id, for_update=True)

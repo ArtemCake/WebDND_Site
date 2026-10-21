@@ -120,3 +120,9 @@ class MapRead(BaseModel):
 
 	class Config:
 		from_attributes = True
+
+class MapGameTargetIn(BaseModel):
+	source_game_id: UUID
+	target_game_id: UUID
+
+	model_config = {"extra": "forbid"}

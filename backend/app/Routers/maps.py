@@ -12,6 +12,8 @@ from backend.app.Services import lobby_service
 from backend.app.Schemas.maps import (MapCreate, MapUpdate, MapRead,
 	HexGridGenerateIn, MapLayerRead, FogOfWarRecalcIn, FogOfWarRecalcOut)
 from backend.app.Services import map_hex_service as svc
+from backend.app.Services import map_management_service
+from backend.app.Schemas.maps import MapGameTargetIn
 
 
 router = APIRouter(
@@ -67,7 +69,7 @@ async def get_maps_page(request: Request, game_id: UUID | None = None,
 	templates = request.app.state.templates
 	response = templates.TemplateResponse(
 		request,
-		"maps.html",
+		"maps/maps.html",
 		context,
 	)
 
@@ -117,7 +119,7 @@ async def get_map_edit_page(request: Request,map_id: UUID,session: AsyncSession 
 
 	response = request.app.state.templates.TemplateResponse(
 		request,
-		"map_edit.html",
+		"maps/map_edit.html",
 		context,
 	)
 
@@ -171,7 +173,7 @@ async def get_map_create_page(request: Request,	game_id: UUID,	session: AsyncSes
 
 	response = request.app.state.templates.TemplateResponse(
 		request,
-		"map_create.html",
+		"maps/map_create.html",
 		context,
 	)
 
@@ -183,6 +185,7 @@ async def get_map_view_page(request: Request, map_id: UUID, session: AsyncSessio
 		user: User = Depends(get_current_user), csrf_protect: CsrfProtect = Depends(),
 ):
 	campaign_map = await svc._get_map_and_check_master(session, map_id,	user.id)
+	target_games = await map_management_service.list_target_games(session, user.id, campaign_map.game_id)
 
 	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
 
@@ -190,11 +193,12 @@ async def get_map_view_page(request: Request, map_id: UUID, session: AsyncSessio
 		"user": user,
 		"csrf_token": csrf_token,
 		"campaign_map": campaign_map,
+		"target_games": target_games,
 	}
 
 	response = request.app.state.templates.TemplateResponse(
 		request,
-		"map_view.html",
+		"maps/map_view.html",
 		context,
 	)
 
@@ -236,10 +240,41 @@ async def activate_map(map_id: UUID,session: AsyncSession = Depends(get_async_se
 ):
 	return await svc.set_active_map(session, map_id, current_user.id)
 
+@router.post("/{map_id}/deactivate",response_model=MapRead,	operation_id="deactivateMap", dependencies=[Depends(enforce_csrf)])
+async def deactivate_map(map_id: UUID, session: AsyncSession = Depends(get_async_session),
+		current_user: User = Depends(get_current_user)):
+	return await map_management_service.set_map_activity(
+		session,
+		map_id,
+		current_user.id,
+		active=False,
+	)
+
+@router.post("/{map_id}/copy", response_model=MapRead, status_code=201, operation_id="copyMap", dependencies=[Depends(enforce_csrf)])
+async def copy_map(map_id: UUID, payload: MapGameTargetIn, session: AsyncSession = Depends(get_async_session),
+		current_user: User = Depends(get_current_user)):
+	return await map_management_service.copy_map(
+		session,
+		map_id,
+		current_user.id,
+		payload.source_game_id,
+		payload.target_game_id,
+	)
+
+@router.post("/{map_id}/move", response_model=MapRead, operation_id="moveMap", dependencies=[Depends(enforce_csrf)])
+async def move_map(map_id: UUID, payload: MapGameTargetIn, session: AsyncSession = Depends(get_async_session),
+		current_user: User = Depends(get_current_user)):
+	return await map_management_service.move_map(
+		session,
+		map_id,
+		current_user.id,
+		payload.source_game_id,
+		payload.target_game_id,
+	)
+
 @router.delete("/{map_id}", status_code=204, operation_id="deleteMap", dependencies=[Depends(enforce_csrf)])
 async def delete_map(map_id: UUID, session: AsyncSession = Depends(get_async_session),
-		current_user: User = Depends(get_current_user),
-):
+		current_user: User = Depends(get_current_user)):
 	await svc.delete_map(session, map_id, current_user.id)
 
 # --- Hex grid & fog of war ---
