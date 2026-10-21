@@ -1,8 +1,9 @@
 # backend/app/Services/map_hex_service.py
 
-from Config.imports import (UUID, HTTPException, status, select, AsyncSession)
+from Config.imports import (UUID, HTTPException, status, select, AsyncSession, UploadFile, uuid4, update, or_)
 from backend.app.Database.Models.Gameplay.maps import CampaignMap, MapLayer, MapHex, Token
 from backend.app.Services import lobby_service
+from backend.app.Services import map_image_service
 from backend.app.Services.lobby_service import (is_game_master, get_session_for_user)
 from backend.app.Services.hex_geometry import offset_to_axial_oddr, axial_distance, hex_line_draw
 
@@ -105,12 +106,10 @@ async def recalc_fog_of_war(session: AsyncSession, map_id: UUID, viewer_token_id
 	await session.commit()
 	return {h.id for h in all_hexes if (h.axial_q, h.axial_r) in visible_coords}
 
-async def create_map(session: AsyncSession, master_id: UUID, data: "MapCreate") -> CampaignMap:
+async def create_map(session: AsyncSession, master_id: UUID, data: "MapCreate", *, background_image: UploadFile | None = None) -> CampaignMap:
 	if not await is_game_master(session, data.game_id, master_id):
-		raise HTTPException(
-			status_code=status.HTTP_403_FORBIDDEN,
-			detail="Только мастер игры может создавать карты",
-		)
+		raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+			detail="Только мастер игры может создавать карты")
 
 	title = data.title.strip()
 
@@ -152,9 +151,32 @@ async def create_map(session: AsyncSession, master_id: UUID, data: "MapCreate") 
 	values["title"] = title
 	values["grid_settings_json"] = data.grid_settings_json or {}
 
-	campaign_map = CampaignMap(**values)
-	session.add(campaign_map)
-	await session.commit()
+	map_id = uuid4()
+	image_saved = False
+
+	if background_image is not None:
+		contents = await map_image_service.prepare_background(
+			background_image,
+		)
+		await map_image_service.save_background(map_id, contents)
+		image_saved = True
+		values["background_image_url"] = f"/maps/{map_id}/background"
+
+	campaign_map = CampaignMap(id=map_id, **values)
+
+	try:
+		session.add(campaign_map)
+		await session.commit()
+	except Exception:
+		await session.rollback()
+
+		if image_saved:
+			await map_image_service.remove_background(map_id)
+
+		raise
+
+	# После успешного commit файл при ошибке refresh уже не удаляем:
+	# запись карты сохранена.
 	await session.refresh(campaign_map)
 	return campaign_map
 
@@ -190,9 +212,32 @@ async def set_active_map(session: AsyncSession, map_id: UUID, master_id: UUID) -
 	return campaign_map
 
 async def delete_map(session: AsyncSession, map_id: UUID, master_id: UUID) -> None:
-	campaign_map = await _get_map_and_check_master(session, map_id, master_id)
-	await session.delete(campaign_map)
-	await session.commit()
+	campaign_map = await _get_map_and_check_master(session,map_id,master_id)
+
+	hex_ids = (select(MapHex.id)
+		.join(MapLayer, MapHex.layer_id == MapLayer.id)
+		.where(MapLayer.map_id == map_id))
+
+	try:
+		await session.execute(
+			update(Token)
+			.where(
+				or_(Token.current_map_id == map_id,
+					Token.current_hex_id.in_(hex_ids))
+			)
+			.values(
+				current_map_id=None,
+				current_hex_id=None,
+			)
+		)
+
+		await session.delete(campaign_map)
+		await session.commit()
+	except Exception:
+		await session.rollback()
+		raise
+
+	await map_image_service.remove_background(map_id)
 
 async def _require_maps_master(session: AsyncSession, game_id: UUID, user_id: UUID) -> None:
 	game = await lobby_service.get_game(

@@ -17,6 +17,7 @@ import { initLobby } from './modules/lobby.js';
 import { initSessionDice } from './modules/session-dice.js';
 import { initMaps } from './modules/maps.js';
 import { initMapView } from './modules/map-view.js';
+import { initMapDelete } from './modules/map-delete.js';
 
 // --- ТОЧКА ВХОДА ПРИЛОЖЕНИЯ ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -64,6 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initSessionDice();
     initMaps();
     initMapView();
+    initMapDelete();
 
     // 3. Инициализация игровой карты (Canvas + PixiJS)
     const canvasRoot = document.getElementById('game-canvas-root');

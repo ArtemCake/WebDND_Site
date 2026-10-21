@@ -23,6 +23,9 @@ import uvicorn
 import atexit
 import hashlib
 import markdown
+from io import BytesIO
+from PIL import Image, ImageOps, UnidentifiedImageError
+from starlette.concurrency import run_in_threadpool
 from queue import Queue
 from typing import Literal
 from abc import ABC, abstractmethod

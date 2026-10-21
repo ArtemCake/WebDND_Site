@@ -1,7 +1,10 @@
 # backend/app/Routers/maps.py
 
-from Config.imports import (APIRouter, Depends, UUID, AsyncSession, Request, HTMLResponse, CsrfProtect, HTTPException, status)
+from Config.imports import (APIRouter, Depends, UUID, AsyncSession, Request, HTMLResponse, CsrfProtect, HTTPException, status,
+                            UploadFile, File, Form, Response)
 from backend.app.Database.database import get_async_session
+from Config.Config import settings
+from backend.app.Services import map_image_service
 from backend.app.Core.csrf import enforce_csrf
 from backend.app.Services.user_service import get_current_user
 from backend.app.Database.Models.Core.user import User
@@ -77,6 +80,43 @@ async def create_map(data: MapCreate, session: AsyncSession = Depends(get_async_
 ):
 	return await svc.create_map(session, current_user.id, data)
 
+@router.post("/upload", response_model=MapRead, operation_id="createMapWithImage", dependencies=[Depends(enforce_csrf)])
+async def create_map_with_image(game_id: UUID = Form(...),title: str = Form(..., min_length=1, max_length=255),
+		fog_of_war_enabled: bool = Form(True),background_image: UploadFile | None = File(None),
+		session: AsyncSession = Depends(get_async_session),	current_user: User = Depends(get_current_user),
+):
+	data = MapCreate(
+		game_id=game_id,
+		title=title,
+		map_type="image_upload",
+		grid_settings_json={},
+		fog_of_war_enabled=fog_of_war_enabled,
+		lighting_model="basic",
+	)
+
+	return await svc.create_map(
+		session,
+		current_user.id,
+		data,
+		background_image=background_image,
+	)
+
+@router.get("/{map_id}/background", response_class=Response, operation_id="getMapBackground")
+async def get_map_background(map_id: UUID, session: AsyncSession = Depends(get_async_session),
+		current_user: User = Depends(get_current_user)):
+	await svc._get_map_and_check_master(session, map_id,	current_user.id)
+
+	contents = await map_image_service.read_background(map_id)
+
+	return Response(
+		content=contents,
+		media_type="image/png",
+		headers={
+			"Cache-Control": "private, no-store",
+			"X-Content-Type-Options": "nosniff",
+		},
+	)
+
 # GET /maps/by-game/{game_id}
 @router.get("/by-game/{game_id}", response_model=list[MapRead], operation_id="listMapsForGame")
 async def list_maps_for_game(game_id: UUID,	session: AsyncSession = Depends(get_async_session),
@@ -103,6 +143,7 @@ async def get_map_create_page(request: Request,	game_id: UUID,	session: AsyncSes
 		"user": user,
 		"csrf_token": csrf_token,
 		"selected_game": selected_game,
+		"map_image_max_bytes": settings.MAP_IMAGE_MAX_BYTES,
 	}
 
 	response = request.app.state.templates.TemplateResponse(

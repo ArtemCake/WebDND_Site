@@ -61,6 +61,7 @@ backend/
 │   │   ├── __init__.py
 │   │   ├── admin_service.py
 │   │   ├── content_service.py
+│   │   ├── map_image_service.py
 │   │   ├── hex_geometry.py
 │   │   ├── map_hex_service.py
 │   │   ├── dice_service.py
@@ -212,6 +213,7 @@ frontend/
             ├── admin.js
             ├── auth.js
             ├── cookie-banner.js
+            ├── map-delete.js
             ├── maps.js
             ├── map-view.js
             ├── session-dice.js

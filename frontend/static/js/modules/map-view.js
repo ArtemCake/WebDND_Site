@@ -21,15 +21,13 @@ export function initMapView() {
 	let parsedUrl;
 
 	try {
-		parsedUrl = new URL(backgroundUrl);
+				parsedUrl = new URL(backgroundUrl, window.location.origin);
 
-		if (
-			!['http:', 'https:'].includes(parsedUrl.protocol)
-			|| parsedUrl.username
-			|| parsedUrl.password
-		) {
-			throw new Error('Unsupported background URL');
-		}
+		message.textContent =
+        	'Не удалось показать фон: адрес изображения '
+        	+ 'должен вести на этот сайт.';
+        return;
+
 	} catch {
 		message.textContent =
 			'Не удалось показать фон: нужен корректный HTTP- '

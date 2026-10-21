@@ -94,6 +94,11 @@ class WebAppSettings(BaseSettings):
 			return []
 		return [url.strip() for url in self.BACKEND_CORS_ORIGINS_RAW.split(",") if url.strip()]
 
+	# --- Изображения игровых карт ---
+	MAP_IMAGES_DIR: Path | None = None
+	MAP_IMAGE_MAX_BYTES: int = Field(default=10 * 1024 * 1024, gt=0)
+	MAP_IMAGE_MAX_PIXELS: int = Field(default=16_000_000, gt=0)
+	MAP_IMAGE_MAX_SIDE: int = Field(default=8192, gt=0)
 
 	model_config = SettingsConfigDict(
 		env_file="data/.env",

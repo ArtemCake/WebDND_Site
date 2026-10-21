@@ -14,6 +14,22 @@
 		</a>
 	</header>
 	
+	<div
+			id="maps-delete-message"
+			role="status"
+			aria-live="polite"
+	></div>
+	
+	<button
+			type="button"
+			class="btn btn-danger"
+			data-map-delete="/maps/{{ campaign_map.id }}"
+			data-map-title="{{ campaign_map.title }}"
+			data-return-url="/maps?game_id={{ campaign_map.game_id }}"
+	>
+		Удалить карту
+	</button>
+	
 	<details>
 		<summary>Сведения о карте</summary>
 		

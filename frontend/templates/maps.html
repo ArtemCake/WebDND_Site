@@ -10,6 +10,12 @@
 		<h1>Карты</h1>
 	</header>
 	
+	<div
+			id="maps-delete-message"
+			role="status"
+			aria-live="polite"
+	></div>
+	
 	<form action="/maps" method="get">
 		<label for="maps-game-select">Игра</label>
 		
@@ -100,6 +106,16 @@
 				>
 					Открыть
 				</a>
+				<button
+						type="button"
+						class="btn btn-danger"
+						data-map-delete="/maps/{{ campaign_map.id }}"
+						data-map-title="{{ campaign_map.title }}"
+						data-return-url="/maps?game_id={{ selected_game.id }}"
+				>
+					Удалить
+				</button>
+			
 			</article>
 			{% else %}
 			<p class="lobby-empty">

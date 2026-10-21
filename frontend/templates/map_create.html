@@ -26,8 +26,9 @@
 	
 	<form
 			id="maps-create-form"
-			action="/maps"
+			action="/maps/upload"
 			method="post"
+			enctype="multipart/form-data"
 	>
 		<input
 				type="hidden"
@@ -48,22 +49,29 @@
 		
 		<p>
 			<label for="maps-create-background">
-				URL фонового изображения — необязательно
+				Изображение карты — необязательно
 			</label>
 			<input
 					id="maps-create-background"
-					name="background_image_url"
-					type="url"
-					pattern="https?://.*"
-					maxlength="1000"
+					name="background_image"
+					type="file"
+					accept="image/png,image/jpeg,image/webp"
+					data-max-bytes="{{ map_image_max_bytes }}"
 					aria-describedby="maps-create-background-help"
 			>
 		</p>
 		
 		<p id="maps-create-background-help">
-			Укажите прямой HTTP- или HTTPS-адрес изображения.
-			Это ссылка на фон, а не загрузка файла с устройства.
+			Выберите PNG, JPEG или WebP без анимации.
+			Изображение будет загружено при создании карты.
 		</p>
+		
+		<img
+				id="maps-create-preview"
+				alt="Предпросмотр выбранного изображения"
+				style="max-width: 100%; height: auto;"
+				hidden
+		>
 		
 		<p>
 			<label>
