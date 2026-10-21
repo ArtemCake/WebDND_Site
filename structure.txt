@@ -117,6 +117,7 @@ frontend/
 │   ├── login.html
 │   ├── maps.html
 │   ├── menu.html
+│   ├── map_edit.html
 │   ├── forgot_password.html
 │   ├── password_reset.html
 │   ├── reset_password.html
@@ -213,6 +214,7 @@ frontend/
             ├── admin.js
             ├── auth.js
             ├── cookie-banner.js
+            ├── map-edit.js
             ├── map-delete.js
             ├── maps.js
             ├── map-view.js

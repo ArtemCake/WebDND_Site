@@ -101,6 +101,29 @@ async def create_map_with_image(game_id: UUID = Form(...),title: str = Form(...,
 		background_image=background_image,
 	)
 
+@router.get("/{map_id}/edit", response_class=HTMLResponse, name="map_edit_page_get", operation_id="getMapEditPage")
+async def get_map_edit_page(request: Request,map_id: UUID,session: AsyncSession = Depends(get_async_session),
+		user: User = Depends(get_current_user),	csrf_protect: CsrfProtect = Depends()):
+	campaign_map = await svc._get_map_and_check_master(session, map_id, user.id)
+
+	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+
+	context = {
+		"user": user,
+		"csrf_token": csrf_token,
+		"campaign_map": campaign_map,
+		"map_image_max_bytes": settings.MAP_IMAGE_MAX_BYTES,
+	}
+
+	response = request.app.state.templates.TemplateResponse(
+		request,
+		"map_edit.html",
+		context,
+	)
+
+	csrf_protect.set_csrf_cookie(signed_token, response)
+	return response
+
 @router.get("/{map_id}/background", response_class=Response, operation_id="getMapBackground")
 async def get_map_background(map_id: UUID, session: AsyncSession = Depends(get_async_session),
 		current_user: User = Depends(get_current_user)):
@@ -183,6 +206,23 @@ async def get_map(map_id: UUID,	session: AsyncSession = Depends(get_async_sessio
 		current_user: User = Depends(get_current_user),
 ):
 	return await svc._get_map_and_check_master(session,map_id,current_user.id)
+
+@router.patch("/{map_id}/upload", response_model=MapRead, operation_id="updateMapWithImage", dependencies=[Depends(enforce_csrf)])
+async def update_map_with_image(map_id: UUID, title: str = Form(..., min_length=1, max_length=255),
+		fog_of_war_enabled: bool = Form(...), background_image: UploadFile | None = File(None),
+		session: AsyncSession = Depends(get_async_session),	current_user: User = Depends(get_current_user)):
+	data = MapUpdate(
+		title=title,
+		fog_of_war_enabled=fog_of_war_enabled,
+	)
+
+	return await svc.update_map(
+		session,
+		map_id,
+		current_user.id,
+		data,
+		background_image=background_image,
+	)
 
 @router.patch("/{map_id}", response_model=MapRead, operation_id="updateMap", dependencies=[Depends(enforce_csrf)])
 async def update_map(map_id: UUID, data: MapUpdate,	session: AsyncSession = Depends(get_async_session),

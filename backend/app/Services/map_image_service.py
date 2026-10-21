@@ -1,10 +1,7 @@
 # backend/app/Services/map_image_service.py
 
-from Config.imports import (
-	BytesIO, Image, ImageOps, UnidentifiedImageError,
-	Path, UUID, UploadFile, HTTPException,
-	logging, run_in_threadpool,
-)
+from Config.imports import (BytesIO, Image, ImageOps, UnidentifiedImageError,
+	Path, UUID, UploadFile, HTTPException, logging, run_in_threadpool, os, uuid4)
 from Config.Config import settings
 
 
@@ -25,10 +22,8 @@ def _storage_root() -> Path:
 
 	return root
 
-
 def _image_path(map_id: UUID) -> Path:
 	return _storage_root() / f"{map_id}.png"
-
 
 def _normalize_image(contents: bytes) -> bytes:
 	try:
@@ -87,7 +82,6 @@ def _normalize_image(contents: bytes) -> bytes:
 			detail="Не удалось прочитать изображение. Выберите PNG, JPEG или WebP",
 		) from exc
 
-
 async def prepare_background(upload: UploadFile) -> bytes:
 	try:
 		contents = await upload.read(settings.MAP_IMAGE_MAX_BYTES + 1)
@@ -108,7 +102,6 @@ async def prepare_background(upload: UploadFile) -> bytes:
 
 	return await run_in_threadpool(_normalize_image, contents)
 
-
 def _write_background(map_id: UUID, contents: bytes) -> None:
 	path = _image_path(map_id)
 	path.parent.mkdir(parents=True, exist_ok=True)
@@ -121,7 +114,6 @@ def _write_background(map_id: UUID, contents: bytes) -> None:
 			path.unlink(missing_ok=True)
 			raise
 
-
 async def save_background(map_id: UUID, contents: bytes) -> None:
 	try:
 		await run_in_threadpool(_write_background, map_id, contents)
@@ -131,7 +123,6 @@ async def save_background(map_id: UUID, contents: bytes) -> None:
 			status_code=500,
 			detail="Не удалось сохранить изображение карты",
 		) from exc
-
 
 async def read_background(map_id: UUID) -> bytes:
 	try:
@@ -148,7 +139,6 @@ async def read_background(map_id: UUID) -> bytes:
 			detail="Не удалось прочитать изображение карты",
 		) from exc
 
-
 async def remove_background(map_id: UUID) -> None:
 	try:
 		await run_in_threadpool(
@@ -162,3 +152,109 @@ async def remove_background(map_id: UUID) -> None:
 			"Не удалось очистить файл фона карты %s",
 			map_id,
 		)
+
+def _cleanup_temporary_background(path: Path | None) -> None:
+	if path is None:
+		return
+
+	try:
+		path.unlink(missing_ok=True)
+	except OSError:
+		log.exception(
+			"Не удалось удалить временный файл изображения %s",
+			path.name,
+		)
+
+def _replace_background(map_id: UUID, contents: bytes) -> Path | None:
+	path = _image_path(map_id)
+	path.parent.mkdir(parents=True, exist_ok=True)
+
+	operation_id = uuid4()
+	temporary_path = path.with_name(
+		f"{map_id}.{operation_id}.upload.tmp"
+	)
+	backup_path = path.with_name(
+		f"{map_id}.{operation_id}.backup.tmp"
+	)
+	backup_created = False
+
+	try:
+		# Сначала записываем новое изображение целиком.
+		# Текущий фон на этом этапе не изменяется.
+		with temporary_path.open("xb") as destination:
+			destination.write(contents)
+			destination.flush()
+			os.fsync(destination.fileno())
+
+		try:
+			old_contents = path.read_bytes()
+		except FileNotFoundError:
+			old_contents = None
+
+		if old_contents is not None:
+			with backup_path.open("xb") as destination:
+				destination.write(old_contents)
+				destination.flush()
+				os.fsync(destination.fileno())
+
+			backup_created = True
+
+		# Оба файла находятся в одной папке.
+		# Читатель получает старый или новый файл, а не часть записи.
+		os.replace(temporary_path, path)
+
+	except BaseException:
+		_cleanup_temporary_background(temporary_path)
+		_cleanup_temporary_background(backup_path)
+		raise
+
+	return backup_path if backup_created else None
+
+async def replace_background(map_id: UUID, contents: bytes) -> Path | None:
+	try:
+		return await run_in_threadpool(
+			_replace_background,
+			map_id,
+			contents,
+		)
+	except OSError as exc:
+		log.exception("Не удалось заменить фон карты %s", map_id)
+		raise HTTPException(
+			status_code=500,
+			detail="Не удалось заменить изображение карты",
+		) from exc
+
+def _rollback_background(map_id: UUID, backup_path: Path | None) -> None:
+	path = _image_path(map_id)
+
+	if backup_path is None:
+		# До операции управляемого файла не было.
+		path.unlink(missing_ok=True)
+	else:
+		os.replace(backup_path, path)
+
+async def rollback_background(map_id: UUID, backup_path: Path | None) -> None:
+	try:
+		await run_in_threadpool(
+			_rollback_background,
+			map_id,
+			backup_path,
+		)
+	except OSError as exc:
+		# При неудаче восстановления резервный файл не удаляем.
+		log.exception(
+			"Не удалось восстановить предыдущий фон карты %s; "
+			"резервный файл: %s",
+			map_id,
+			backup_path,
+		)
+		raise HTTPException(
+			status_code=500,
+			detail=(
+				"Не удалось восстановить предыдущий фон после "
+				"ошибки сохранения. Требуется проверка хранилища"
+			),
+		) from exc
+
+async def finish_background_replacement(backup_path: Path | None) -> None:
+	await run_in_threadpool(_cleanup_temporary_background,backup_path,)

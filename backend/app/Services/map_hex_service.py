@@ -8,17 +8,38 @@ from backend.app.Services.lobby_service import (is_game_master, get_session_for_
 from backend.app.Services.hex_geometry import offset_to_axial_oddr, axial_distance, hex_line_draw
 
 
-async def _get_map_and_check_master(session: AsyncSession, map_id: UUID, master_id: UUID) -> CampaignMap:
-	campaign_map = await session.get(CampaignMap, map_id)
+async def _get_map_and_check_master(session: AsyncSession, map_id: UUID, master_id: UUID, *, for_update: bool = False) -> CampaignMap:
+	if for_update:
+		statement = (
+			select(CampaignMap)
+			.where(CampaignMap.id == map_id)
+			.with_for_update()
+			.execution_options(populate_existing=True)
+		)
+		result = await session.execute(statement)
+		campaign_map = result.scalar_one_or_none()
+	else:
+		campaign_map = await session.get(CampaignMap, map_id)
+
 	if campaign_map is None:
-		raise HTTPException(status.HTTP_404_NOT_FOUND, "Карта не найдена")
-	if not await is_game_master(session, campaign_map.game_id, master_id):
-		raise HTTPException(status.HTTP_403_FORBIDDEN, "Только мастер игры может управлять картой")
+		raise HTTPException(
+			status.HTTP_404_NOT_FOUND,
+			"Карта не найдена",
+		)
+
+	if not await is_game_master(
+			session,
+			campaign_map.game_id,
+			master_id,
+	):
+		raise HTTPException(
+			status.HTTP_403_FORBIDDEN,
+			"Только мастер игры может управлять картой",
+		)
+
 	return campaign_map
 
-async def generate_hex_grid(
-		session: AsyncSession, map_id: UUID, master_id: UUID, rows: int, cols: int,
-) -> MapLayer:
+async def generate_hex_grid(session: AsyncSession, map_id: UUID, master_id: UUID, rows: int, cols: int) -> MapLayer:
 	"""Накладывает гекс-сетку поверх карты — работает и для image_upload, и для procedural_generation."""
 	campaign_map = await _get_map_and_check_master(session, map_id, master_id)
 
@@ -46,11 +67,8 @@ async def generate_hex_grid(
 	await session.refresh(layer)
 	return layer
 
-def _has_line_of_sight(
-		origin: tuple[int, int], target: tuple[int, int],
-		hex_by_coord: dict[tuple[int, int], MapHex],
-		origin_elevation: int, target_elevation: int,
-) -> bool:
+def _has_line_of_sight(origin: tuple[int, int], target: tuple[int, int],
+		hex_by_coord: dict[tuple[int, int], MapHex],origin_elevation: int, target_elevation: int) -> bool:
 	"""
 	Упрощённая проверка видимости: блокирует только гекс с cover=true в data_json,
 	если его высота не ниже обеих точек линии. Это эвристика, не точные правила 5e по укрытиям.
@@ -190,11 +208,80 @@ async def get_map(session: AsyncSession, map_id: UUID) -> CampaignMap:
 		raise HTTPException(status.HTTP_404_NOT_FOUND, "Карта не найдена")
 	return campaign_map
 
-async def update_map(session: AsyncSession, map_id: UUID, master_id: UUID, data: "MapUpdate") -> CampaignMap:
-	campaign_map = await _get_map_and_check_master(session, map_id, master_id)
-	for field, value in data.model_dump(exclude_unset=True).items():
-		setattr(campaign_map, field, value)
-	await session.commit()
+async def update_map(session: AsyncSession, map_id: UUID, master_id: UUID, data: "MapUpdate", *, background_image: UploadFile | None = None) -> CampaignMap:
+	backup_path = None
+	image_replaced = False
+
+	try:
+		campaign_map = await _get_map_and_check_master(
+			session,
+			map_id,
+			master_id,
+			for_update=True,
+		)
+
+		values = data.model_dump(exclude_unset=True)
+
+		if "title" in values:
+			title = values["title"]
+
+			if title is None or not title.strip():
+				raise HTTPException(
+					status_code=status.HTTP_400_BAD_REQUEST,
+					detail="Укажите название карты",
+				)
+
+			values["title"] = title.strip()
+
+		if background_image is not None:
+			if campaign_map.map_type != "image_upload":
+				raise HTTPException(
+					status_code=status.HTTP_400_BAD_REQUEST,
+					detail=(
+						"Загрузка фона доступна только для карты "
+						"на основе изображения"
+					),
+				)
+
+			contents = await map_image_service.prepare_background(
+				background_image,
+			)
+
+			backup_path = await map_image_service.replace_background(
+				map_id,
+				contents,
+			)
+			image_replaced = True
+
+			# Адрес формируется сервером, а не берётся из имени файла.
+			values["background_image_url"] = (
+				f"/maps/{map_id}/background"
+			)
+
+		for field, value in values.items():
+			setattr(campaign_map, field, value)
+
+		await session.commit()
+
+	except Exception:
+		try:
+			if image_replaced:
+				await map_image_service.rollback_background(
+					map_id,
+					backup_path,
+				)
+		finally:
+			await session.rollback()
+
+		raise
+
+	# Запись уже сохранена: ошибка refresh не должна
+	# возвращать старое изображение.
+	if image_replaced:
+		await map_image_service.finish_background_replacement(
+			backup_path,
+		)
+
 	await session.refresh(campaign_map)
 	return campaign_map
 
@@ -212,7 +299,7 @@ async def set_active_map(session: AsyncSession, map_id: UUID, master_id: UUID) -
 	return campaign_map
 
 async def delete_map(session: AsyncSession, map_id: UUID, master_id: UUID) -> None:
-	campaign_map = await _get_map_and_check_master(session,map_id,master_id)
+	campaign_map = await _get_map_and_check_master(session, map_id, master_id, for_update=True)
 
 	hex_ids = (select(MapHex.id)
 		.join(MapLayer, MapHex.layer_id == MapLayer.id)

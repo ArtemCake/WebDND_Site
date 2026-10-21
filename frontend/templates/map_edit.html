@@ -1,0 +1,108 @@
+<!-- frontend/templates/map_edit.html -->
+
+{% extends "base.html" %}
+
+{% block title %}Редактирование карты — WorldLoom{% endblock %}
+
+{% block content %}
+<section class="lobby-page">
+	<header class="lobby-page__header">
+		<h1>Редактирование карты</h1>
+		
+		<a href="/maps/{{ campaign_map.id }}/view">
+			Вернуться к просмотру
+		</a>
+	</header>
+	
+	<form
+			id="map-edit-form"
+			action="/maps/{{ campaign_map.id }}/upload"
+			method="post"
+			enctype="multipart/form-data"
+			data-return-url="/maps/{{ campaign_map.id }}/view"
+			data-background-url="{{ campaign_map.background_image_url or '' }}"
+	>
+		<p>
+			<label for="map-edit-title">Название карты</label>
+			<input
+					id="map-edit-title"
+					name="title"
+					type="text"
+					value="{{ campaign_map.title }}"
+					maxlength="255"
+					required
+			>
+		</p>
+		
+		<p>
+			<label for="map-edit-fog">
+				<input
+						id="map-edit-fog"
+						name="fog_of_war_enabled"
+						type="checkbox"
+						{% if campaign_map.fog_of_war_enabled %}checked{% endif %}
+				>
+				Включить туман войны
+			</label>
+		</p>
+		
+		{% if campaign_map.map_type == "image_upload" %}
+		<p>
+			<label for="map-edit-background">
+				Новое изображение карты
+			</label>
+			<input
+					id="map-edit-background"
+					name="background_image"
+					type="file"
+					accept="image/png,image/jpeg,image/webp"
+					data-max-bytes="{{ map_image_max_bytes }}"
+					aria-describedby="map-edit-background-help"
+			>
+		</p>
+		
+		<p id="map-edit-background-help">
+			PNG, JPEG или WebP без анимации.
+			Если новый файл не выбран, текущий фон сохранится.
+		</p>
+		{% endif %}
+		
+		<section aria-labelledby="map-edit-preview-heading">
+			<h2 id="map-edit-preview-heading">Предпросмотр фона</h2>
+			
+			<p
+					id="map-edit-preview-message"
+					role="status"
+					aria-live="polite"
+			></p>
+			
+			<img
+					id="map-edit-preview"
+					alt="Предпросмотр фонового изображения карты"
+					style="max-width: 100%; height: auto;"
+					hidden
+			>
+		</section>
+		
+		<div
+				id="map-edit-message"
+				role="status"
+				aria-live="polite"
+		></div>
+		
+		<p>
+			<button type="submit" class="btn btn-primary">
+				Сохранить изменения
+			</button>
+			
+			<a href="/maps/{{ campaign_map.id }}/view">
+				Отмена
+			</a>
+		</p>
+	</form>
+	
+	<noscript>
+		<p>Для сохранения изменений необходим JavaScript.</p>
+	</noscript>
+</section>
+{% endblock %}
