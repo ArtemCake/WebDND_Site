@@ -17,6 +17,7 @@ from backend.app.Services.Core.user_service import get_optional_user, ensure_ini
 from Config.imports import (FastAPI, asynccontextmanager, CORSMiddleware, Path, StaticFiles,
                             Jinja2Templates, SessionMiddleware, CsrfProtectError, CsrfProtect,
                             base64, RequestValidationError, Request, asyncio, JSONResponse, HTMLResponse, uvicorn, os, command, Config)
+import Config.csrf_config as _csrf_config
 
 
 # --- ПУТЬ К КОНФИГУРАЦИИ ALEMBIC ---
