@@ -20,6 +20,7 @@ import { initMapView } from './modules/maps/map-view.js';
 import { initMapDelete } from './modules/maps/map-delete.js';
 import { initMapEdit } from './modules/maps/map-edit.js';
 import { initMapManagement } from './modules/maps/map-management.js';
+import { initSessionCombat } from './modules/games/session-combat.js';
 
 
 // --- ТОЧКА ВХОДА ПРИЛОЖЕНИЯ ---
@@ -71,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initMapDelete();
     initMapEdit();
     initMapManagement();
+    initSessionCombat();
 
     // 3. Инициализация игровой карты (Canvas + PixiJS)
     const canvasRoot = document.getElementById('game-canvas-root');

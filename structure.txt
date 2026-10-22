@@ -235,6 +235,7 @@ frontend/
             ├── games/
             │   ├── dice-roller.js
             │   ├── game-state-api.js
+            │   ├── session-combat.js
             │   ├── lobby.js
             │   └── session-dice.js
             ├── admin/

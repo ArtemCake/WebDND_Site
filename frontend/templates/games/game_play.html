@@ -59,6 +59,34 @@
 		<p>Эта сессия завершена. Новые броски здесь недоступны.</p>
 		{% endif %}
 	</section>
+	<section
+			data-session-combat
+			data-session-id="{{ selected_session.id }}"
+			aria-labelledby="session-combat-title"
+			aria-busy="false"
+	>
+		<h3 id="session-combat-title">Очередь боя</h3>
+		
+		<button
+				type="button"
+				class="btn btn-outline-primary"
+				data-combat-refresh
+		>
+			Обновить очередь
+		</button>
+		
+		<p
+				data-combat-status
+				role="status"
+				aria-live="polite"
+		>
+			Состояние боя ещё не загружено.
+		</p>
+		
+		<p data-combat-round hidden></p>
+		<ol data-combat-order aria-label="Участники боя"></ol>
+	</section>
+	
 	{% elif game_sessions %}
 	<p>Активной сессии нет. Выберите завершённую из списка.</p>
 	{% endif %}

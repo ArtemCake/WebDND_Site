@@ -68,6 +68,14 @@ async def delete_token(
 
 # --- Initiative / combat ---
 
+@router.get(
+	"/{session_id}/combat",
+	operation_id="getCombatState",
+)
+async def get_combat_state(session_id: UUID, session: AsyncSession = Depends(get_async_session),
+		current_user: User = Depends(get_current_user)):
+	return await initiative_service.get_combat_state(session, session_id, current_user.id)
+
 @router.post("/{session_id}/combat/start", operation_id="startCombat", dependencies=[Depends(enforce_csrf)])
 async def start_combat(
 		session_id: UUID,

@@ -1,4 +1,4 @@
-// frontend/static/js/modules/game-state-api.js
+// frontend/static/js/modules/games/game-state-api.js
 
 /**
  * API игрового состояния: токены, очередь ходов, броски кубиков.
@@ -89,11 +89,13 @@ async function request(path, { method = 'GET', body } = {}) {
 
 	try {
 		response = await fetch(path, {
-			method,
-			headers,
-			credentials: 'include',
-			body: body === undefined ? undefined : JSON.stringify(body)
-		});
+        	method,
+        	headers,
+        	credentials: 'include',
+        	cache: 'no-store',
+            body: body === undefined ? undefined : JSON.stringify(body)
+        });
+
 	} catch {
 		throw new GameStateApiError(
 			'Не удалось связаться с сервером. Проверьте соединение.'
@@ -174,6 +176,10 @@ export const gameStateApi = Object.freeze({
 			method: 'DELETE'
 		});
 	},
+
+		getCombatState(sessionId) {
+    		return request(`/sessions/${encodeId(sessionId)}/combat`);
+    	},
 
 	startCombat(sessionId, combatants) {
 		if (!Array.isArray(combatants)) {
