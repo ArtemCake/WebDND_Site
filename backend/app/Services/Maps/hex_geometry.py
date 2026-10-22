@@ -1,4 +1,4 @@
-# backend/app/Services/hex_geometry.py
+# backend/app/Services/Maps/hex_geometry.py
 
 """Чистая геометрия гекс-сетки: координаты axial/cube, соседи, дистанция, линия видимости."""
 

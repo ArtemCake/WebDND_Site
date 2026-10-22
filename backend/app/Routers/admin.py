@@ -8,7 +8,7 @@ from Config.imports import (APIRouter, Depends, Request, HTMLResponse, JSONRespo
 from backend.app.Database.database import get_async_session
 from backend.app.Database.Models.Core.user import User
 from backend.app.Enums.enums_BD import SystemRole, AdminPermission
-from backend.app.Services.user_service import soft_delete_user, hard_delete_user, get_user_by_id
+from backend.app.Services.Core.user_service import soft_delete_user, hard_delete_user, get_user_by_id
 from backend.app.Services.admin_service import (get_admin_user, require_permission, list_users, admin_set_roles, admin_set_permissions,
 	list_reports, update_report, get_report_by_id, list_audit_logs)
 from backend.app.Core.csrf import enforce_csrf

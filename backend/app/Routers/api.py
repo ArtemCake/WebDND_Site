@@ -1,18 +1,18 @@
 # backend/app/Routers/api.py
 
 from Config.logger import setup_logging
-from backend.app.Services.rate_limit_service import check_ip_rate_limit
-from backend.app.Services.security_service import (create_verification_token, verify_token, create_password_reset_token,
-                                                   issue_login_session, set_auth_cookie, clear_auth_cookie)
-from backend.app.Services.user_service import (soft_delete_user, get_current_user, verify_user_password)
+from backend.app.Services.Core.rate_limit_service import check_ip_rate_limit
+from backend.app.Services.Core.security_service import (create_verification_token, verify_token, create_password_reset_token,
+                                                        issue_login_session, set_auth_cookie, clear_auth_cookie)
+from backend.app.Services.Core.user_service import (soft_delete_user, get_current_user, verify_user_password)
 from Config.Config import settings
 from Config.imports import (JSONResponse, datetime, AsyncSession, update, UUID, RedirectResponse,
                             APIRouter, Depends, HTTPException, status, hashlib,
                             Form, secrets, Request)
 from backend.app.Database.database import get_async_session
 from backend.app.Database.Models.Core.user import User
-from backend.app.Services import security_service, user_service, mfa_service
-from backend.app.Services.mail_service import mail_service
+from backend.app.Services.Core import user_service, security_service, mfa_service
+from backend.app.Services.Core.mail_service import mail_service
 from backend.app.Schemas.auth import RegisterRequest, validate_password_complexity
 from backend.app.Core.csrf import enforce_csrf
 

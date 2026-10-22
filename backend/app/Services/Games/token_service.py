@@ -1,8 +1,8 @@
-# backend/app/Services/token_service.py
+# backend/app/Services/Games/token_service.py
 
 from Config.imports import (UUID, HTTPException, status, select, AsyncSession)
 from backend.app.Database.Models.Gameplay.lobby import Session as GameSession
-from backend.app.Services.lobby_service import (get_game, get_session_for_user, is_game_master)
+from backend.app.Services.Games.lobby_service import (get_game, get_session_for_user, is_game_master)
 from backend.app.Schemas.maps import TokenCreate, TokenUpdate, TokenMove
 from backend.app.Database.Models.Gameplay.maps import (Token, MapHex, MapLayer, CampaignMap)
 

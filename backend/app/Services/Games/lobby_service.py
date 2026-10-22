@@ -1,4 +1,4 @@
-# backend/app/Services/lobby_service.py
+# backend/app/Services/Games/lobby_service.py
 
 from Config.imports import (AsyncSession, HTTPException, status, secrets, UUID, select)
 from backend.app.Schemas.lobby import GameCreate, GameUpdate, InviteCreate, SessionCreate, SessionUpdate

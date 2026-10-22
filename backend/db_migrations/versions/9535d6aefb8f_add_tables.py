@@ -1,8 +1,8 @@
 """add_tables
 
-Revision ID: 2f2a24dbb145
+Revision ID: 9535d6aefb8f
 Revises: 
-Create Date: 2026-10-18 16:05:01.755206
+Create Date: 2026-10-22 18:27:54.776259
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '2f2a24dbb145'
+revision: str = '9535d6aefb8f'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -51,6 +51,7 @@ def upgrade() -> None:
     sa.Column('email_hash', sa.String(length=64), nullable=False),
     sa.Column('password_hash', sa.Text(), nullable=True),
     sa.Column('nickname', sa.String(length=50), nullable=False),
+    sa.Column('maps_storage_folder', sa.String(length=160), nullable=True),
     sa.Column('avatar_url', sa.String(length=500), nullable=True),
     sa.Column('profile_settings', postgresql.JSONB(astext_type=sa.Text()), server_default='{}', nullable=True),
     sa.Column('is_email_verified', sa.Boolean(), nullable=False),
@@ -336,6 +337,8 @@ def upgrade() -> None:
     sa.Column('privacy_level', sa.String(length=20), server_default='private', nullable=False),
     sa.Column('voice_chat_config', postgresql.JSONB(astext_type=sa.Text()), server_default='{}', nullable=True),
     sa.Column('is_homebrew_allowed', sa.Boolean(), nullable=False),
+    sa.Column('maps_storage_folder', sa.String(length=160), nullable=True),
+    sa.Column('next_map_number', sa.Integer(), server_default='1', nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['master_id'], ['users.id'], ondelete='SET NULL'),
@@ -888,6 +891,8 @@ def upgrade() -> None:
     sa.Column('game_id', sa.UUID(), nullable=False),
     sa.Column('session_id', sa.UUID(), nullable=True),
     sa.Column('title', sa.String(length=255), nullable=False),
+    sa.Column('map_number', sa.Integer(), nullable=True),
+    sa.Column('background_storage_path', sa.String(length=512), nullable=True),
     sa.Column('map_type', sa.String(length=20), nullable=False),
     sa.Column('background_image_url', sa.String(length=1000), nullable=True),
     sa.Column('grid_settings_json', postgresql.JSONB(astext_type=sa.Text()), server_default='{}', nullable=False),
@@ -898,7 +903,8 @@ def upgrade() -> None:
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['game_id'], ['games.id'], ondelete='CASCADE'),
     sa.ForeignKeyConstraint(['session_id'], ['sessions.id'], ondelete='SET NULL'),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('game_id', 'map_number', name='uq_campaign_maps_game_number')
     )
     op.create_index(op.f('ix_campaign_maps_game_id'), 'campaign_maps', ['game_id'], unique=False)
     op.create_index(op.f('ix_campaign_maps_session_id'), 'campaign_maps', ['session_id'], unique=False)

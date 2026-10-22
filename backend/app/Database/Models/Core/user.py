@@ -20,6 +20,7 @@ class User(Base):
 	# Расширено до Text для безопасного хранения длинных хешей Argon2id без риска обрезки
 	password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
 	nickname: Mapped[str] = mapped_column(String(50), nullable=False, index=True, unique=True)
+	maps_storage_folder: Mapped[str | None] = mapped_column(String(160), nullable=True)
 	avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 	profile_settings: Mapped[dict | None] = mapped_column(JSONB, nullable=True, server_default="{}")
 	is_email_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

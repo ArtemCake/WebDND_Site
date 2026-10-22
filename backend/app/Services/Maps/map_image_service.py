@@ -1,6 +1,6 @@
-# backend/app/Services/map_image_service.py
+# backend/app/Services/Maps/map_image_service.py
 
-from Config.imports import (BytesIO, Image, ImageOps, UnidentifiedImageError,
+from Config.imports import (BytesIO, Image, ImageOps, UnidentifiedImageError, PurePosixPath, re,
 	Path, UUID, UploadFile, HTTPException, logging, run_in_threadpool, os, uuid4)
 from Config.Config import settings
 
@@ -22,8 +22,45 @@ def _storage_root() -> Path:
 
 	return root
 
-def _image_path(map_id: UUID) -> Path:
-	return _storage_root() / f"{map_id}.png"
+def _image_path(map_id: UUID | str) -> Path:
+	root = _storage_root()
+
+	if isinstance(map_id, UUID):
+		# Совместимость со старым хранилищем.
+		return root / f"{map_id}.png"
+
+	if not isinstance(map_id, str):
+		raise ValueError("Некорректный адрес изображения карты")
+
+	relative = PurePosixPath(map_id)
+
+	if (
+			relative.is_absolute()
+			or "\\" in map_id
+			or len(relative.parts) != 3
+			or relative.as_posix() != map_id
+	):
+		raise ValueError("Некорректный адрес изображения карты")
+
+	master_folder, game_folder, filename = relative.parts
+
+	if (
+			not master_folder.startswith("master-")
+			or not game_folder.startswith("game-")
+			or not re.fullmatch(r"[\w-]+", master_folder)
+			or not re.fullmatch(r"[\w-]+", game_folder)
+			or not re.fullmatch(r"map-[1-9][0-9]*\.png", filename)
+	):
+		raise ValueError("Некорректный адрес изображения карты")
+
+	path = root.joinpath(*relative.parts).resolve()
+
+	# Дополнительная защита от выхода за пределы хранилища,
+	# в том числе через существующую символическую ссылку.
+	if not path.is_relative_to(root):
+		raise ValueError("Путь изображения вне хранилища карт")
+
+	return path
 
 def _normalize_image(contents: bytes) -> bytes:
 	try:
@@ -102,7 +139,7 @@ async def prepare_background(upload: UploadFile) -> bytes:
 
 	return await run_in_threadpool(_normalize_image, contents)
 
-def _write_background(map_id: UUID, contents: bytes) -> None:
+def _write_background(map_id: UUID | str, contents: bytes) -> None:
 	path = _image_path(map_id)
 	path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -114,7 +151,7 @@ def _write_background(map_id: UUID, contents: bytes) -> None:
 			path.unlink(missing_ok=True)
 			raise
 
-async def save_background(map_id: UUID, contents: bytes) -> None:
+async def save_background(map_id: UUID | str, contents: bytes) -> None:
 	try:
 		await run_in_threadpool(_write_background, map_id, contents)
 	except OSError as exc:
@@ -124,7 +161,7 @@ async def save_background(map_id: UUID, contents: bytes) -> None:
 			detail="Не удалось сохранить изображение карты",
 		) from exc
 
-async def read_background(map_id: UUID) -> bytes:
+async def read_background(map_id: UUID | str) -> bytes:
 	try:
 		return await run_in_threadpool(_image_path(map_id).read_bytes)
 	except FileNotFoundError as exc:
@@ -139,7 +176,7 @@ async def read_background(map_id: UUID) -> bytes:
 			detail="Не удалось прочитать изображение карты",
 		) from exc
 
-async def remove_background(map_id: UUID) -> None:
+async def remove_background(map_id: UUID | str) -> None:
 	try:
 		await run_in_threadpool(
 			_image_path(map_id).unlink,
@@ -165,17 +202,14 @@ def _cleanup_temporary_background(path: Path | None) -> None:
 			path.name,
 		)
 
-def _replace_background(map_id: UUID, contents: bytes) -> Path | None:
+def _replace_background(map_id: UUID | str, contents: bytes) -> Path | None:
 	path = _image_path(map_id)
 	path.parent.mkdir(parents=True, exist_ok=True)
 
 	operation_id = uuid4()
-	temporary_path = path.with_name(
-		f"{map_id}.{operation_id}.upload.tmp"
-	)
-	backup_path = path.with_name(
-		f"{map_id}.{operation_id}.backup.tmp"
-	)
+	temporary_path = path.with_name(f"{path.stem}.{operation_id}.upload.tmp")
+	backup_path = path.with_name(f"{path.stem}.{operation_id}.backup.tmp")
+
 	backup_created = False
 
 	try:
@@ -210,7 +244,7 @@ def _replace_background(map_id: UUID, contents: bytes) -> Path | None:
 
 	return backup_path if backup_created else None
 
-async def replace_background(map_id: UUID, contents: bytes) -> Path | None:
+async def replace_background(map_id: UUID | str, contents: bytes) -> Path | None:
 	try:
 		return await run_in_threadpool(
 			_replace_background,
@@ -224,7 +258,7 @@ async def replace_background(map_id: UUID, contents: bytes) -> Path | None:
 			detail="Не удалось заменить изображение карты",
 		) from exc
 
-def _rollback_background(map_id: UUID, backup_path: Path | None) -> None:
+def _rollback_background(map_id: UUID | str, backup_path: Path | None) -> None:
 	path = _image_path(map_id)
 
 	if backup_path is None:
@@ -233,7 +267,7 @@ def _rollback_background(map_id: UUID, backup_path: Path | None) -> None:
 	else:
 		os.replace(backup_path, path)
 
-async def rollback_background(map_id: UUID, backup_path: Path | None) -> None:
+async def rollback_background(map_id: UUID | str, backup_path: Path | None) -> None:
 	try:
 		await run_in_threadpool(
 			_rollback_background,

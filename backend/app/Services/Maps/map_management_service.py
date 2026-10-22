@@ -1,10 +1,10 @@
-# backend/app/Services/map_management_service.py
+# backend/app/Services/Maps/map_management_service.py
 
 from Config.imports import (AsyncSession, UUID, HTTPException, select, update,
 	or_, uuid4, deepcopy)
 from backend.app.Database.Models.Gameplay.lobby import Game
 from backend.app.Database.Models.Gameplay.maps import (CampaignMap, MapLayer, MapHex, Token, MapObject, SpatialAudioZone)
-from backend.app.Services import map_image_service
+from backend.app.Services.Maps import map_image_service, map_storage_service
 
 
 async def list_target_games(session: AsyncSession, master_id: UUID, source_game_id: UUID) -> list[Game]:
@@ -183,7 +183,11 @@ async def _check_move_dependencies(session: AsyncSession, map_id: UUID) -> None:
 			"Аудиозоны не удалены. Можно скопировать основу карты",
 		)
 
-async def move_map(	session: AsyncSession, map_id: UUID, master_id: UUID, source_game_id: UUID, target_game_id: UUID) -> CampaignMap:
+async def move_map(session: AsyncSession, map_id: UUID, master_id: UUID, source_game_id: UUID, target_game_id: UUID) -> CampaignMap:
+	old_key = None
+	new_path = None
+	image_saved = False
+
 	try:
 		campaign_map = await _lock_context(
 			session,
@@ -195,17 +199,61 @@ async def move_map(	session: AsyncSession, map_id: UUID, master_id: UUID, source
 
 		await _check_move_dependencies(session, map_id)
 
+		old_key = map_storage_service.image_key(campaign_map)
+		contents = None
+
+		if campaign_map.background_image_url == (
+				f"/maps/{campaign_map.id}/background"
+		):
+			contents = await map_image_service.read_background(
+				old_key,
+			)
+
+		number, new_path = (
+			await map_storage_service.allocate_location(
+				session,
+				target_game_id,
+				master_id,
+			)
+		)
+
+		if contents is not None:
+			await map_image_service.save_background(
+				new_path,
+				contents,
+			)
+			image_saved = True
+
+			written = await map_image_service.read_background(
+				new_path,
+			)
+			if written != contents:
+				raise HTTPException(
+					500,
+					"Не удалось проверить изображение после переноса",
+				)
+
 		campaign_map.game_id = target_game_id
+		campaign_map.map_number = number
+		campaign_map.background_storage_path = new_path
 		campaign_map.session_id = None
 		campaign_map.is_active_in_session = False
 
 		await session.commit()
+
 	except Exception:
-		await session.rollback()
+		try:
+			await session.rollback()
+		finally:
+			if image_saved:
+				await map_image_service.remove_background(
+					new_path,
+				)
 		raise
 
-	# Идентификатор карты не изменился:
-	# переносить или переименовывать файл фона не нужно.
+	if image_saved:
+		await map_image_service.remove_background(old_key)
+
 	await session.refresh(campaign_map)
 	return campaign_map
 
@@ -264,6 +312,7 @@ async def _copy_layers(session: AsyncSession, source_map_id: UUID, destination: 
 
 async def copy_map(session: AsyncSession, map_id: UUID, master_id: UUID, source_game_id: UUID, target_game_id: UUID) -> CampaignMap:
 	new_map_id = uuid4()
+	new_path = None
 	image_saved = False
 
 	try:
@@ -275,24 +324,36 @@ async def copy_map(session: AsyncSession, map_id: UUID, master_id: UUID, source_
 			expected_game_id=source_game_id,
 		)
 
-		background_url = None
+		contents = None
 
 		if source.background_image_url:
-			managed_url = f"/maps/{source.id}/background"
-
-			if source.background_image_url != managed_url:
+			if source.background_image_url != (
+					f"/maps/{source.id}/background"
+			):
 				raise HTTPException(
 					409,
 					"Карта использует фон по произвольному адресу. "
 					"Сначала загрузите изображение через "
-					"редактирование карты, затем повторите копирование",
+					"редактирование карты",
 				)
 
 			contents = await map_image_service.read_background(
-				source.id,
+				map_storage_service.image_key(source),
 			)
+
+		number, new_path = (
+			await map_storage_service.allocate_location(
+				session,
+				target_game_id,
+				master_id,
+			)
+		)
+
+		background_url = None
+
+		if contents is not None:
 			await map_image_service.save_background(
-				new_map_id,
+				new_path,
 				contents,
 			)
 			image_saved = True
@@ -302,6 +363,8 @@ async def copy_map(session: AsyncSession, map_id: UUID, master_id: UUID, source_
 			id=new_map_id,
 			game_id=target_game_id,
 			session_id=None,
+			map_number=number,
+			background_storage_path=new_path,
 			title=source.title,
 			map_type=source.map_type,
 			background_image_url=background_url,
@@ -322,11 +385,9 @@ async def copy_map(session: AsyncSession, map_id: UUID, master_id: UUID, source_
 		finally:
 			if image_saved:
 				await map_image_service.remove_background(
-					new_map_id,
+					new_path,
 				)
 		raise
 
-	# После успешного commit файл уже принадлежит сохранённой карте.
-	# Ошибка refresh не должна его удалить.
 	await session.refresh(destination)
 	return destination

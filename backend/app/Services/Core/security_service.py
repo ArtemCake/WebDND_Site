@@ -1,4 +1,4 @@
-# backend/app/Services/security_service.py
+# backend/app/Services/Core/security_service.py
 
 from Config.Config import settings
 from Config.imports import (OAuth2PasswordBearer, jwt, JWTError, datetime, timedelta, hashlib,

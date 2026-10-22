@@ -58,23 +58,31 @@ backend/
 │   │   │    ├── dnd5e_system.py
 │   │   │    ├── registry.py
 │   │   │    └── i_system.py
+│   │   ├── Core/
+│   │   │    ├── __init__.py
+│   │   │    ├── mail_service.py
+│   │   │    ├── mfa_service.py
+│   │   │    ├── rate_limit_service.py
+│   │   │    ├── security_service.py
+│   │   │    └── user_service.py
+│   │   ├── Games/
+│   │   │    ├── __init__.py
+│   │   │    ├── dice_service.py
+│   │   │    ├── initiative_service.py
+│   │   │    ├── lobby_service.py
+│   │   │    └── token_service.py
+│   │   ├── Maps/
+│   │   │    ├── __init__.py
+│   │   │    ├── hex_geometry.py
+│   │   │    ├── map_hex_service.py
+│   │   │    ├── map_image_service.py
+│   │   │    ├── map_storage_service.py
+│   │   │    └── map_management_service.py
 │   │   ├── __init__.py
 │   │   ├── admin_service.py
-│   │   ├── map_management_service.py
 │   │   ├── content_service.py
-│   │   ├── map_image_service.py
-│   │   ├── hex_geometry.py
-│   │   ├── map_hex_service.py
-│   │   ├── dice_service.py
-│   │   ├── initiative_service.py
-│   │   ├── token_service.py
 │   │   ├── legal_service.py
-│   │   ├── lobby_service.py
-│   │   ├── mfa_service.py
-│   │   ├── mail_service.py
-│   │   ├── rate_limit_service.py
-│   │   ├── security_service.py
-│   │   └── user_service.py
+│   │   └── character_service.py
 │   └── Database/
 │       ├── __init__.py
 │       ├── _models.py

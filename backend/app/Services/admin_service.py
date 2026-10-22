@@ -5,11 +5,10 @@
 от самой роли admin, согласно гранулярной модели прав."""
 
 from Config.imports import AsyncSession, select, Depends, HTTPException, status, func
-from backend.app.Database.database import get_async_session
 from backend.app.Database.Models.Core.user import User
 from backend.app.Database.Models.Systems.system import AuditLog, ContentReport
 from backend.app.Enums.enums_BD import SystemRole, AdminPermission
-from backend.app.Services.user_service import get_current_user
+from backend.app.Services.Core.user_service import get_current_user
 
 
 PAGE_SIZE = 25

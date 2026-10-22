@@ -1,4 +1,4 @@
-# backend/app/Services/user_service.py
+# backend/app/Services/Core/user_service.py
 
 from Config.Config import settings
 from backend.app.Core.crypto import hash_email

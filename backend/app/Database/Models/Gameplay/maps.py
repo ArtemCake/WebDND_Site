@@ -20,6 +20,8 @@ class CampaignMap(Base):
 	game_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("games.id", ondelete="CASCADE"), nullable=False, index=True)
 	session_id: Mapped[PG_UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("sessions.id", ondelete="SET NULL"), nullable=True, index=True)
 	title: Mapped[str] = mapped_column(String(255), nullable=False)
+	map_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+	background_storage_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
 	map_type: Mapped[str] = mapped_column(String(20), nullable=False) # 'image_upload', 'procedural_generation'
 	background_image_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
 	grid_settings_json: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default="{}")
@@ -34,7 +36,9 @@ class CampaignMap(Base):
 	layers: Mapped[list["MapLayer"]] = relationship("MapLayer", back_populates="map", cascade="all, delete-orphan")
 	tokens: Mapped[list["Token"]] = relationship("Token", back_populates="current_map", lazy="selectin")
 
-	def __repr__(self) -> str:
+	__table_args__ = (UniqueConstraint("game_id", "map_number", name="uq_campaign_maps_game_number"),)
+
+def __repr__(self) -> str:
 		return f"<CampaignMap(id='{self.id}', title='{self.title}')>"
 
 # --- СЛОИ КАРТЫ ---

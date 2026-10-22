@@ -27,6 +27,8 @@ class Game(Base):
 	voice_chat_config: Mapped[dict | None] = mapped_column(JSONB, nullable=True, server_default="{}")
 	# {"provider": "discord", "channel_id": "..."}
 	is_homebrew_allowed: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+	maps_storage_folder: Mapped[str | None] = mapped_column(String(160), nullable=True)
+	next_map_number: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
 	master: Mapped["User"] = relationship("User", back_populates="created_games")

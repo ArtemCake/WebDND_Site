@@ -1,8 +1,8 @@
-# backend/app/Services/initiative_service.py
+# backend/app/Services/Games/initiative_service.py
 
 from Config.imports import (UUID, HTTPException, status, AsyncSession)
 from backend.app.Database.Models.Gameplay.lobby import InitiativeTracker, Session as GameSession
-from backend.app.Services.lobby_service import is_game_master
+from backend.app.Services.Games.lobby_service import is_game_master
 
 
 async def _require_master_for_session(session: AsyncSession, session_id: UUID, master_id: UUID) -> GameSession:

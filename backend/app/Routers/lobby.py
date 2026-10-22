@@ -4,13 +4,12 @@ from Config.imports import (APIRouter, Depends, status, AsyncSession, UUID,
                             Request, HTMLResponse, CsrfProtect, HTTPException)
 from backend.app.Database.database import get_async_session
 from backend.app.Core.csrf import enforce_csrf
-from backend.app.Services.user_service import get_current_user
+from backend.app.Services.Core.user_service import get_current_user
 from backend.app.Database.Models.Core.user import User
 from backend.app.Schemas.lobby import (GameCreate, GameUpdate, GameRead,
                                        PartyRead, PartyRoleUpdate, InviteCreate, InviteRead, InviteClaim,
                                        SessionCreate, SessionUpdate, SessionRead)
-from backend.app.Services import lobby_service as svc
-
+from backend.app.Services.Games import lobby_service as svc
 
 router = APIRouter(
 	prefix="/games",

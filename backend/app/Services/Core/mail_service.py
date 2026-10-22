@@ -1,4 +1,4 @@
-# backend/app/Services/mail_service.py
+# backend/app/Services/Core/mail_service.py
 
 """
 Сервис отправки email-уведомлений.

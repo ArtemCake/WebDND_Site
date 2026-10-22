@@ -1,12 +1,11 @@
-# backend/app/Services/map_hex_service.py
+# backend/app/Services/Maps/map_hex_service.py
 
 from Config.imports import (UUID, HTTPException, status, select, AsyncSession, UploadFile, uuid4, update, or_)
 from backend.app.Database.Models.Gameplay.maps import CampaignMap, MapLayer, MapHex, Token
-from backend.app.Services import lobby_service
-from backend.app.Services import map_image_service
-from backend.app.Services.lobby_service import (is_game_master, get_session_for_user)
-from backend.app.Services import map_management_service
-from backend.app.Services.hex_geometry import offset_to_axial_oddr, axial_distance, hex_line_draw
+from backend.app.Services.Games import lobby_service
+from backend.app.Services.Maps import map_image_service, map_management_service, map_storage_service
+from backend.app.Services.Games.lobby_service import (is_game_master, get_session_for_user)
+from backend.app.Services.Maps.hex_geometry import offset_to_axial_oddr, axial_distance, hex_line_draw
 
 
 async def _get_map_and_check_master(session: AsyncSession, map_id: UUID, master_id: UUID, *, for_update: bool = False) -> CampaignMap:
@@ -134,31 +133,25 @@ async def recalc_fog_of_war(session: AsyncSession, map_id: UUID, viewer_token_id
 
 async def create_map(session: AsyncSession, master_id: UUID, data: "MapCreate", *, background_image: UploadFile | None = None) -> CampaignMap:
 	if not await is_game_master(session, data.game_id, master_id):
-		raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-			detail="Только мастер игры может создавать карты")
+		raise HTTPException(
+			status.HTTP_403_FORBIDDEN,
+			"Только мастер игры может создавать карты",
+		)
 
 	title = data.title.strip()
 
 	if not title:
-		raise HTTPException(
-			status_code=status.HTTP_400_BAD_REQUEST,
-			detail="Укажите название карты",
-		)
+		raise HTTPException(400, "Укажите название карты")
 
 	if data.map_type == "procedural_generation":
 		raise HTTPException(
-			status_code=status.HTTP_400_BAD_REQUEST,
-			detail=(
-				"Создание процедурных карт пока не подключено. "
-				"Используйте карту на основе изображения"
-			),
+			400,
+			"Создание процедурных карт пока не подключено. "
+			"Используйте карту на основе изображения",
 		)
 
 	if data.map_type != "image_upload":
-		raise HTTPException(
-			status_code=status.HTTP_400_BAD_REQUEST,
-			detail="Неизвестный тип карты",
-		)
+		raise HTTPException(400, "Неизвестный тип карты")
 
 	if data.session_id is not None:
 		game_session = await get_session_for_user(
@@ -166,43 +159,63 @@ async def create_map(session: AsyncSession, master_id: UUID, data: "MapCreate", 
 			data.session_id,
 			master_id,
 		)
-
 		if game_session.game_id != data.game_id:
 			raise HTTPException(
-				status_code=status.HTTP_400_BAD_REQUEST,
-				detail="Сессия не принадлежит указанной игре",
+				400,
+				"Сессия не принадлежит указанной игре",
 			)
+
+	contents = None
+
+	if background_image is not None:
+		contents = await map_image_service.prepare_background(
+			background_image,
+		)
 
 	values = data.model_dump()
 	values["title"] = title
 	values["grid_settings_json"] = data.grid_settings_json or {}
 
 	map_id = uuid4()
+	storage_path = None
 	image_saved = False
 
-	if background_image is not None:
-		contents = await map_image_service.prepare_background(
-			background_image,
-		)
-		await map_image_service.save_background(map_id, contents)
-		image_saved = True
-		values["background_image_url"] = f"/maps/{map_id}/background"
-
-	campaign_map = CampaignMap(id=map_id, **values)
-
 	try:
+		number, storage_path = (
+			await map_storage_service.allocate_location(
+				session,
+				data.game_id,
+				master_id,
+			)
+		)
+
+		values["map_number"] = number
+		values["background_storage_path"] = storage_path
+
+		if contents is not None:
+			await map_image_service.save_background(
+				storage_path,
+				contents,
+			)
+			image_saved = True
+			values["background_image_url"] = (
+				f"/maps/{map_id}/background"
+			)
+
+		campaign_map = CampaignMap(id=map_id, **values)
 		session.add(campaign_map)
 		await session.commit()
+
 	except Exception:
-		await session.rollback()
-
-		if image_saved:
-			await map_image_service.remove_background(map_id)
-
+		try:
+			await session.rollback()
+		finally:
+			if image_saved:
+				await map_image_service.remove_background(
+					storage_path,
+				)
 		raise
 
-	# После успешного commit файл при ошибке refresh уже не удаляем:
-	# запись карты сохранена.
 	await session.refresh(campaign_map)
 	return campaign_map
 
@@ -219,14 +232,11 @@ async def get_map(session: AsyncSession, map_id: UUID) -> CampaignMap:
 async def update_map(session: AsyncSession, map_id: UUID, master_id: UUID, data: "MapUpdate", *, background_image: UploadFile | None = None) -> CampaignMap:
 	backup_path = None
 	image_replaced = False
+	previous_key = None
+	replacement_key = None
 
 	try:
-		campaign_map = await _get_map_and_check_master(
-			session,
-			map_id,
-			master_id,
-			for_update=True,
-		)
+		campaign_map = await map_management_service._lock_context(session, map_id, master_id)
 
 		values = data.model_dump(exclude_unset=True)
 
@@ -251,13 +261,28 @@ async def update_map(session: AsyncSession, map_id: UUID, master_id: UUID, data:
 					),
 				)
 
-			contents = await map_image_service.prepare_background(
-				background_image,
+			contents = await map_image_service.prepare_background(background_image)
+
+			previous_key = map_storage_service.image_key(
+				campaign_map,
 			)
 
-			backup_path = await map_image_service.replace_background(
-				map_id,
-				contents,
+		if not campaign_map.background_storage_path:
+			number, storage_path = (
+				await map_storage_service.allocate_location(
+					session, campaign_map.game_id, master_id, number=campaign_map.map_number
+				)
+			)
+			campaign_map.map_number = number
+			campaign_map.background_storage_path = storage_path
+
+			replacement_key = map_storage_service.image_key(campaign_map)
+
+			backup_path = (
+				await map_image_service.replace_background(
+					replacement_key,
+					contents,
+				)
 			)
 			image_replaced = True
 
@@ -274,10 +299,7 @@ async def update_map(session: AsyncSession, map_id: UUID, master_id: UUID, data:
 	except Exception:
 		try:
 			if image_replaced:
-				await map_image_service.rollback_background(
-					map_id,
-					backup_path,
-				)
+				await map_image_service.rollback_background(replacement_key, backup_path)
 		finally:
 			await session.rollback()
 
@@ -286,9 +308,9 @@ async def update_map(session: AsyncSession, map_id: UUID, master_id: UUID, data:
 	# Запись уже сохранена: ошибка refresh не должна
 	# возвращать старое изображение.
 	if image_replaced:
-		await map_image_service.finish_background_replacement(
-			backup_path,
-		)
+		await map_image_service.finish_background_replacement(backup_path)
+		if previous_key != replacement_key:
+			await map_image_service.remove_background(previous_key)
 
 	await session.refresh(campaign_map)
 	return campaign_map
@@ -298,6 +320,8 @@ async def set_active_map(session: AsyncSession, map_id: UUID, master_id: UUID) -
 
 async def delete_map(session: AsyncSession, map_id: UUID, master_id: UUID) -> None:
 	campaign_map = await _get_map_and_check_master(session, map_id, master_id, for_update=True)
+	image_key = map_storage_service.image_key(campaign_map)
+	await map_image_service.remove_background(image_key)
 
 	hex_ids = (select(MapHex.id)
 		.join(MapLayer, MapHex.layer_id == MapLayer.id)

@@ -3,12 +3,11 @@
 from Config.imports import (APIRouter, Depends, status, AsyncSession, UUID)
 from backend.app.Database.database import get_async_session
 from backend.app.Core.csrf import enforce_csrf
-from backend.app.Services.user_service import get_current_user
+from backend.app.Services.Core.user_service import get_current_user
 from backend.app.Database.Models.Core.user import User
 from backend.app.Schemas.maps import TokenCreate, TokenUpdate, TokenMove, TokenRead
 from backend.app.Schemas.lobby import DiceRollIn, DiceRollRead
-from backend.app.Services import token_service, dice_service, initiative_service
-
+from backend.app.Services.Games import dice_service, initiative_service, token_service
 
 router = APIRouter(
 	prefix="/sessions",

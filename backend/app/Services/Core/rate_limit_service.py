@@ -1,4 +1,4 @@
-# backend/app/Services/rate_limit_service.py
+# backend/app/Services/Core/rate_limit_service.py
 
 """Простой in-memory rate limiter по IP для публичных auth-эндпоинтов.
 """

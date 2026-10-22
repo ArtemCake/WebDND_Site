@@ -4,15 +4,14 @@ from Config.imports import (APIRouter, Depends, UUID, AsyncSession, Request, HTM
                             UploadFile, File, Form, Response)
 from backend.app.Database.database import get_async_session
 from Config.Config import settings
-from backend.app.Services import map_image_service
+from backend.app.Services.Maps import map_image_service, map_hex_service as svc, map_management_service, \
+	map_storage_service
 from backend.app.Core.csrf import enforce_csrf
-from backend.app.Services.user_service import get_current_user
+from backend.app.Services.Core.user_service import get_current_user
 from backend.app.Database.Models.Core.user import User
-from backend.app.Services import lobby_service
+from backend.app.Services.Games import lobby_service
 from backend.app.Schemas.maps import (MapCreate, MapUpdate, MapRead,
 	HexGridGenerateIn, MapLayerRead, FogOfWarRecalcIn, FogOfWarRecalcOut)
-from backend.app.Services import map_hex_service as svc
-from backend.app.Services import map_management_service
 from backend.app.Schemas.maps import MapGameTargetIn
 
 
@@ -131,7 +130,8 @@ async def get_map_background(map_id: UUID, session: AsyncSession = Depends(get_a
 		current_user: User = Depends(get_current_user)):
 	await svc._get_map_and_check_master(session, map_id,	current_user.id)
 
-	contents = await map_image_service.read_background(map_id)
+	campaign_map = await svc._get_map_and_check_master(session, map_id, current_user.id, for_update=True)
+	contents = await map_image_service.read_background(map_storage_service.image_key(campaign_map))
 
 	return Response(
 		content=contents,

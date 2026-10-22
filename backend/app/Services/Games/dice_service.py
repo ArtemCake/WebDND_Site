@@ -1,10 +1,10 @@
-# backend/app/Services/dice_service.py
+# backend/app/Services/Games/dice_service.py
 
 import re
 
 from Config.imports import (UUID, HTTPException, status, select, AsyncSession, secrets)
 from backend.app.Database.Models.Gameplay.lobby import DiceRoll, Party
-from backend.app.Services.lobby_service import (get_session_for_user, is_game_master)
+from backend.app.Services.Games.lobby_service import (get_session_for_user, is_game_master)
 from backend.app.Schemas.lobby import DiceRollIn
 
 

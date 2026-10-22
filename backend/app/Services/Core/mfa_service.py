@@ -1,4 +1,4 @@
-# backend/app/Services/mfa_service.py
+# backend/app/Services/Core/mfa_service.py
 
 """
 Двухфакторная аутентификация (TOTP) и резервные коды восстановления.
@@ -12,7 +12,7 @@ from Config.imports import (AsyncSession, select, delete, Fernet, InvalidToken, 
                             hashlib, base64)
 from Config.Config import settings
 from backend.app.Database.Models.Core.user import User, MFADevice
-from backend.app.Services.user_service import pwd_context
+from backend.app.Services.Core.user_service import pwd_context
 
 
 TOTP_DEVICE_TYPE = "totp"

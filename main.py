@@ -1,7 +1,6 @@
 # main.py
 
 from Config.Config import settings
-from Config import csrf_config
 from backend.app.Database.database import engine
 import backend.app.Routers.api as api_module
 import backend.app.Routers.web as web_module
@@ -14,7 +13,7 @@ from backend.app.Routers import content as content_module
 from backend.app.Routers import maps as maps_module
 from Config.logger import setup_logging
 from backend.app.Database.database import AsyncSessionLocal
-from backend.app.Services.user_service import get_optional_user, ensure_initial_admin
+from backend.app.Services.Core.user_service import get_optional_user, ensure_initial_admin
 from Config.imports import (FastAPI, asynccontextmanager, CORSMiddleware, Path, StaticFiles,
                             Jinja2Templates, SessionMiddleware, CsrfProtectError, CsrfProtect,
                             base64, RequestValidationError, Request, asyncio, JSONResponse, HTMLResponse, uvicorn, os, command, Config)
