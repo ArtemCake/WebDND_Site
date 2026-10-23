@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 def _storage_root() -> Path:
 	root = (Path(settings.MAP_IMAGES_DIR)
 		if settings.MAP_IMAGES_DIR is not None
-		else Path(settings.BASE_DIR) / "data" / "private" / "maps"
+		else Path(settings.BASE_DIR) / "frontend" / "static" / "private" / "maps"
 	).resolve()
 
 	public_root = (Path(settings.BASE_DIR) / "frontend" / "static"

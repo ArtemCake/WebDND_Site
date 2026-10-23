@@ -28,7 +28,7 @@ class GameUpdate(BaseModel):
 
 class GameRead(BaseModel):
 	id: UUID
-	master_id: UUID
+	master_id: Optional[UUID]
 	system_id: UUID
 	title: str
 	description: Optional[str]

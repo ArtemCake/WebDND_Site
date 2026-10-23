@@ -1,4 +1,4 @@
-// frontend/static/js/modules/session-dice.js
+// frontend/static/js/modules/games/session-dice.js
 
 import { gameStateApi } from './game-state-api.js';
 

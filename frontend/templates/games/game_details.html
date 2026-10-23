@@ -1,0 +1,139 @@
+<!-- frontend/templates/games/game_details.html -->
+
+{% extends "base.html" %}
+
+{% block title %}{{ game.title }} — WorldLoom{% endblock %}
+
+{% block content %}
+{% set status_labels = {
+"draft": "Черновик",
+"active": "Идёт",
+"archived": "Архив"
+} %}
+{% set privacy_labels = {
+"public": "Публичная",
+"friends_only": "Только друзья",
+"invite_only": "По приглашению",
+"private": "Приватная"
+} %}
+
+<section class="lobby-page">
+	<header class="lobby-page__header">
+		<h1>{{ game.title }}</h1>
+		
+		<a
+				href="{{ request.url_for('games_page_get') }}"
+				class="btn btn-outline-primary"
+		>
+			К списку игр
+		</a>
+	</header>
+	
+	<section aria-labelledby="game-info-title">
+		<h2 id="game-info-title">Об игре</h2>
+		
+		<p>{{ game.description or "Описание пока не добавлено." }}</p>
+		
+		<dl>
+			<dt>Статус</dt>
+			<dd>{{ status_labels.get(game.status, game.status) }}</dd>
+			
+			<dt>Приватность</dt>
+			<dd>
+				{{ privacy_labels.get(
+				game.privacy_level,
+				game.privacy_level
+				) }}
+			</dd>
+			
+			<dt>Самодельный контент</dt>
+			<dd>
+				{{ "Разрешён" if game.is_homebrew_allowed else "Не разрешён" }}
+			</dd>
+		</dl>
+		
+		<a
+				href="{{ request.url_for(
+					'game_play_page_get',
+					game_id=game.id
+				) }}"
+				class="btn btn-primary"
+		>
+			К игровым сессиям
+		</a>
+	</section>
+	
+	{% if is_game_master %}
+	<section aria-labelledby="game-settings-title">
+		<h2 id="game-settings-title">Настройки игры</h2>
+		
+		<form
+				id="game-settings-form"
+				action="{{ request.url_for('update_game', game_id=game.id) }}"
+				data-game-settings
+		>
+			<label for="game-settings-title-input">Название</label>
+			<input
+					id="game-settings-title-input"
+					type="text"
+					name="title"
+					value="{{ game.title }}"
+					required
+					maxlength="255"
+			>
+			
+			<label for="game-settings-description">Описание</label>
+			<textarea
+					id="game-settings-description"
+					name="description"
+			>{{ game.description or "" }}</textarea>
+			
+			<label for="game-settings-status">Статус</label>
+			<select id="game-settings-status" name="status" required>
+				{% for value, label in status_labels.items() %}
+				<option
+						value="{{ value }}"
+						{% if game.status == value %}selected{% endif %}
+				>
+					{{ label }}
+				</option>
+				{% endfor %}
+			</select>
+			
+			<label for="game-settings-privacy">Приватность</label>
+			<select
+					id="game-settings-privacy"
+					name="privacy_level"
+					required
+			>
+				{% for value, label in privacy_labels.items() %}
+				<option
+						value="{{ value }}"
+						{% if game.privacy_level == value %}selected{% endif %}
+				>
+					{{ label }}
+				</option>
+				{% endfor %}
+			</select>
+			
+			<label class="lobby-checkbox">
+				<input
+						type="checkbox"
+						name="is_homebrew_allowed"
+						{% if game.is_homebrew_allowed %}checked{% endif %}
+				>
+				Разрешить самодельный контент (homebrew)
+			</label>
+			
+			<p data-game-settings-message role="status" aria-live="polite"></p>
+			
+			<button type="submit" class="btn btn-primary">
+				Сохранить настройки
+			</button>
+		</form>
+	</section>
+	{% else %}
+	<p>Изменять настройки может только мастер этой игры.</p>
+	{% endif %}
+</section>
+{% endblock %}

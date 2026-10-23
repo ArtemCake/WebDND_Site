@@ -1,4 +1,4 @@
-// frontend/static/js/modules/lobby.js
+// frontend/static/js/modules/games/lobby.js
 
 /**
  * @fileoverview Лобби игр: список своих игр, создание игры, приглашения.
@@ -6,6 +6,8 @@
  * Чистый fetch + построение DOM (в отличие от auth.js на HTMX): API лобби отдаёт JSON, а не HTML.
  * @module modules/lobby
  */
+
+ import { initGameDetails } from './game-details.js';
 
 let currentUserId = null;
 let currentInviteGameId = null;
@@ -46,11 +48,17 @@ function renderGameCard(game) {
 	const isMaster = currentUserId && game.master_id === currentUserId;
 	const statusLabel = STATUS_LABELS[game.status] || game.status;
 	const privacyLabel = PRIVACY_LABELS[game.privacy_level] || game.privacy_level;
+	const detailsUrl = `/games/${encodeURIComponent(game.id)}/details`;
+    const playUrl =	`/games/${encodeURIComponent(game.id)}/play`;
 
 	return `
 		<article class="lobby-card" data-game-id="${escapeHtml(game.id)}">
 			<header class="lobby-card__header">
-				<h3>${escapeHtml(game.title)}</h3>
+								<h3>
+                					<a href="${escapeHtml(detailsUrl)}">
+                						${escapeHtml(game.title)}
+                					</a>
+                				</h3>
 				${isMaster ? '<span class="lobby-badge lobby-badge--master">Вы — ведущий</span>' : ''}
 			</header>
 			${game.description ? `<p class="lobby-card__description">${escapeHtml(game.description)}</p>` : ''}
@@ -59,6 +67,12 @@ function renderGameCard(game) {
 				<span class="lobby-badge">${escapeHtml(privacyLabel)}</span>
 			</div>
 			<div class="lobby-card__actions">
+				<a class="btn btn-outline-primary" href="${escapeHtml(detailsUrl)}">
+            		${isMaster ? 'Открыть и настроить' : 'Открыть игру'}
+            	</a>
+            	<a class="btn btn-outline-primary" href="${escapeHtml(playUrl)}">
+            		К игровым сессиям
+            	</a>
 				${isMaster ? `<button type="button" class="btn btn-outline-primary" data-lobby-action="invite-open" data-game-id="${escapeHtml(game.id)}">Пригласить</button>` : ''}
 				${!isMaster ? `<button type="button" class="btn btn-outline-primary" data-lobby-action="leave-game" data-game-id="${escapeHtml(game.id)}">Покинуть</button>` : ''}
 			</div>
@@ -260,6 +274,8 @@ async function loadGameSystems() {
 }
 
 export async function initLobby() {
+	initGameDetails();
+
 	if (!document.getElementById('games-list')) return;
 
 	currentUserId = await fetchCurrentUserId();

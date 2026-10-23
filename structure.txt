@@ -133,6 +133,7 @@ frontend/
 │   ├── register.html
 │   ├── games/
 │   │   ├── game_play.html
+│   │   ├── game_details.html
 │   │   └── games.html
 │   ├── maps/
 │   │   ├── maps.html
@@ -156,7 +157,8 @@ frontend/
 │       ├── password_reset.html
 │       └── verification_email.html
 └── static/
-    ├── avatars/
+    ├── avatars/ # Аватары пользователей, которые разбиты по каталогам с никами пользователей
+    ├── private/ # Карты мастеров, которые разбиты по подкаталогам никам мастеров в которых подкаталоги с названиям игр
     ├── css/
     │   ├── style.scss
     │   ├── style.min.css
@@ -234,7 +236,8 @@ frontend/
             │   └── map-view.js
             ├── games/
             │   ├── dice-roller.js
-            │   ├── game-state-api.js
+            │   ├── dice-roller.js
+            │   ├── game-details.js
             │   ├── session-combat.js
             │   ├── lobby.js
             │   └── session-dice.js

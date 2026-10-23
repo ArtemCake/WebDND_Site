@@ -1,4 +1,4 @@
-// frontend/static/js/modules/dice-roller.js
+// frontend/static/js/modules/games/dice-roller.js
 
 import { AppConfig } from './../../config/appConfig.js';
 

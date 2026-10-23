@@ -6,10 +6,22 @@ from backend.app.Database.Models.Gameplay.lobby import Game, Party, Invite, Sess
 
 
 async def list_games_for_user(session: AsyncSession, user_id: UUID) -> list[Game]:
+	active_membership = (select(Party.id)
+		.where(
+			Party.game_id == Game.id,
+			Party.user_id == user_id,
+			Party.is_active.is_(True),
+			Party.role_in_game != "banned",
+			)
+		.exists()
+	)
+
 	result = await session.execute(
 		select(Game)
-		.join(Party, Party.game_id == Game.id)
-		.where(Party.user_id == user_id, Party.is_active.is_(True), Party.role_in_game != "banned")
+		.where(
+			(Game.master_id == user_id) | active_membership
+		)
+		.order_by(Game.created_at.desc(), Game.id)
 	)
 	return list(result.scalars().all())
 
@@ -83,8 +95,37 @@ async def get_session_for_user(session: AsyncSession, session_id: UUID,	user_id:
 
 async def update_game(session: AsyncSession, game_id: UUID, master_id: UUID, data: GameUpdate) -> Game:
 	game = await _require_master(session, game_id, master_id)
-	for field, value in data.model_dump(exclude_unset=True).items():
+
+	values = data.model_dump(exclude_unset=True)
+
+	required_fields = (
+		"title",
+		"status",
+		"privacy_level",
+		"is_homebrew_allowed",
+	)
+
+	for field in required_fields:
+		if field in values and values[field] is None:
+			raise HTTPException(
+				status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+				detail="Обязательные настройки игры не могут быть пустыми",
+			)
+
+	if "title" in values:
+		title = values["title"].strip()
+
+		if not title or len(title) > 255:
+			raise HTTPException(
+				status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+				detail="Название должно содержать от 1 до 255 символов",
+			)
+
+		values["title"] = title
+
+	for field, value in values.items():
 		setattr(game, field, value)
+
 	await session.commit()
 	await session.refresh(game)
 	return game
@@ -99,9 +140,7 @@ async def list_party(session: AsyncSession, game_id: UUID, user_id: UUID) -> lis
 	result = await session.execute(select(Party).where(Party.game_id == game_id))
 	return list(result.scalars().all())
 
-async def update_party_role(
-		session: AsyncSession, game_id: UUID, target_user_id: UUID, master_id: UUID, role_in_game: str
-) -> Party:
+async def update_party_role(session: AsyncSession, game_id: UUID, target_user_id: UUID, master_id: UUID, role_in_game: str) -> Party:
 	await _require_master(session, game_id, master_id)
 	member = await session.execute(
 		select(Party).where(Party.game_id == game_id, Party.user_id == target_user_id)
