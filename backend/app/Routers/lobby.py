@@ -1,7 +1,7 @@
 # backend/app/Routers/lobby.py
 
 from Config.imports import (APIRouter, Depends, status, AsyncSession, UUID,
-                            Request, HTMLResponse, CsrfProtect, HTTPException)
+                            Request, HTMLResponse, CsrfProtect, HTTPException, JSONResponse)
 from backend.app.Database.database import get_async_session
 from backend.app.Core.csrf import enforce_csrf
 from backend.app.Services.Core.user_service import get_current_user
@@ -9,7 +9,7 @@ from backend.app.Database.Models.Core.user import User
 from backend.app.Schemas.lobby import (GameCreate, GameUpdate, GameRead,
                                        PartyRead, PartyRoleUpdate, InviteCreate, InviteRead, InviteClaim,
                                        SessionCreate, SessionUpdate, SessionRead)
-from backend.app.Services.Games import lobby_service as svc
+from backend.app.Services.Games import lobby_service as svc, game_deletion_service
 
 router = APIRouter(
 	prefix="/games",
@@ -29,19 +29,14 @@ async def get_games_page(request: Request, user: User = Depends(get_current_user
 	return response
 
 @router.get("/list", response_model=list[GameRead], operation_id="listGames")
-async def list_games(
-		session: AsyncSession = Depends(get_async_session),
-		current_user: User = Depends(get_current_user),
-):
+async def list_games(session: AsyncSession = Depends(get_async_session),
+		current_user: User = Depends(get_current_user)):
 	return await svc.list_games_for_user(session, current_user.id)
 
 @router.post("", response_model=GameRead, status_code=status.HTTP_201_CREATED,
              operation_id="createGame", dependencies=[Depends(enforce_csrf)])
-async def create_game(
-		data: GameCreate,
-		session: AsyncSession = Depends(get_async_session),
-		current_user: User = Depends(get_current_user),
-):
+async def create_game(data: GameCreate, session: AsyncSession = Depends(get_async_session),
+		current_user: User = Depends(get_current_user)):
 	return await svc.create_game(session, current_user.id, data)
 
 @router.get("/{game_id}/details", response_class=HTMLResponse, name="game_details_page_get", operation_id="getGameDetailsPage")
@@ -130,49 +125,26 @@ async def list_sessions(game_id: UUID, session: AsyncSession = Depends(get_async
 	return await svc.list_sessions(session, game_id, current_user.id)
 
 @router.get("/{game_id}/sessions/active", response_model=SessionRead, operation_id="getActiveSession")
-async def get_active_session(
-		game_id: UUID,
-		session: AsyncSession = Depends(get_async_session),
-		current_user: User = Depends(get_current_user),
-):
+async def get_active_session(game_id: UUID, session: AsyncSession = Depends(get_async_session), current_user: User = Depends(get_current_user)):
 	return await svc.get_active_session(session, game_id, current_user.id)
 
 @router.patch("/{game_id}/sessions/{session_id}", response_model=SessionRead, operation_id="updateSession",
               dependencies=[Depends(enforce_csrf)])
-async def update_session(
-		game_id: UUID,
-		session_id: UUID,
-		data: SessionUpdate,
-		session: AsyncSession = Depends(get_async_session),
-		current_user: User = Depends(get_current_user),
-):
+async def update_session(game_id: UUID, session_id: UUID, data: SessionUpdate,
+		session: AsyncSession = Depends(get_async_session), current_user: User = Depends(get_current_user)):
 	return await svc.update_session(session, session_id, current_user.id, data)
 
 @router.post("/{game_id}/sessions/{session_id}/end", response_model=SessionRead, operation_id="endSession",
              dependencies=[Depends(enforce_csrf)])
-async def end_session(
-		game_id: UUID,
-		session_id: UUID,
-		session: AsyncSession = Depends(get_async_session),
-		current_user: User = Depends(get_current_user),
-):
+async def end_session(game_id: UUID, session_id: UUID, session: AsyncSession = Depends(get_async_session),
+		current_user: User = Depends(get_current_user)):
 	return await svc.end_session(session, session_id, current_user.id)
 
 # GET /games/{game_id}/play
-@router.get(
-	"/{game_id}/play",
-	response_class=HTMLResponse,
-	name="game_play_page_get",
-	operation_id="getGamePlayPage",
-)
-async def get_game_play_page(
-		request: Request,
-		game_id: UUID,
-		session_id: UUID | None = None,
-		session: AsyncSession = Depends(get_async_session),
-		user: User = Depends(get_current_user),
-		csrf_protect: CsrfProtect = Depends(),
-):
+@router.get("/{game_id}/play", response_class=HTMLResponse, name="game_play_page_get", operation_id="getGamePlayPage")
+async def get_game_play_page(request: Request, game_id: UUID, session_id: UUID | None = None,
+		session: AsyncSession = Depends(get_async_session), user: User = Depends(get_current_user),
+		csrf_protect: CsrfProtect = Depends()):
 	# Сервис проверяет доступ пользователя к игре.
 	game_sessions = await svc.list_sessions(session, game_id, user.id)
 
@@ -210,3 +182,21 @@ async def get_game_play_page(
 	)
 	csrf_protect.set_csrf_cookie(signed_token, response)
 	return response
+
+@router.delete("/{game_id}/permanent", name="delete_game_permanently", operation_id="deleteGamePermanently",dependencies=[Depends(enforce_csrf)])
+async def delete_game_permanently(game_id: UUID,session: AsyncSession = Depends(get_async_session),
+		current_user: User = Depends(get_current_user)):
+	result = await game_deletion_service.delete_game(
+		session,
+		game_id,
+		current_user.id,
+	)
+
+	return JSONResponse(
+		status_code=(
+			status.HTTP_200_OK
+			if result["cleanup_complete"]
+			else status.HTTP_202_ACCEPTED
+		),
+		content=result,
+	)

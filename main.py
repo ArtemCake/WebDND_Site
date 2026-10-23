@@ -18,6 +18,8 @@ from Config.imports import (FastAPI, asynccontextmanager, CORSMiddleware, Path, 
                             Jinja2Templates, SessionMiddleware, CsrfProtectError, CsrfProtect,
                             base64, RequestValidationError, Request, asyncio, JSONResponse, HTMLResponse, uvicorn, os, command, Config)
 import Config.csrf_config as _csrf_config
+from backend.app.Services.Games.game_deletion_service import (run_cleanup_worker)
+from backend.app.Core.static_files import PublicStaticFiles
 
 
 # --- ПУТЬ К КОНФИГУРАЦИИ ALEMBIC ---
@@ -103,7 +105,18 @@ async def lifespan(app: FastAPI):
 		app.state.settings = settings
 		log.info("[STARTUP] Инициализация завершена")
 
-		yield
+		cleanup_task = asyncio.create_task(run_cleanup_worker(AsyncSessionLocal))
+
+		try:
+			yield
+		finally:
+			cleanup_task.cancel()
+
+			try:
+				await cleanup_task
+			except asyncio.CancelledError:
+				pass
+
 	except Exception as e:
 		log.critical(f"[FATAL STARTUP ERROR] {e}", exc_info=True)
 		raise RuntimeError("Критическая ошибка при старте приложения.") from e
@@ -158,7 +171,11 @@ app.add_middleware(ProxyHeaderMiddleware)
 
 # --- СТАТИЧЕСКИЕ ФАЙЛЫ И ШАБЛОНЫ ---
 static_dir = BASE_DIR / "frontend" / "static"
-app.mount("/frontend/static", StaticFiles(directory=str(static_dir)), name="static")
+app.mount(
+	"/frontend/static",
+	PublicStaticFiles(directory=str(static_dir)),
+	name="static",
+)
 templates_dir = BASE_DIR / "frontend" / "templates"
 templates = Jinja2Templates(directory=str(templates_dir))
 env = templates.env

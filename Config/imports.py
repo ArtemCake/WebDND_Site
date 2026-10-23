@@ -15,6 +15,7 @@ import hmac
 import pyotp
 import base64
 import argon2
+import shutil
 import pathlib
 import asyncio
 import logging

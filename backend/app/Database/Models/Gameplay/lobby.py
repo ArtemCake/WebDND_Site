@@ -185,3 +185,34 @@ class DiceRoll(Base):
 
 	def __repr__(self) -> str:
 		return f"<DiceRoll(id='{self.id}', formula='{self.formula}', total={self.result_total})>"
+
+class GameDeletionJob(Base):
+	"""Сохраняет сведения для повторяемой очистки файлов удалённой игры."""
+
+	__tablename__ = "game_deletion_jobs"
+
+	game_id: Mapped[PG_UUID] = mapped_column(
+		PG_UUID(as_uuid=True),
+		primary_key=True,
+	)
+	master_id: Mapped[PG_UUID] = mapped_column(
+		PG_UUID(as_uuid=True),
+		nullable=False,
+		index=True,
+	)
+	cleanup_plan: Mapped[dict] = mapped_column(
+		JSONB,
+		nullable=False,
+	)
+	cleanup_complete: Mapped[bool] = mapped_column(
+		Boolean,
+		nullable=False,
+		default=False,
+		server_default=text("false"),
+		index=True,
+	)
+	created_at: Mapped[datetime] = mapped_column(
+		DateTime(timezone=True),
+		nullable=False,
+		server_default=text("now()"),
+	)

@@ -1,5 +1,7 @@
 // frontend/static/js/modules/games/game-details.js
 
+import { initGameDelete } from './game-delete.js';
+
 function getErrorMessage(data) {
 	if (typeof data?.detail === 'string') {
 		return data.detail;
@@ -18,6 +20,9 @@ function getErrorMessage(data) {
 }
 
 export function initGameDetails() {
+
+	initGameDelete();
+
 	const form = document.querySelector('[data-game-settings]');
 
 	if (!form || form.dataset.initialized === 'true') {
@@ -32,9 +37,12 @@ export function initGameDetails() {
 	form.addEventListener('submit', async (event) => {
 		event.preventDefault();
 
-		if (form.dataset.saving === 'true') {
-			return;
-		}
+		if (
+        	form.dataset.saving === 'true'
+        	|| form.dataset.deleting === 'true'
+        ) {
+        	return;
+        }
 
 		message.textContent = '';
 

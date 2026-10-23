@@ -30,6 +30,7 @@ backend/
 │   ├── Core/
 │   ├── __init__.py
 │   │   ├── csrf.py
+│   │   ├── static_files.py
 │   │   └── crypto.py
 │   ├── Enums/
 │   ├── __init__.py
@@ -68,12 +69,14 @@ backend/
 │   │   ├── Games/
 │   │   │    ├── __init__.py
 │   │   │    ├── dice_service.py
+│   │   │    ├── game_deletion_service.py
 │   │   │    ├── initiative_service.py
 │   │   │    ├── lobby_service.py
 │   │   │    └── token_service.py
 │   │   ├── Maps/
 │   │   │    ├── __init__.py
 │   │   │    ├── hex_geometry.py
+│   │   │    ├── map_cleanup_service.py
 │   │   │    ├── map_hex_service.py
 │   │   │    ├── map_image_service.py
 │   │   │    ├── map_storage_service.py
@@ -236,8 +239,9 @@ frontend/
             │   └── map-view.js
             ├── games/
             │   ├── dice-roller.js
-            │   ├── dice-roller.js
             │   ├── game-details.js
+            │   ├── game-delete.js
+            │   ├── game-state-api.js
             │   ├── session-combat.js
             │   ├── lobby.js
             │   └── session-dice.js

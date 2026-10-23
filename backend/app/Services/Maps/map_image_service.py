@@ -9,16 +9,30 @@ log = logging.getLogger(__name__)
 
 
 def _storage_root() -> Path:
-	root = (Path(settings.MAP_IMAGES_DIR)
+	base = Path(settings.BASE_DIR)
+
+	private_maps = (
+			base / "frontend" / "static" / "private" / "maps"
+	).resolve()
+
+	root = (
+		Path(settings.MAP_IMAGES_DIR)
 		if settings.MAP_IMAGES_DIR is not None
-		else Path(settings.BASE_DIR) / "frontend" / "static" / "private" / "maps"
+		else private_maps
 	).resolve()
 
-	public_root = (Path(settings.BASE_DIR) / "frontend" / "static"
+	public_root = (
+			base / "frontend" / "static"
 	).resolve()
 
-	if root == public_root or root.is_relative_to(public_root):
-		raise RuntimeError(	"Хранилище карт должно находиться вне публичной статики")
+	if (
+			root.is_relative_to(public_root)
+			and not root.is_relative_to(private_maps)
+	):
+		raise RuntimeError(
+			"Внутри frontend/static карты можно хранить "
+			"только в private/maps"
+		)
 
 	return root
 
