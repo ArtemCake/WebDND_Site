@@ -1,6 +1,7 @@
 # backend/app/Services/Maps/map_hex_service.py
 
-from Config.imports import (UUID, HTTPException, status, select, AsyncSession, UploadFile, uuid4, update, or_)
+from Config.imports import (UUID, HTTPException, status, select, AsyncSession, UploadFile, uuid4, update, or_, ValidationError)
+from backend.app.Schemas.maps import MapGridSettings
 from backend.app.Database.Models.Gameplay.maps import CampaignMap, MapLayer, MapHex, Token
 from backend.app.Services.Games import lobby_service
 from backend.app.Services.Maps import map_image_service, map_management_service, map_storage_service
@@ -40,30 +41,34 @@ async def _get_map_and_check_master(session: AsyncSession, map_id: UUID, master_
 	return campaign_map
 
 async def generate_hex_grid(session: AsyncSession, map_id: UUID, master_id: UUID, rows: int, cols: int) -> MapLayer:
-	"""Накладывает гекс-сетку поверх карты — работает и для image_upload, и для procedural_generation."""
-	campaign_map = await _get_map_and_check_master(session, map_id, master_id, for_update=True)
+	campaign_map = await _get_map_and_check_master(
+		session, map_id, master_id, for_update=True,
+	)
 
-	existing_stmt = select(MapLayer).where(MapLayer.map_id == campaign_map.id, MapLayer.layer_type == "vector_tiles")
-	if (await session.execute(existing_stmt)).scalar_one_or_none() is not None:
-		raise HTTPException(status.HTTP_400_BAD_REQUEST, "На этой карте уже есть слой гексов")
+	existing = (
+		await session.execute(
+			select(MapLayer).where(
+				MapLayer.map_id == map_id,
+				MapLayer.layer_type == "vector_tiles",
+				)
+		)
+	).scalar_one_or_none()
 
-	layer = MapLayer(map_id=campaign_map.id, name="Hex Grid", layer_type="vector_tiles", z_index=1)
-	session.add(layer)
-	await session.flush()
+	if existing is not None:
+		raise HTTPException(
+			400,
+			"На этой карте уже есть слой гексов",
+		)
 
-	hexes = []
-	for row in range(rows):
-		for col in range(cols):
-			q, r = offset_to_axial_oddr(col, row)
-			hexes.append(MapHex(
-				layer_id=layer.id,
-				axial_q=q,
-				axial_r=r,
-				h3_index=f"{row}:{col}",
-				is_visible_to_players=not campaign_map.fog_of_war_enabled,
-			))
-	session.add_all(hexes)
-	await session.commit()
+	try:
+		layer = await _add_hex_grid(
+			session, campaign_map, rows, cols,
+		)
+		await session.commit()
+	except Exception:
+		await session.rollback()
+		raise
+
 	await session.refresh(layer)
 	return layer
 
@@ -165,6 +170,17 @@ async def create_map(session: AsyncSession, master_id: UUID, data: "MapCreate", 
 				"Сессия не принадлежит указанной игре",
 			)
 
+	try:
+		grid_settings = MapGridSettings.model_validate(
+			data.grid_settings_json or {}
+		)
+	except ValidationError as exc:
+		raise HTTPException(
+			422,
+			"Некорректные параметры сетки: "
+			"строки и столбцы должны быть от 1 до 200",
+		) from exc
+
 	contents = None
 
 	if background_image is not None:
@@ -174,7 +190,12 @@ async def create_map(session: AsyncSession, master_id: UUID, data: "MapCreate", 
 
 	values = data.model_dump()
 	values["title"] = title
-	values["grid_settings_json"] = data.grid_settings_json or {}
+	values["grid_settings_json"] = {
+		**(data.grid_settings_json or {}),
+		**grid_settings.model_dump(),
+		"orientation": "pointy-top",
+		"offset": "odd-r",
+	}
 
 	map_id = uuid4()
 	storage_path = None
@@ -204,6 +225,17 @@ async def create_map(session: AsyncSession, master_id: UUID, data: "MapCreate", 
 
 		campaign_map = CampaignMap(id=map_id, **values)
 		session.add(campaign_map)
+		await session.flush()
+
+		# Для тумана гексы нужны даже при скрытых линиях сетки.
+		if grid_settings.show_grid or data.fog_of_war_enabled:
+			await _add_hex_grid(
+				session,
+				campaign_map,
+				grid_settings.rows,
+				grid_settings.cols,
+			)
+
 		await session.commit()
 
 	except Exception:
@@ -360,3 +392,45 @@ async def _require_maps_master(session: AsyncSession, game_id: UUID, user_id: UU
 			status_code=status.HTTP_403_FORBIDDEN,
 			detail="Каталог карт доступен только мастеру игры",
 		)
+
+async def _add_hex_grid(session: AsyncSession, campaign_map: CampaignMap, rows: int, cols: int) -> MapLayer:
+	"""Добавляет сетку, но не фиксирует транзакцию."""
+	layer = MapLayer(
+		map_id=campaign_map.id,
+		name="Hex Grid",
+		layer_type="vector_tiles",
+		z_index=1,
+	)
+	session.add(layer)
+	await session.flush()
+
+	hexes = []
+
+	for row in range(rows):
+		for col in range(cols):
+			q, r = offset_to_axial_oddr(col, row)
+
+			hexes.append(
+				MapHex(
+					layer_id=layer.id,
+					axial_q=q,
+					axial_r=r,
+					h3_index=f"{row}:{col}",
+					is_visible_to_players=(
+						not campaign_map.fog_of_war_enabled
+					),
+					explored_by_players=False,
+				)
+			)
+
+	session.add_all(hexes)
+
+	campaign_map.grid_settings_json = {
+		**(campaign_map.grid_settings_json or {}),
+		"rows": rows,
+		"cols": cols,
+		"orientation": "pointy-top",
+		"offset": "odd-r",
+	}
+
+	return layer

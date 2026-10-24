@@ -69,10 +69,11 @@
 		<img
 				id="maps-create-preview"
 				alt="Предпросмотр выбранного изображения"
-				style="max-width: 100%; height: auto;"
+				style="display: none;"
 				hidden
 		>
-		
+		{% set sandbox_saved = false %}
+		{% include "maps/map_sandbox.html" %}
 		<p>
 			<label>
 				<input

@@ -1,5 +1,7 @@
 // frontend/static/js/modules/maps.js
 
+import { initMapSandbox } from './map-sandbox.js';
+
 function showCreateMessage(text, isError = false) {
 	const box = document.getElementById('maps-create-message');
 	if (!box) return;
@@ -135,6 +137,12 @@ async function submitCreateMap(form) {
 			? 'true'
 			: 'false'
 	);
+		formData.set(
+    		'show_grid',
+    		form.querySelector('[name="show_grid"]').checked
+    			? 'true'
+    			: 'false'
+    	);
 
 	const fileInput = form.querySelector('[name="background_image"]');
 	if (!fileInput?.files?.length) {
@@ -216,12 +224,18 @@ async function submitCreateMap(form) {
 }
 
 export function initMaps() {
+
 	const form = document.getElementById('maps-create-form');
 
 	if (!form || form.dataset.mapsInitialized === 'true') return;
 	form.dataset.mapsInitialized = 'true';
 
 	initBackgroundPreview(form);
+
+	initMapSandbox(
+    	form.querySelector('[data-map-sandbox]'),
+    	document.getElementById('maps-create-preview')
+    );
 
 	form.addEventListener('submit', event => {
 		event.preventDefault();

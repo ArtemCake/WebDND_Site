@@ -1,5 +1,7 @@
 // frontend/static/js/modules/map-view.js
 
+import { initMapSandbox } from './map-sandbox.js';
+
 export function initMapView() {
 	const root = document.getElementById('map-view-root');
 	if (!root || root.dataset.initialized === 'true') return;
@@ -9,6 +11,10 @@ export function initMapView() {
 
 	if (!message || !image) return;
 	root.dataset.initialized = 'true';
+	initMapSandbox(
+    	root.querySelector('[data-map-sandbox]'),
+    	image
+    );
 
 	const backgroundUrl = (root.dataset.backgroundUrl || '').trim();
 

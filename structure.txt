@@ -77,6 +77,7 @@ backend/
 │   │   │    ├── __init__.py
 │   │   │    ├── hex_geometry.py
 │   │   │    ├── map_cleanup_service.py
+│   │   │    ├── map_preview_service.py
 │   │   │    ├── map_hex_service.py
 │   │   │    ├── map_image_service.py
 │   │   │    ├── map_storage_service.py
@@ -142,6 +143,7 @@ frontend/
 │   │   ├── maps.html
 │   │   ├── map_create.html
 │   │   ├── map_view.html
+│   │   ├── map_sandbox.html
 │   │   ├── map_management.html
 │   │   └── map_edit.html
 │   ├── partials/
@@ -234,6 +236,7 @@ frontend/
             │   ├── map-delete.js
             │   ├── map-edit.js
             │   ├── map-management.js
+            │   ├── map-sandbox.js
             │   ├── map-operation-state.js
             │   ├── maps.js
             │   └── map-view.js

@@ -4,13 +4,13 @@ from Config.imports import (APIRouter, Depends, UUID, AsyncSession, Request, HTM
                             UploadFile, File, Form, Response)
 from backend.app.Database.database import get_async_session
 from Config.Config import settings
-from backend.app.Services.Maps import map_image_service, map_hex_service as svc, map_management_service, \
-	map_storage_service
+from backend.app.Services.Maps import (map_image_service, map_hex_service as svc, map_management_service,
+	map_storage_service, map_preview_service)
 from backend.app.Core.csrf import enforce_csrf
 from backend.app.Services.Core.user_service import get_current_user
 from backend.app.Database.Models.Core.user import User
 from backend.app.Services.Games import lobby_service
-from backend.app.Schemas.maps import (MapCreate, MapUpdate, MapRead,
+from backend.app.Schemas.maps import (MapCreate, MapUpdate, MapRead, MapPreviewIn,
 	HexGridGenerateIn, MapLayerRead, FogOfWarRecalcIn, FogOfWarRecalcOut)
 from backend.app.Schemas.maps import MapGameTargetIn
 
@@ -82,15 +82,25 @@ async def create_map(data: MapCreate, session: AsyncSession = Depends(get_async_
 	return await svc.create_map(session, current_user.id, data)
 
 @router.post("/upload", response_model=MapRead, operation_id="createMapWithImage", dependencies=[Depends(enforce_csrf)])
-async def create_map_with_image(game_id: UUID = Form(...),title: str = Form(..., min_length=1, max_length=255),
-		fog_of_war_enabled: bool = Form(True),background_image: UploadFile | None = File(None),
-		session: AsyncSession = Depends(get_async_session),	current_user: User = Depends(get_current_user),
+async def create_map_with_image(game_id: UUID = Form(...),
+		title: str = Form(..., min_length=1, max_length=255),
+		fog_of_war_enabled: bool = Form(True),
+		show_grid: bool = Form(True),
+		rows: int = Form(20, ge=1, le=200),
+		cols: int = Form(20, ge=1, le=200),
+		background_image: UploadFile | None = File(None),
+		session: AsyncSession = Depends(get_async_session),
+		current_user: User = Depends(get_current_user),
 ):
 	data = MapCreate(
 		game_id=game_id,
 		title=title,
 		map_type="image_upload",
-		grid_settings_json={},
+		grid_settings_json={
+			"rows": rows,
+			"cols": cols,
+			"show_grid": show_grid,
+		},
 		fog_of_war_enabled=fog_of_war_enabled,
 		lighting_model="basic",
 	)
@@ -100,6 +110,13 @@ async def create_map_with_image(game_id: UUID = Form(...),title: str = Form(...,
 		current_user.id,
 		data,
 		background_image=background_image,
+	)
+
+@router.post("/preview", operation_id="previewMapVisibility", dependencies=[Depends(enforce_csrf)])
+async def preview_map_visibility(payload: MapPreviewIn, session: AsyncSession = Depends(get_async_session),
+		current_user: User = Depends(get_current_user)):
+	return await map_preview_service.preview(
+		session, current_user.id, payload,
 	)
 
 @router.get("/{map_id}/edit", response_class=HTMLResponse, name="map_edit_page_get", operation_id="getMapEditPage")

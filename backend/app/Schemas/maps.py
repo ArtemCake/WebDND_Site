@@ -71,6 +71,22 @@ class HexGridGenerateIn(BaseModel):
 	rows: int = Field(gt=0, le=200)
 	cols: int = Field(gt=0, le=200)
 
+class MapGridSettings(BaseModel):
+	rows: int = Field(default=20, ge=1, le=200)
+	cols: int = Field(default=20, ge=1, le=200)
+	show_grid: bool = True
+
+class MapPreviewIn(BaseModel):
+	game_id: UUID
+	map_id: Optional[UUID] = None
+
+	rows: int = Field(default=20, ge=1, le=200)
+	cols: int = Field(default=20, ge=1, le=200)
+
+	origin_q: Optional[int] = None
+	origin_r: Optional[int] = None
+	vision_radius: int = Field(default=6, ge=0, le=50)
+
 class MapLayerRead(BaseModel):
 	id: UUID
 	map_id: UUID

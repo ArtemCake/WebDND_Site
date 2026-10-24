@@ -1,0 +1,99 @@
+<!-- frontend/templates/maps/map_sandbox.html -->
+
+<section
+		data-map-sandbox
+		data-game-id="{{ campaign_map.game_id if sandbox_saved else selected_game.id }}"
+		data-map-id="{{ campaign_map.id if sandbox_saved else '' }}"
+>
+	<h2>Карта, сетка и туман войны</h2>
+	
+	<p>
+		<label>
+			<input type="checkbox" name="show_grid" checked>
+			Показывать гексы
+		</label>
+		
+		<label>
+			<input
+					type="checkbox"
+					name="fog_of_war_enabled"
+					{% if not sandbox_saved or campaign_map.fog_of_war_enabled %}
+					checked
+					{% endif %}
+			>
+			Туман войны
+		</label>
+	</p>
+	
+	<p>
+		<label>
+			Строки
+			<input type="number" name="rows"
+			       value="20" min="1" max="200" required>
+		</label>
+		
+		<label>
+			Столбцы
+			<input type="number" name="cols"
+			       value="20" min="1" max="200" required>
+		</label>
+	</p>
+	
+	<p>
+		<label>
+			Режим просмотра
+			<select data-preview-mode>
+				<option value="master">Мастер</option>
+				<option value="player">Игрок</option>
+			</select>
+		</label>
+		
+		<label>
+			Тестовый радиус зрения, гексы
+			<input type="number" data-preview-radius
+			       value="6" min="0" max="50" required>
+		</label>
+		
+		<label>
+			<input type="checkbox" data-preview-memory checked>
+			Показывать исследованные области
+		</label>
+	</p>
+	
+	<p>
+		<button type="button" data-preview-reset>
+			Сбросить тестовую прогулку
+		</button>
+		
+		{% if sandbox_saved %}
+		<button type="button" data-preview-generate hidden>
+			Создать сетку на этой карте
+		</button>
+		{% endif %}
+	</p>
+	
+	<p>
+		Нажмите на карту, чтобы поставить тестовую фишку.
+		Перетаскивайте её для проверки обзора.
+		С фокусом на карте можно использовать стрелки.
+	</p>
+	
+	<div style="max-width: 100%; overflow: auto;">
+		<canvas
+				data-preview-canvas
+				tabindex="0"
+				width="1200"
+				height="800"
+				aria-label="Предпросмотр карты с тестовой фишкой"
+				style="display: block; max-width: 100%; height: auto;
+					   background: #ddd; touch-action: none;"
+		></canvas>
+	</div>
+	
+	<p data-preview-message role="status" aria-live="polite"></p>
+	
+	<p>
+		Тестовая фишка и исследование не сохраняются.
+		Чёрное — неизвестная область, затемнённое — исследованная.
+	</p>
+</section>

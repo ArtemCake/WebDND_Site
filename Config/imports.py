@@ -24,6 +24,7 @@ import uvicorn
 import atexit
 import hashlib
 import markdown
+from types import SimpleNamespace
 from io import BytesIO
 from PIL import Image, ImageOps, UnidentifiedImageError
 from starlette.concurrency import run_in_threadpool

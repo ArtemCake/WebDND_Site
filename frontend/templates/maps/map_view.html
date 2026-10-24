@@ -77,10 +77,11 @@
 				id="map-view-background"
 				alt="Фоновое изображение карты «{{ campaign_map.title }}»"
 				referrerpolicy="no-referrer"
-				style="max-width: 100%; height: auto;"
+				style="display: none;"
 				hidden
 		>
-		
+		{% set sandbox_saved = true %}
+		{% include "maps/map_sandbox.html" %}
 		<noscript>
 			<p>Для загрузки фонового изображения необходим JavaScript.</p>
 		</noscript>
