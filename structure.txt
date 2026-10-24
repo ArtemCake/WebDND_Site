@@ -51,6 +51,7 @@ backend/
 │   │   ├── auth.py
 │   │   ├── content.py
 │   │   ├── character.py
+│   │   ├── game_rules.py
 │   │   ├── maps.py
 │   │   └── lobby.py
 │   ├── Services/
@@ -58,6 +59,8 @@ backend/
 │   │   │    ├── __init__.py
 │   │   │    ├── dnd5e_system.py
 │   │   │    ├── registry.py
+│   │   │    ├── rules_engine.py
+│   │   │    ├── rules_presets.py
 │   │   │    └── i_system.py
 │   │   ├── Core/
 │   │   │    ├── __init__.py

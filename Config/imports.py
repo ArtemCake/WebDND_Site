@@ -24,6 +24,7 @@ import uvicorn
 import atexit
 import hashlib
 import markdown
+from unittest import TestCase
 from types import SimpleNamespace
 from io import BytesIO
 from PIL import Image, ImageOps, UnidentifiedImageError
@@ -88,7 +89,7 @@ from itsdangerous import URLSafeTimedSerializer
 from pathlib import Path
 
 # --- Валидация API (Pydantic) ---
-from pydantic import ValidationError, EmailStr, BaseModel, Field, field_validator, ConfigDict, computed_field
+from pydantic import ValidationError, EmailStr, BaseModel, Field, field_validator, ConfigDict, computed_field, model_validator
 from fastapi.exceptions import RequestValidationError
 
 # --- Роутинг ---
