@@ -7,6 +7,57 @@
  * @param {string} text - Текст сообщения.
  * @param {string|null} targetSelector - Явный CSS-селектор контейнера (hx-target формы), если есть.
  */
+
+ import {sessionClient, SessionRefreshError, isAuthenticationFailure} from './games/session-client.js';
+
+ const profileRequests = new WeakMap();
+
+ function clearLegacyTokens() {
+     try {
+         localStorage.removeItem('accessToken');
+         localStorage.removeItem('refreshToken');
+     } catch (_) {
+         // Недоступность localStorage не должна ломать cookie-сессию.
+     }
+ }
+
+ function redirectToLogin() {
+     clearLegacyTokens();
+
+     const redirect = window.location.pathname + window.location.search;
+     window.location.href =
+         '/login?redirect=' + encodeURIComponent(redirect);
+ }
+
+ function renderProfileResult(target, status, data) {
+     if (!target) return;
+
+     const isError = status >= 400;
+     const message = isError
+         ? (data.detail || data.error || `Ошибка сервера (${status})`)
+         : (data.message || 'Изменения успешно сохранены.');
+
+     const alert = document.createElement('div');
+     alert.className = `alert alert-${isError ? 'danger' : 'success'}`;
+     alert.setAttribute('role', 'alert');
+     alert.textContent =
+         typeof message === 'string'
+             ? message
+             : 'Не удалось обработать ответ сервера.';
+
+     target.replaceChildren(alert);
+     target.scrollIntoView?.({
+         behavior: 'smooth',
+         block: 'center'
+     });
+
+     if (!isError && data.redirect_url) {
+         setTimeout(() => {
+             window.location.href = data.redirect_url;
+         }, 1200);
+     }
+ }
+
 export function showMessage(formEl, type, text, targetSelector = null) {
     // Если у формы задан свой hx-target (как на странице профиля,
     // где смена пароля и обновление данных выводятся в разные блоки) —
@@ -81,36 +132,53 @@ export function checkAuthValidity() {
  * @param {object} requestConfig - evt.detail.requestConfig исходного запроса.
  * @param {HTMLElement} targetForm - элемент, инициировавший исходный запрос.
  */
-async function attemptTokenRefresh(requestConfig, targetForm) {
+async function attemptTokenRefresh(xhr, snapshot) {
+    if (!snapshot) {
+        // Без снимка исходных данных нельзя безопасно повторять форму:
+        // её содержимое уже могло измениться.
+        return;
+    }
+
     try {
-        const resp = await fetch('/auth/refresh', {
-            method: 'POST',
-            credentials: 'include'
+        const response = await sessionClient.recover(
+            xhr,
+            snapshot.path,
+            {
+                method: snapshot.method,
+                headers: snapshot.headers,
+                body: snapshot.body
+            },
+            snapshot.generation
+        );
+
+        if (isAuthenticationFailure(response)) {
+            redirectToLogin();
+            return;
+        }
+
+        const data = await response.json().catch(() => ({}));
+
+        renderProfileResult(
+            snapshot.target,
+            response.status,
+            data
+        );
+    } catch (error) {
+        // Только отказ refresh по авторизации означает,
+        // что пользователя следует направить на вход.
+        if (
+            error instanceof SessionRefreshError &&
+            error.status === 401
+        ) {
+            redirectToLogin();
+            return;
+        }
+
+        renderProfileResult(snapshot.target, 503, {
+            error: error instanceof SessionRefreshError
+                ? error.message
+                : 'Не удалось связаться с сервером. Повторите действие позже.'
         });
-
-        if (!resp.ok) {
-            throw new Error('refresh_failed');
-        }
-
-        const data = await resp.json();
-        if (data.access_token) {
-            localStorage.setItem('accessToken', data.access_token);
-        }
-        if (data.refresh_token) {
-            localStorage.setItem('refreshToken', data.refresh_token);
-        }
-
-        // Повторяем исходный запрос тем же методом и путём, что и упавший
-        htmx.ajax(requestConfig.verb.toUpperCase(), requestConfig.path, {
-            source: targetForm,
-            target: targetForm
-        });
-
-    } catch (e) {
-        console.warn('[AUTH] Token refresh failed, redirecting to login.', e);
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
     }
 }
 
@@ -124,6 +192,59 @@ async function attemptTokenRefresh(requestConfig, targetForm) {
  * перед показом ошибки пользователю.
  */
 export function setupAuthHandlers() {
+
+	    clearLegacyTokens();
+
+        document.body.addEventListener('htmx:beforeRequest', (event) => {
+            const config = event.detail.requestConfig;
+            const xhr = event.detail.xhr;
+
+            if (!config?.path || !xhr) return;
+
+            const url = new URL(config.path, window.location.origin);
+            if (url.origin !== window.location.origin) return;
+            if (!url.pathname.startsWith('/profile/')) return;
+
+            const method = config.verb.toUpperCase();
+
+            // Автоповтор в этом блоке предназначен только для
+            // прочитанных профильных форм, а не любых запросов сайта.
+            const supported = new Set([
+                'PUT /profile/update',
+                'PATCH /profile/roles',
+                'POST /profile/change-password',
+                'POST /profile/resend-verification'
+            ]);
+
+            if (!supported.has(`${method} ${url.pathname}`)) return;
+
+            if (!(config.formData instanceof FormData)) return;
+
+            const body = new FormData();
+
+            // Сохраняем повторяющиеся значения roles и выбранный файл.
+            // Значения формы после получения 401 заново не считываем.
+            for (const [name, value] of config.formData.entries()) {
+                body.append(name, value);
+            }
+
+            const headers = new Headers(config.headers);
+
+            // При повторе тело отправляется как FormData.
+            // Boundary должен установить сам браузер.
+            headers.delete('Content-Type');
+            headers.delete('Content-Length');
+            headers.delete('Authorization');
+
+            profileRequests.set(xhr, {
+                method,
+                path: url.pathname + url.search,
+                headers,
+                body,
+                target: event.detail.target || config.target,
+                generation: sessionClient.getGeneration()
+            });
+        });
 
 	// === БЛОК CSRF ЗАЩИТЫ ===
 	document.body.addEventListener('htmx:configRequest', (event) => {
@@ -206,10 +327,14 @@ export function setupAuthHandlers() {
         // === Истёкший access-токен на защищённой профильной форме ===
         // Access теперь живёт недолго, поэтому 401 здесь — не всегда "выйди и зайди заново":
         // сначала пробуем тихо обновить пару токенов через refresh_token.
-        if (isProfilePath && status === 401) {
-            attemptTokenRefresh(evt.detail.requestConfig, targetForm);
-            return;
-        }
+                if (isProfilePath && isAuthenticationFailure(xhr)) {
+                    const snapshot = profileRequests.get(xhr);
+
+                    if (snapshot) {
+                        attemptTokenRefresh(xhr, snapshot);
+                        return;
+                    }
+                }
 
         // === Простые профильные формы (смена пароля, обновление профиля) ===
         if (isProfilePath) {
@@ -250,8 +375,7 @@ export function setupAuthHandlers() {
 
             case 200: // Вход успешен (но нужно проверить наличие токена)
                 if (data.access_token) {
-                    localStorage.setItem('accessToken', data.access_token);
-                    localStorage.setItem('refreshToken', data.refresh_token);
+					clearLegacyTokens();
                     showMessage(targetForm, 'success', 'Добро пожаловать!');
                     setTimeout(() => { window.location.href = '/profile'; }, 300);
                     return;

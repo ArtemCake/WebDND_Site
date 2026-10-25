@@ -298,11 +298,8 @@ async def delete_account(
 	response.headers["HX-Redirect"] = "/login"
 	return response
 
-@router.post("/refresh", response_model=dict)
-async def refresh_access_token(
-		request: Request,
-		session: AsyncSession = Depends(get_async_session),
-):
+@router.post("/refresh", response_model=dict,dependencies=[Depends(enforce_csrf)])
+async def refresh_access_token(request: Request, session: AsyncSession = Depends(get_async_session)):
 	"""Выдача новой пары токенов по refresh_token из cookie."""
 	refresh_token = request.cookies.get("refresh_token")
 	if not refresh_token:
@@ -321,6 +318,18 @@ async def refresh_access_token(
 
 	user_id = payload.get("sub")
 	token_sid = payload.get("sid")
+
+	if (
+			not isinstance(user_id, str)
+			or not user_id.strip()
+			or not isinstance(token_sid, str)
+			or not token_sid.strip()
+	):
+		raise HTTPException(
+			status_code=401,
+			detail="Недействительный refresh-токен.",
+		)
+
 	user = await user_service.get_user_by_id(session, user_id)
 
 	if not user or not user.is_active or user.active_session_token != token_sid:
@@ -349,10 +358,7 @@ async def refresh_access_token(
 	return response
 
 @router.post("/forgot-password", response_model=dict, dependencies=[Depends(enforce_csrf)])
-async def forgot_password(
-		request: Request,
-		email: str = Form(...),
-		session: AsyncSession = Depends(get_async_session)):
+async def forgot_password(request: Request, email: str = Form(...), session: AsyncSession = Depends(get_async_session)):
 	"""
 	Запрос на восстановление пароля. Ответ намеренно одинаковый независимо
 	от того, существует ли такой email, — иначе по ответу можно было бы
@@ -389,10 +395,7 @@ async def forgot_password(
 	return generic_response
 
 @router.post("/reset-password", response_model=dict, dependencies=[Depends(enforce_csrf)])
-async def reset_password_action(
-		token: str = Form(...),
-		new_password: str = Form(...),
-		session: AsyncSession = Depends(get_async_session)):
+async def reset_password_action(token: str = Form(...), new_password: str = Form(...), session: AsyncSession = Depends(get_async_session)):
 
 	payload = verify_token(token, purpose="password_reset")
 	user_id = payload.get("sub") if payload else None

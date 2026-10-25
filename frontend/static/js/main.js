@@ -3,7 +3,8 @@
 
 // --- ИМПОРТ МОДУЛЕЙ ---
 import { initGlobalUI } from './modules/ui.js';
-import { setupAuthHandlers, protectPrivateRoutes } from './modules/auth.js';
+import { setupAuthHandlers } from './modules/auth.js';
+import { initMfaSetup } from './modules/mfa-setup.js';
 import { GameMap } from './modules/maps/map.js';
 import { initCookieBanner } from './modules/cookie-banner.js';
 import { initDeleteAccountModal } from './modules/delete-account.js';
@@ -64,7 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 2. Навешивание обработчиков для форм авторизации (регистрация/вход)
     setupAuthHandlers();
-    protectPrivateRoutes();
+    initMfaSetup();
     initLobby();
     initSessionDice();
     initMaps();

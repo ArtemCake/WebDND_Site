@@ -32,7 +32,7 @@
 			
 			<div id="profile-form-section" hx-target="this" hx-swap="outerHTML">
 				<form
-						hx-put="/profile/update"
+						hx-encoding="multipart/form-data"
 						hx-target="#message-box-profile"
 						hx-swap="innerHTML"
 						hx-trigger="submit"
