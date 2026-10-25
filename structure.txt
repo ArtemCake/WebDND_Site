@@ -23,11 +23,14 @@ Config/
 	└── logger.py
 
 Tests/
-	├── __init__.py
-	├── test_auth_refresh.py
-	├── test_csrf_coverage.py
-	├── test_csrf_protection.py
-	└── test_rules_engine.py
+├── python/
+│ 	├── test_attribute_engine.py
+│ 	├── test_auth_refresh.py
+│ 	├── test_csrf_coverage.py
+│ 	├── test_csrf_protection.py
+│ 	└── test_rules_engine.py
+├── js/
+	└── session-client.test.js
 
 BACKEND
 backend/
@@ -57,6 +60,7 @@ backend/
 │   ├── __init__.py
 │   │   ├── auth.py
 │   │   ├── content.py
+│   │   ├── rule_calculations.py
 │   │   ├── character.py
 │   │   ├── game_rules.py
 │   │   ├── maps.py
@@ -66,6 +70,7 @@ backend/
 │   │   │    ├── __init__.py
 │   │   │    ├── dnd5e_system.py
 │   │   │    ├── registry.py
+│   │   │    ├── attribute_engine.py
 │   │   │    ├── rules_engine.py
 │   │   │    ├── rules_presets.py
 │   │   │    └── i_system.py

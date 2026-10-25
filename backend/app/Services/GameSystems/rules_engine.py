@@ -113,6 +113,22 @@ def evaluate_check(rules: RulesProfile, check: CheckInput) -> CheckResult:
 			"Характеристика отсутствует в выбранном наборе правил"
 		)
 
+	if rules.calculations is not None:
+		definition = rules.calculations.attributes[
+			check.attribute_code
+		]
+
+		if not (
+				definition.min_value
+				<= check.attribute_value
+				<= definition.max_value
+		):
+			raise ValueError(
+				f"Характеристика {check.attribute_code}: "
+				f"допустимый диапазон от {definition.min_value} "
+				f"до {definition.max_value}"
+			)
+
 	die = _select_die(rules, check)
 
 	attribute_modifier = calculate_attribute_modifier(

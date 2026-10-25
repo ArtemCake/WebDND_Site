@@ -2,6 +2,7 @@
 
 from Config.imports import (BaseModel, ConfigDict, Field, Literal,
 	field_validator, model_validator, re, UUID, datetime)
+from backend.app.Schemas.rule_calculations import (AttributeCalculations)
 
 
 CheckKind = Literal["ability", "save", "attack"]
@@ -84,7 +85,7 @@ class CheckRules(RulesModel):
 		return self
 
 class RulesProfile(RulesModel):
-	schema_version: Literal[1] = 1
+	schema_version: Literal[1, 2] = 1
 
 	# Это происхождение конфигурации, а не выбор класса по URL.
 	base_ruleset: Literal[
@@ -112,6 +113,32 @@ class RulesProfile(RulesModel):
 	)
 
 	checks: CheckRules
+
+	calculations: AttributeCalculations | None = None
+
+	@model_validator(mode="after")
+	def validate_calculations(self):
+		if self.schema_version == 1:
+			if self.calculations is not None:
+				raise ValueError(
+					"Настраиваемые вычисления требуют "
+					"schema_version=2"
+				)
+
+			return self
+
+		if self.calculations is None:
+			raise ValueError(
+				"Для schema_version=2 требуется раздел calculations"
+			)
+
+		if set(self.calculations.attributes) != set(self.attribute_codes):
+			raise ValueError(
+				"Определения характеристик должны точно "
+				"соответствовать attribute_codes"
+			)
+
+		return self
 
 	@field_validator("attribute_codes")
 	@classmethod
@@ -184,6 +211,15 @@ class CheckResult(RulesModel):
 class CheckPreviewInput(RulesModel):
 	rules: RulesProfile
 	check: CheckInput
+
+class AttributePreviewInput(RulesModel):
+	rules: RulesProfile
+	level: int = Field(ge=1, le=100)
+
+	attributes: dict[str, int] = Field(
+		min_length=1,
+		max_length=40,
+	)
 
 class GameSystemRulesDraftCreate(RulesModel):
 	rules: RulesProfile

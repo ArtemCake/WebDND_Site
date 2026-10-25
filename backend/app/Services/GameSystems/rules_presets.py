@@ -113,3 +113,36 @@ def list_rules_presets() -> list[dict]:
 			"rules": _pf2e_remaster().model_dump(mode="json"),
 		},
 	]
+
+def create_calculation_profile(code: str) -> RulesProfile:
+	"""Создаёт независимый профиль конструктора на основе пресета."""
+
+	rules = get_rules_preset(code)
+	payload = rules.model_dump(mode="json")
+
+	labels = {
+		"str": "Сила",
+		"dex": "Ловкость",
+		"con": "Телосложение",
+		"int": "Интеллект",
+		"wis": "Мудрость",
+		"cha": "Харизма",
+	}
+
+	payload["schema_version"] = 2
+	payload["calculations"] = {
+		"attributes": {
+			attribute_code: {
+				"label": labels.get(
+					attribute_code,
+					attribute_code,
+				),
+				"min_value": -1000,
+				"max_value": 1000,
+			}
+			for attribute_code in rules.attribute_codes
+		},
+		"derived": {},
+	}
+
+	return RulesProfile.model_validate(payload)
