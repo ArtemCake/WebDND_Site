@@ -3,7 +3,8 @@
 """Модели игровых систем (D&D, Pathfinder и др.) и домашних правил."""
 
 from Config.imports import (String, Text, Boolean, DateTime, ForeignKey, PG_UUID,
-	Mapped, mapped_column, relationship, JSONB, text, datetime, uuid4)
+	Mapped, mapped_column, relationship, JSONB, text, datetime,
+	uuid4, UUID, Integer, UniqueConstraint, CheckConstraint)
 from backend.app.Database.database import Base
 
 
@@ -75,3 +76,131 @@ class HomebrewRule(Base):
 
 	def __repr__(self) -> str:
 		return f"<HomebrewRule(id='{self.id}', title='{self.title}', scope='{self.visibility_scope}')>"
+
+class GameSystemRulesDraft(Base):
+	"""Редактируемый черновик конфигурации правил игровой системы."""
+
+	__tablename__ = "game_system_rules_drafts"
+
+	__table_args__ = (
+		UniqueConstraint(
+			"system_id",
+			name="uq_game_system_rules_drafts_system",
+		),
+		CheckConstraint(
+			"revision >= 1",
+			name="ck_game_system_rules_drafts_revision_positive",
+		),
+		CheckConstraint(
+			"jsonb_typeof(rules_json) = 'object'",
+			name="ck_game_system_rules_drafts_rules_object",
+		),
+	)
+
+	id: Mapped[UUID] = mapped_column(
+		PG_UUID(as_uuid=True),
+		primary_key=True,
+		default=uuid4,
+	)
+	system_id: Mapped[UUID] = mapped_column(
+		PG_UUID(as_uuid=True),
+		ForeignKey("game_systems.id", ondelete="CASCADE"),
+		nullable=False,
+	)
+	rules_json: Mapped[dict] = mapped_column(
+		JSONB,
+		nullable=False,
+	)
+	revision: Mapped[int] = mapped_column(
+		Integer,
+		nullable=False,
+		default=1,
+		server_default=text("1"),
+	)
+	created_at: Mapped[datetime] = mapped_column(
+		DateTime(timezone=True),
+		nullable=False,
+		server_default=text("now()"),
+	)
+	updated_at: Mapped[datetime] = mapped_column(
+		DateTime(timezone=True),
+		nullable=False,
+		server_default=text("now()"),
+		onupdate=text("now()"),
+	)
+
+	system: Mapped["GameSystem"] = relationship("GameSystem")
+
+	__mapper_args__ = {
+		"version_id_col": revision,
+	}
+
+	def __repr__(self) -> str:
+		return (
+			f"<GameSystemRulesDraft("
+			f"id='{self.id}', system_id='{self.system_id}', "
+			f"revision={self.revision})>"
+		)
+
+class GameSystemRulesVersion(Base):
+	"""Опубликованный снимок конфигурации правил игровой системы."""
+
+	__tablename__ = "game_system_rules_versions"
+
+	__table_args__ = (
+		UniqueConstraint(
+			"system_id",
+			"version_number",
+			name="uq_game_system_rules_versions_number",
+		),
+		UniqueConstraint(
+			"system_id",
+			"id",
+			name="uq_game_system_rules_versions_system_id",
+		),
+		CheckConstraint(
+			"version_number >= 1",
+			name="ck_game_system_rules_versions_number_positive",
+		),
+		CheckConstraint(
+			"jsonb_typeof(rules_json) = 'object'",
+			name="ck_game_system_rules_versions_rules_object",
+		),
+	)
+
+	id: Mapped[UUID] = mapped_column(
+		PG_UUID(as_uuid=True),
+		primary_key=True,
+		default=uuid4,
+	)
+	system_id: Mapped[UUID] = mapped_column(
+		PG_UUID(as_uuid=True),
+		ForeignKey("game_systems.id", ondelete="RESTRICT"),
+		nullable=False,
+	)
+	version_number: Mapped[int] = mapped_column(
+		Integer,
+		nullable=False,
+	)
+	rules_json: Mapped[dict] = mapped_column(
+		JSONB,
+		nullable=False,
+	)
+	rules_engine_version: Mapped[str] = mapped_column(
+		String(20),
+		nullable=False,
+	)
+	published_at: Mapped[datetime] = mapped_column(
+		DateTime(timezone=True),
+		nullable=False,
+		server_default=text("now()"),
+	)
+
+	system: Mapped["GameSystem"] = relationship("GameSystem")
+
+	def __repr__(self) -> str:
+		return (
+			f"<GameSystemRulesVersion("
+			f"id='{self.id}', system_id='{self.system_id}', "
+			f"version_number={self.version_number})>"
+		)

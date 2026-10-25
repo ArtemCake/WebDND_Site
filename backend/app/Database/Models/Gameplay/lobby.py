@@ -4,7 +4,7 @@
 
 from Config.imports import (Mapped, mapped_column, relationship, JSONB, text, datetime,
                             PG_UUID, String, Text, Integer, Boolean, DateTime, ForeignKey,
-							ARRAY, datetime, uuid4)
+							ARRAY, datetime, ForeignKeyConstraint, UUID, uuid4)
 from backend.app.Database.database import Base
 
 
@@ -19,6 +19,7 @@ class Game(Base):
 	id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
 	master_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
 	system_id: Mapped[PG_UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("game_systems.id", ondelete="CASCADE"), nullable=False, index=True)
+	rules_version_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), nullable=True, index=True)
 	title: Mapped[str] = mapped_column(String(255), nullable=False)
 	description: Mapped[str | None] = mapped_column(Text, nullable=True)
 	status: Mapped[str] = mapped_column(String(20), nullable=False, server_default="draft") # 'draft', 'active', 'archived'
@@ -32,12 +33,25 @@ class Game(Base):
 	created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))
 	updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), onupdate=text("now()"), server_default=text("now()"))
 	master: Mapped["User"] = relationship("User", back_populates="created_games")
-	system: Mapped["GameSystem"] = relationship("GameSystem")
+	system: Mapped["GameSystem"] = relationship("GameSystem",foreign_keys=[system_id])
+	rules_version: Mapped["GameSystemRulesVersion | None"] = relationship("GameSystemRulesVersion", foreign_keys=[rules_version_id], lazy="raise")
 	party: Mapped[list["Party"]] = relationship("Party", back_populates="game", cascade="all, delete-orphan")
 	invites: Mapped[list["Invite"]] = relationship("Invite", back_populates="game", cascade="all, delete-orphan")
 	sessions: Mapped[list["Session"]] = relationship("Session", back_populates="game", cascade="all, delete-orphan")
 	campaign_maps: Mapped[list["CampaignMap"]] = relationship("CampaignMap", back_populates="game", cascade="all, delete-orphan")
 	character_sheets: Mapped[list["CharacterSheet"]] = relationship( "CharacterSheet", back_populates="game", lazy="selectin")
+
+	__table_args__ = (
+		ForeignKeyConstraint(
+			["system_id", "rules_version_id"],
+			[
+				"game_system_rules_versions.system_id",
+				"game_system_rules_versions.id",
+			],
+			name="fk_games_rules_version_same_system",
+			ondelete="RESTRICT",
+		),
+	)
 
 	def __repr__(self) -> str:
 		return f"<Game(id='{self.id}', title='{self.title}', status='{self.status}')>"

@@ -5,7 +5,8 @@ from backend.app.Database.database import Base
 # Блок 0: Ядро
 from backend.app.Database.Models.Core.user import User, MFADevice, Friendship, OAuthProvider
 # Блок 1: Лор
-from backend.app.Database.Models.Content.game_systems import GameSystem, HomebrewRule
+from backend.app.Database.Models.Content.game_systems import (GameSystem, HomebrewRule, GameSystemRulesDraft,
+	GameSystemRulesVersion)
 from backend.app.Database.Models.Content.worldbuilding import Language, LoreEntry
 
 # Блок 2: Билдинг
@@ -37,7 +38,7 @@ __all__ = [
 	# Блок 0
 	'User', 'MFADevice', 'Friendship', 'OAuthProvider',
 	# Блок 1
-	'GameSystem', 'HomebrewRule', 'Language', 'LoreEntry',
+	'GameSystem', 'GameSystemRulesDraft', 'GameSystemRulesVersion', 'HomebrewRule', 'Language', 'LoreEntry',
 	# Блок 2
 	'Race', 'Origin', 'Background', 'Feat', 'CharacterClass', 'Subclass',
 	'Skill', 'Characteristic', 'SkillCharacteristicMap', 'CharacterSheetAbilityScore',

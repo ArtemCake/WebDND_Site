@@ -31,7 +31,7 @@ from starlette.concurrency import run_in_threadpool
 from queue import Queue
 from typing import Literal
 from abc import ABC, abstractmethod
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, insert
 from enum import Enum, StrEnum
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
@@ -51,11 +51,12 @@ from collections import defaultdict, deque
 # --- База данных (SQLAlchemy) ---
 from sqlalchemy.ext.asyncio import (AsyncSession, async_sessionmaker, create_async_engine)
 from sqlalchemy.orm import Mapped, mapped_column, relationship, declarative_base, backref, selectinload
-from sqlalchemy import (JSON, Boolean, DateTime, ForeignKey, Index, Float,	Integer, Table, Column,
-	String,	Text, UniqueConstraint,	text, func, CheckConstraint, SmallInteger, update)
 from sqlalchemy.dialects.postgresql import INET, JSONB, ARRAY, UUID as PG_UUID, ENUM as PG_ENUM
 from sqlalchemy.types import TIMESTAMP
 from geoalchemy2 import Geometry, Geography
+from sqlalchemy import (JSON, Boolean, DateTime, ForeignKey, ForeignKeyConstraint,
+	Index, Float, Integer, Table, Column, String, Text,
+	UniqueConstraint, text, func, CheckConstraint, SmallInteger, update)
 
 # --- Веб-сервер (FastAPI & Starlette) ---
 from fastapi import (APIRouter,	Depends, FastAPI, File, Form, HTTPException,

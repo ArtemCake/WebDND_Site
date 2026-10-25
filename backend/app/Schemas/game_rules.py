@@ -1,7 +1,7 @@
 # backend/app/Schemas/game_rules.py
 
 from Config.imports import (BaseModel, ConfigDict, Field, Literal,
-	field_validator, model_validator, re)
+	field_validator, model_validator, re, UUID, datetime)
 
 
 CheckKind = Literal["ability", "save", "attack"]
@@ -184,3 +184,50 @@ class CheckResult(RulesModel):
 class CheckPreviewInput(RulesModel):
 	rules: RulesProfile
 	check: CheckInput
+
+class GameSystemRulesDraftCreate(RulesModel):
+	rules: RulesProfile
+
+class GameSystemRulesDraftUpdate(RulesModel):
+	expected_revision: int = Field(ge=1)
+	rules: RulesProfile
+
+class GameSystemRulesPublish(RulesModel):
+	expected_revision: int = Field(ge=1)
+
+class GameRulesVersionBind(RulesModel):
+	rules_version_id: UUID
+
+	# Обязательное поле запроса.
+	# null означает, что клиент ожидает отсутствие закреплённой версии.
+	expected_rules_version_id: UUID | None = Field(...)
+
+class GameSystemRulesDraftRead(RulesModel):
+	model_config = ConfigDict(
+		from_attributes=True,
+		populate_by_name=True,
+	)
+
+	id: UUID
+	system_id: UUID
+	revision: int
+
+	rules: RulesProfile = Field(validation_alias="rules_json")
+
+	created_at: datetime
+	updated_at: datetime
+
+class GameSystemRulesVersionRead(RulesModel):
+	model_config = ConfigDict(
+		from_attributes=True,
+		populate_by_name=True,
+	)
+
+	id: UUID
+	system_id: UUID
+	version_number: int
+
+	rules: RulesProfile = Field(validation_alias="rules_json")
+
+	rules_engine_version: str
+	published_at: datetime
