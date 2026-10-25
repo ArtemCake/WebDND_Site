@@ -2,7 +2,7 @@
 
 from Config.Config import settings
 from Config.imports import (os, URLSafeTimedSerializer, HTTPException, TemplateNotFound, CsrfProtect,
-                            Request, APIRouter, HTMLResponse, status, RedirectResponse, Depends)
+                            Request, APIRouter, HTMLResponse, status, RedirectResponse, Depends, UUID)
 from backend.app.Services.Core.user_service import get_optional_user
 from backend.app.Database.Models.Core.user import User
 from backend.app.Services.legal_service import render_legal_markdown
@@ -14,8 +14,7 @@ secret_key = os.environ.get("SECRET_KEY", settings.SECRET_KEY)
 serializer = URLSafeTimedSerializer(secret_key)
 
 @router.get("/", response_class=HTMLResponse, name="main_page_get")
-async def get_main_page(request: Request, user: User | None = Depends(get_optional_user),
-                        csrf_protect: CsrfProtect = Depends()):
+async def get_main_page(request: Request, user: User | None = Depends(get_optional_user), csrf_protect: CsrfProtect = Depends()):
 	"""
 	Главная заглушка сайта.
 	"""
@@ -42,10 +41,7 @@ async def get_main_page(request: Request, user: User | None = Depends(get_option
         """
 
 @router.get("/login", response_class=HTMLResponse, name="login_page_get")
-async def get_login_page(request: Request,
-                         user: User | None = Depends(get_optional_user),
-                         csrf_protect: CsrfProtect = Depends()
-                         ):
+async def get_login_page(request: Request, user: User | None = Depends(get_optional_user), csrf_protect: CsrfProtect = Depends()):
 	if user:
 		return RedirectResponse(url="/profile", status_code=status.HTTP_302_FOUND)
 
@@ -62,10 +58,7 @@ async def get_login_page(request: Request,
 	return response
 
 @router.get("/register", response_class=HTMLResponse, name="register_page_get")
-async def get_register_page(request: Request,
-                            user: User | None = Depends(get_optional_user),
-                            csrf_protect: CsrfProtect = Depends()
-                            ):
+async def get_register_page(request: Request, user: User | None = Depends(get_optional_user), csrf_protect: CsrfProtect = Depends()):
 	"""
 	Страница регистрации.
 	Если пользователь уже авторизован — перенаправляем в лобби.
@@ -87,8 +80,7 @@ async def get_register_page(request: Request,
 	return response
 
 @router.get("/cookie-policy", response_class=HTMLResponse, name="cookie_policy_page_get")
-async def get_cookie_policy_page(request: Request, user: User | None = Depends(get_optional_user),
-                                 csrf_protect: CsrfProtect = Depends()):
+async def get_cookie_policy_page(request: Request, user: User | None = Depends(get_optional_user), csrf_protect: CsrfProtect = Depends()):
 	"""Статичная страница политики использования cookie."""
 	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
 	context = {
@@ -105,8 +97,7 @@ async def get_cookie_policy_page(request: Request, user: User | None = Depends(g
 	return response
 
 @router.get("/terms", response_class=HTMLResponse, name="terms_page_get")
-async def get_terms_page(request: Request, user: User | None = Depends(get_optional_user),
-                         csrf_protect: CsrfProtect = Depends()):
+async def get_terms_page(request: Request, user: User | None = Depends(get_optional_user), csrf_protect: CsrfProtect = Depends()):
 	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
 	context = {
 		"user": user, "project_name": settings.PROJECT_NAME, "csrf_token": csrf_token,
@@ -117,8 +108,7 @@ async def get_terms_page(request: Request, user: User | None = Depends(get_optio
 	return response
 
 @router.get("/privacy-policy", response_class=HTMLResponse, name="privacy_policy_page_get")
-async def get_privacy_policy_page(request: Request, user: User | None = Depends(get_optional_user),
-                                  csrf_protect: CsrfProtect = Depends()):
+async def get_privacy_policy_page(request: Request, user: User | None = Depends(get_optional_user), csrf_protect: CsrfProtect = Depends()):
 	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
 	context = {
 		"user": user, "project_name": settings.PROJECT_NAME, "csrf_token": csrf_token,
@@ -154,8 +144,7 @@ async def get_dashboard_page(request: Request, user: User | None = Depends(get_o
 	return response
 
 @router.get("/forgot-password", response_class=HTMLResponse, name="forgot_password_page_get")
-async def get_forgot_password_page(request: Request, user: User | None = Depends(get_optional_user),
-                                   csrf_protect: CsrfProtect = Depends()):
+async def get_forgot_password_page(request: Request, user: User | None = Depends(get_optional_user), csrf_protect: CsrfProtect = Depends()):
 	if user:
 		return RedirectResponse(url="/profile", status_code=status.HTTP_302_FOUND)
 
@@ -172,9 +161,7 @@ async def get_forgot_password_page(request: Request, user: User | None = Depends
 	return response
 
 @router.get("/reset-password", response_class=HTMLResponse, name="reset_password_page_get")
-async def get_reset_password_page(request: Request, token: str = "",
-                                  user: User | None = Depends(get_optional_user),
-                                  csrf_protect: CsrfProtect = Depends()):
+async def get_reset_password_page(request: Request, token: str = "", user: User | None = Depends(get_optional_user), csrf_protect: CsrfProtect = Depends()):
 	if user:
 		return RedirectResponse(url="/profile", status_code=status.HTTP_302_FOUND)
 
@@ -189,3 +176,41 @@ async def get_reset_password_page(request: Request, token: str = "",
 	csrf_protect.set_csrf_cookie(signed_token, response)
 	response.headers["X-CSRF-Token"] = csrf_token
 	return response
+
+def _render_game_systems_page(request: Request, user: User | None, csrf_protect: CsrfProtect, page_mode: str, system_id: UUID | None = None):
+	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+
+	response = request.app.state.templates.TemplateResponse(
+		request=request,
+		name="games/game_systems.html",
+		context={
+			"user": user,
+			"project_name": settings.PROJECT_NAME,
+			"csrf_token": csrf_token,
+			"page_mode": page_mode,
+			"system_id": str(system_id) if system_id else "",
+		},
+	)
+
+	csrf_protect.set_csrf_cookie(signed_token, response)
+	response.headers["X-CSRF-Token"] = csrf_token
+	response.headers["Cache-Control"] = "no-store"
+
+	return response
+
+@router.get("/game-systems/catalog", response_class=HTMLResponse, name="game_systems_catalog_get")
+async def game_systems_catalog_page(request: Request, user: User | None = Depends(get_optional_user), csrf_protect: CsrfProtect = Depends()):
+	return _render_game_systems_page(request, user, csrf_protect, "list")
+
+# /new должен быть зарегистрирован раньше /{system_id}.
+@router.get("/game-systems/catalog/new", response_class=HTMLResponse, name="game_systems_create_get")
+async def game_systems_create_page(request: Request, user: User | None = Depends(get_optional_user), csrf_protect: CsrfProtect = Depends()):
+	return _render_game_systems_page(request, user, csrf_protect, "create")
+
+@router.get("/game-systems/catalog/{system_id}/edit", response_class=HTMLResponse, name="game_systems_edit_get")
+async def game_systems_edit_page(system_id: UUID, request: Request, user: User | None = Depends(get_optional_user), csrf_protect: CsrfProtect = Depends()):
+	return _render_game_systems_page(request, user, csrf_protect, "edit", system_id)
+
+@router.get("/game-systems/catalog/{system_id}", response_class=HTMLResponse, name="game_systems_view_get")
+async def game_systems_view_page(system_id: UUID, request: Request, user: User | None = Depends(get_optional_user), csrf_protect: CsrfProtect = Depends()):
+	return _render_game_systems_page(request, user, csrf_protect, "view", system_id)

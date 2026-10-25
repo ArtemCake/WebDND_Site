@@ -3,7 +3,7 @@
 """Административная панель: пользователи, жалобы на контент, аудит-лог."""
 
 from Config.Config import settings
-from Config.imports import (APIRouter, Depends, Request, HTMLResponse, JSONResponse,
+from Config.imports import (APIRouter, Depends, Request, HTMLResponse, JSONResponse, RedirectResponse,
                             status, HTTPException, CsrfProtect, Form, UUID, AsyncSession)
 from backend.app.Database.database import get_async_session
 from backend.app.Database.Models.Core.user import User
@@ -153,51 +153,39 @@ async def admin_audit_page(request: Request, page: int = 1, session: AsyncSessio
 
 # --- Игровые системы ---
 
-# GET /admin/game-systems/list
+@router.get("/game-systems", response_class=RedirectResponse, name="admin_game_systems_get", operation_id="adminGameSystemsPage")
+async def admin_game_systems_page():
+	return RedirectResponse(
+		url="/game-systems/catalog",
+		status_code=status.HTTP_303_SEE_OTHER,
+		headers={"Cache-Control": "no-store"},
+	)
+
+# Статический путь списка обязательно регистрируем раньше
+# параметризованного /game-systems/{system_id}.
 @router.get("/game-systems/list", response_model=list[GameSystemAdminRead], operation_id="adminListGameSystems")
-async def admin_list_game_systems(session: AsyncSession = Depends(get_async_session),
-		actor: User = Depends(require_permission(AdminPermission.CONTENT))):
+async def admin_list_game_systems(session: AsyncSession = Depends(get_async_session), actor: User = Depends(require_permission(AdminPermission.CONTENT))):
 	return await content_service.list_all_systems(session)
 
-# GET /admin/game-systems/{system_id}
 @router.get("/game-systems/{system_id}", response_model=GameSystemAdminRead, operation_id="adminGetGameSystem")
 async def admin_get_game_system(system_id: UUID, session: AsyncSession = Depends(get_async_session),
 		actor: User = Depends(require_permission(AdminPermission.CONTENT))):
-	return await content_service.get_game_system(
-		session,
-		system_id,
-	)
+	return await content_service.get_game_system(session, system_id)
 
-# POST /admin/game-systems
-@router.post("/game-systems", response_model=GameSystemAdminRead, status_code=status.HTTP_201_CREATED, operation_id="adminCreateGameSystem", dependencies=[Depends(enforce_csrf)])
+@router.post("/game-systems", response_model=GameSystemAdminRead, status_code=status.HTTP_201_CREATED, operation_id="adminCreateGameSystem",
+             dependencies=[Depends(enforce_csrf)])
 async def admin_create_game_system(data: GameSystemCreate, session: AsyncSession = Depends(get_async_session),
 		actor: User = Depends(require_permission(AdminPermission.CONTENT))):
 	return await content_service.create_game_system(session, data)
 
-# PATCH /admin/game-systems/{system_id}
-@router.patch("/game-systems/{system_id}",response_model=GameSystemAdminRead,operation_id="adminUpdateGameSystem",dependencies=[Depends(enforce_csrf)])
+@router.patch("/game-systems/{system_id}", response_model=GameSystemAdminRead, operation_id="adminUpdateGameSystem", dependencies=[Depends(enforce_csrf)])
 async def admin_update_game_system(system_id: UUID, data: GameSystemUpdate, session: AsyncSession = Depends(get_async_session),
 		actor: User = Depends(require_permission(AdminPermission.CONTENT))):
-	return await content_service.update_game_system(session, system_id, data)
-
-# GET /admin/game-systems
-@router.get("/game-systems",response_class=HTMLResponse,name="admin_game_systems_get",operation_id="adminGameSystemsPage")
-async def admin_game_systems_page(request: Request, user: User = Depends(require_permission(AdminPermission.CONTENT)), csrf_protect: CsrfProtect = Depends()):
-	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
-
-	context = {
-		"user": user,
-		"project_name": settings.PROJECT_NAME,
-		"csrf_token": csrf_token,
-	}
-
-	response = request.app.state.templates.TemplateResponse(
-		request=request,
-		name="admin/game_systems.html",
-		context=context,
+	return await content_service.update_game_system(
+		session,
+		system_id,
+		data,
 	)
-	csrf_protect.set_csrf_cookie(signed_token, response)
-	return response
 
 @router.get("/game-systems/rules/presets", operation_id="adminListGameRulesPresets")
 async def admin_list_game_rules_presets(actor: User = Depends(require_permission(AdminPermission.CONTENT))):

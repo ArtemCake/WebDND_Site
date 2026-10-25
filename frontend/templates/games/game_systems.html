@@ -1,0 +1,185 @@
+<!-- frontend/templates/games/game_systems.html -->
+
+{% extends "base.html" %}
+
+{% set page_titles = {
+"list": "Игровые системы",
+"view": "Просмотр игровой системы",
+"create": "Новая игровая система",
+"edit": "Редактирование игровой системы"
+} %}
+
+{% block title %}
+{{ page_titles[page_mode] }} — {{ project_name }}
+{% endblock %}
+
+{% block content %}
+<section
+		class="admin-page"
+		data-game-systems-page
+		data-page-mode="{{ page_mode }}"
+		data-system-id="{{ system_id }}"
+>
+	<h1 class="profile-heading">{{ page_titles[page_mode] }}</h1>
+	
+	{% if page_mode != "list" %}
+	<p>
+		<a href="/game-systems/catalog" class="btn btn-outline-primary">
+			К списку систем
+		</a>
+	</p>
+	{% endif %}
+	
+	<p data-page-message role="status" aria-live="polite">
+		Загрузка…
+	</p>
+	
+	<p data-page-login hidden>
+		<a href="/login" class="btn btn-primary">
+			Войти в аккаунт
+		</a>
+	</p>
+	
+	<button
+			type="button"
+			class="btn btn-outline-primary"
+			data-page-reload
+	>
+		{% if page_mode == "list" %}
+		Обновить список
+		{% else %}
+		Загрузить страницу заново
+		{% endif %}
+	</button>
+	
+	<div data-page-content hidden>
+		{% if page_mode == "list" %}
+		<p>
+			<a
+					href="/game-systems/catalog/new"
+					class="btn btn-primary"
+					data-system-create
+					hidden
+			>
+				Создать систему
+			</a>
+		</p>
+		
+		<p class="profile-note">
+			Активные системы доступны при создании игры.
+			Деактивация не удаляет существующие игры и связанный контент.
+		</p>
+		
+		<div class="admin-sections" data-systems-list></div>
+		
+		{% elif page_mode == "view" %}
+		<article>
+			<h2 data-system-name></h2>
+			<p data-system-details></p>
+			<p data-system-description></p>
+			
+			<a
+					class="btn btn-primary"
+					data-system-edit
+					hidden
+			>
+				Редактировать
+			</a>
+		</article>
+		
+		{% elif page_mode in ["create", "edit"] %}
+		<form data-system-form>
+			<fieldset data-system-fields disabled>
+				<legend>Параметры системы</legend>
+				
+				<p>
+					<label for="system-name">Название</label>
+					<input
+							id="system-name"
+							name="name"
+							type="text"
+							maxlength="100"
+							required
+					>
+				</p>
+				
+				<p>
+					<label for="system-slug">Код системы (slug)</label>
+					<input
+							id="system-slug"
+							name="slug"
+							type="text"
+							maxlength="100"
+							pattern="[a-z0-9]+([-_][a-z0-9]+)*"
+							aria-describedby="system-slug-help"
+							autocomplete="off"
+							spellcheck="false"
+							required
+					>
+					<small id="system-slug-help" class="profile-note">
+						Строчные латинские буквы, цифры, дефисы
+						и подчёркивания. Например: dnd-5e.
+					</small>
+				</p>
+				
+				<p>
+					<label for="system-description">Описание</label>
+					<textarea
+							id="system-description"
+							name="description"
+							rows="4"
+					></textarea>
+				</p>
+				
+				<p>
+					<label for="system-engine">Версия движка правил</label>
+					<input
+							id="system-engine"
+							name="rules_engine_version"
+							type="text"
+							value="1.0"
+							maxlength="20"
+							required
+					>
+				</p>
+				
+				<p>
+					<label>
+						<input name="is_active" type="checkbox" checked>
+						Доступна для новых игр
+					</label>
+				</p>
+				
+				<button type="submit" class="btn btn-primary">
+					{% if page_mode == "create" %}
+					Создать систему
+					{% else %}
+					Сохранить изменения
+					{% endif %}
+				</button>
+			</fieldset>
+			
+			<p>
+				<a
+						class="btn btn-outline-primary"
+						href="{% if page_mode == 'edit' %}/game-systems/catalog/{{ system_id }}{% else %}/game-systems/catalog{% endif %}"
+				>
+					Отмена
+				</a>
+			</p>
+		</form>
+		{% endif %}
+	</div>
+	
+	<noscript>
+		<p>Для работы с игровыми системами нужен JavaScript.</p>
+	</noscript>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script
+		type="module"
+		src="{{ static_url('js/modules/systems/game-systems-catalog.js') }}"
+></script>
+{% endblock %}

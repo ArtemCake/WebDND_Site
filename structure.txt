@@ -148,6 +148,7 @@ frontend/
 │   ├── games/
 │   │   ├── game_play.html
 │   │   ├── game_details.html
+│   │   ├── game_systems.html
 │   │   └── games.html
 │   ├── maps/
 │   │   ├── maps.html
@@ -160,7 +161,6 @@ frontend/
 │   │   └── session_dice.html
 │   ├── admin/
 │   │   ├── audit.html
-│   │   ├── game_systems.html
 │   │   ├── dashboard.html
 │   │   ├── reports.html
 │   │   └── users.html
@@ -260,8 +260,7 @@ frontend/
             │   ├── lobby.js
             │   └── session-dice.js
             ├── admin/
-            │   ├── admin.js
-            │   └── admin-game-systems.js
+            │   └── admin.js
             ├── auth.js
             ├── cookie-banner.js
             ├── delete-account.js
@@ -278,4 +277,5 @@ frontend/
             │   └── TokenFactory.js
             └── systems/
                 ├── Dnd5eSystem.js
+                ├── game-systems-catalog.js
                 └── ISystem.js
