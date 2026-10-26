@@ -28,6 +28,8 @@ Tests/
 │ 	├── test_auth_refresh.py
 │ 	├── test_csrf_coverage.py
 │ 	├── test_csrf_protection.py
+│ 	├── test_attribute_preview_api.py
+│ 	├── test_rules_draft_api.py
 │ 	└── test_rules_engine.py
 ├── js/
 	└── session-client.test.js
@@ -282,5 +284,6 @@ frontend/
             │   └── TokenFactory.js
             └── systems/
                 ├── Dnd5eSystem.js
+                ├── game-system-rules-editor.js
                 ├── game-systems-catalog.js
                 └── ISystem.js

@@ -203,6 +203,27 @@ env.filters['b64encode'] = b64encode_filter
 # --- ГЛОБАЛЬНЫЕ ОБРАБОТЧИКИ ОШИБОК ---
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
+
+	if request.url.path.startswith("/admin/game-systems/"):
+		errors = [
+			{
+				"type": error["type"],
+				"loc": list(error["loc"]),
+				"msg": error["msg"],
+			}
+			for error in exc.errors()
+		]
+
+		log.warning(
+			f"[RULES][VALIDATION] "
+			f"{request.method} {request.url.path}: {errors}"
+		)
+
+		return JSONResponse(
+			status_code=422,
+			content={"detail": errors},
+		)
+
 	field_names = {
 		"email": "Email",
 		"password": "Пароль",
@@ -227,8 +248,23 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 @app.exception_handler(404)
 async def not_found_exception_handler(request: Request, exc):
-	if request.url.path.startswith("/api"):
-		return JSONResponse(status_code=404, content={"detail": "Not found"})
+	if (
+			request.url.path.startswith("/api")
+			or "application/json"
+			in request.headers.get("accept", "").lower()
+	):
+		detail = getattr(exc, "detail", None)
+
+		return JSONResponse(
+			status_code=404,
+			content={
+				"detail": (
+					detail
+					if isinstance(detail, str)
+					else "Ресурс не найден"
+				),
+			},
+		)
 
 	user = None
 	try:

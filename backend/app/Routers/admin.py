@@ -4,7 +4,7 @@
 
 from Config.Config import settings
 from Config.imports import (APIRouter, Depends, Request, HTMLResponse, JSONResponse, RedirectResponse,
-                            status, HTTPException, CsrfProtect, Form, UUID, AsyncSession)
+                            status, HTTPException, CsrfProtect, Form, UUID, AsyncSession, Response)
 from backend.app.Database.database import get_async_session
 from backend.app.Database.Models.Core.user import User
 from backend.app.Enums.enums_BD import SystemRole, AdminPermission
@@ -14,9 +14,13 @@ from backend.app.Services.admin_service import (get_admin_user, require_permissi
 from backend.app.Core.csrf import enforce_csrf
 from backend.app.Schemas.content import (GameSystemCreate,GameSystemUpdate,	GameSystemAdminRead)
 from backend.app.Services import content_service
-from backend.app.Schemas.game_rules import (CheckPreviewInput, CheckResult)
-from backend.app.Services.GameSystems.rules_presets import (list_rules_presets)
+from backend.app.Schemas.game_rules import (CheckPreviewInput, CheckResult, AttributePreviewInput, GameSystemRulesDraftCreate,
+                                            GameSystemRulesDraftUpdate, GameSystemRulesDraftRead, GameSystemRulesDraftState)
+from backend.app.Services.GameSystems.rules_presets import (list_rules_presets, create_calculation_profile)
 from backend.app.Services.GameSystems.rules_engine import (evaluate_check)
+from backend.app.Schemas.rule_calculations import (AttributePreviewResult)
+from backend.app.Services.GameSystems.attribute_engine import (evaluate_attributes)
+from backend.app.Services.GameSystems import rules_service
 
 
 router = APIRouter(
@@ -197,7 +201,80 @@ async def admin_preview_game_rules(data: CheckPreviewInput, actor: User = Depend
 		return evaluate_check(data.rules, data.check)
 	except ValueError as exc:
 		raise HTTPException(
+			status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+			detail=str(exc),
+		) from exc
+
+@router.post("/game-systems/rules/attributes/preview", response_model=AttributePreviewResult, operation_id="adminPreviewGameSystemAttributes",
+             dependencies=[Depends(enforce_csrf)])
+async def admin_preview_game_system_attributes(data: AttributePreviewInput, actor: User = Depends(require_permission(AdminPermission.CONTENT))):
+	"""Рассчитать характеристики без сохранения и игровых действий."""
+
+	try:
+		return evaluate_attributes(data)
+	except ValueError as exc:
+		raise HTTPException(
 			status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
 			detail=str(exc),
 		) from exc
 
+@router.get("/game-systems/rules/calculation-presets", operation_id="adminListCalculationPresets")
+async def admin_list_calculation_presets(response: Response,actor: User = Depends(require_permission(AdminPermission.CONTENT))):
+	response.headers["Cache-Control"] = "no-store"
+
+	return [
+		{
+			"code": preset["code"],
+			"name": preset["name"],
+			"rules": create_calculation_profile(
+				preset["code"],
+			).model_dump(mode="json"),
+		}
+		for preset in list_rules_presets()
+	]
+
+@router.get(
+	"/game-systems/{system_id}/rules/draft", response_model=GameSystemRulesDraftState, operation_id="adminGetGameSystemRulesDraft")
+async def admin_get_game_system_rules_draft(system_id: UUID, response: Response, session: AsyncSession = Depends(get_async_session),
+		actor: User = Depends(require_permission(AdminPermission.CONTENT))):
+	response.headers["Cache-Control"] = "no-store"
+
+	# Сначала отличаем отсутствующую систему от отсутствующего
+	# черновика. Проверка прав выполнена зависимостью выше.
+	await content_service.get_game_system(session, system_id)
+
+	try:
+		draft = await rules_service.get_rules_draft(
+			session,
+			system_id,
+		)
+	except HTTPException as exc:
+		if exc.status_code != status.HTTP_404_NOT_FOUND:
+			raise
+
+		draft = None
+
+	return GameSystemRulesDraftState(draft=draft)
+
+@router.post("/game-systems/{system_id}/rules/draft", response_model=GameSystemRulesDraftRead, status_code=status.HTTP_201_CREATED,
+	operation_id="adminCreateGameSystemRulesDraft", dependencies=[Depends(enforce_csrf)])
+async def admin_create_game_system_rules_draft(system_id: UUID, data: GameSystemRulesDraftCreate, response: Response, session: AsyncSession = Depends(get_async_session),
+		actor: User = Depends(require_permission(AdminPermission.CONTENT))):
+	response.headers["Cache-Control"] = "no-store"
+
+	return await rules_service.create_rules_draft(
+		session,
+		system_id,
+		data,
+	)
+
+@router.patch("/game-systems/{system_id}/rules/draft", response_model=GameSystemRulesDraftRead, operation_id="adminUpdateGameSystemRulesDraft", dependencies=[Depends(enforce_csrf)])
+async def admin_update_game_system_rules_draft(system_id: UUID, data: GameSystemRulesDraftUpdate, response: Response, session: AsyncSession = Depends(get_async_session),
+		actor: User = Depends(require_permission(AdminPermission.CONTENT))):
+	response.headers["Cache-Control"] = "no-store"
+
+	return await rules_service.update_rules_draft(
+		session,
+		system_id,
+		data,
+	)

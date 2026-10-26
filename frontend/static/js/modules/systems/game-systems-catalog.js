@@ -4,6 +4,9 @@ import {
 	sessionClient,
 	SessionRefreshError
 } from '../games/session-client.js';
+import {
+	createRulesEditor
+} from './game-system-rules-editor.js';
 
 const root = document.querySelector('[data-game-systems-page]');
 
@@ -30,6 +33,12 @@ function initGameSystemsPage(root) {
 	let ready = false;
 	let busy = false;
 	let systems = [];
+	const rulesEditor = mode === 'edit'
+    		? createRulesEditor(
+    			root.querySelector('[data-rules-editor]'),
+    			{ request, systemId }
+    		)
+    		: null;
 
 	function pageUrl(id) {
 		return `/game-systems/catalog/${encodeURIComponent(id)}`;
@@ -57,6 +66,7 @@ function initGameSystemsPage(root) {
 		list?.querySelectorAll('button').forEach((button) => {
 			button.disabled = value || !ready;
 		});
+		rulesEditor?.setParentBusy(value || !ready);
 	}
 
 	function showError(error) {
@@ -97,7 +107,12 @@ function initGameSystemsPage(root) {
 		return `Не удалось выполнить запрос (${status}).`;
 	}
 
-	async function request(path, method = 'GET', payload) {
+	async function request(
+    		path,
+    		method = 'GET',
+    		payload,
+    		{ readOnly = false } = {}
+    	) {
 		const headers = new Headers({
 			Accept: 'application/json'
 		});
@@ -106,7 +121,7 @@ function initGameSystemsPage(root) {
 			headers.set('Content-Type', 'application/json');
 		}
 
-		const mutation = method !== 'GET';
+		const mutation = method !== 'GET' && !readOnly;
 		let response;
 
 		try {
@@ -259,7 +274,7 @@ function initGameSystemsPage(root) {
 	}
 
 	async function loadPage() {
-		if (busy) return;
+		if (busy || rulesEditor?.isBusy()) return;
 
 		ready = false;
 		access = null;
@@ -310,8 +325,9 @@ function initGameSystemsPage(root) {
 				if (mode === 'view') {
 					renderView(system);
 				} else {
-					fillForm(system);
-				}
+                	fillForm(system);
+                	await rulesEditor?.load();
+                }
 			} else {
 				throw makeError('Неизвестный режим страницы.');
 			}
@@ -335,7 +351,19 @@ function initGameSystemsPage(root) {
 	form?.addEventListener('submit', async (event) => {
 		event.preventDefault();
 
-		if (busy || !ready || !form.reportValidity()) return;
+		if (rulesEditor?.isBusy()) {
+        			message.textContent =
+        				'Дождитесь завершения операции с черновиком правил.';
+        			return;
+        		}
+
+        if (rulesEditor?.hasUnsaved()) {
+            message.textContent =
+            'Сначала сохраните черновик правил. ' +
+            'Сохранение основных сведений переводит на страницу просмотра.';
+            return;
+        }
+         if (busy || !ready || !form.reportValidity()) return;
 
 		const isEditing = mode === 'edit';
 		const allowed = isEditing
@@ -380,7 +408,11 @@ function initGameSystemsPage(root) {
 				);
 			}
 
-			window.location.assign(pageUrl(saved.id));
+			window.location.assign(
+            				isEditing
+            					? pageUrl(saved.id)
+            					: `${pageUrl(saved.id)}/edit`
+            			);
 		} catch (error) {
 			showError(error);
 		} finally {
@@ -438,7 +470,7 @@ function initGameSystemsPage(root) {
 	});
 
 	reload.addEventListener('click', () => {
-		if (busy) return;
+		if (busy || rulesEditor?.isBusy()) return;
 
 		if (
 			form && ready &&

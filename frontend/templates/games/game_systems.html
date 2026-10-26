@@ -168,6 +168,45 @@
 				</a>
 			</p>
 		</form>
+		
+		{% if page_mode == "edit" %}
+		<section data-rules-editor>
+			<h2>Характеристики и показатели</h2>
+			
+			<p class="profile-note">
+				Это редактор черновика правил.
+				Основные сведения системы сохраняются отдельно.
+				Опубликованные версии не изменяются.
+			</p>
+			
+			<p
+					data-rules-message
+					role="status"
+					aria-live="polite"
+			></p>
+			
+			<button
+					type="button"
+					class="btn btn-outline-primary"
+					data-rules-reload
+			>
+				Перезагрузить черновик
+			</button>
+			
+			<fieldset data-rules-controls disabled>
+				<legend>Настройки правил</legend>
+				<div data-rules-body></div>
+			</fieldset>
+			
+			<pre data-rules-result hidden></pre>
+		</section>
+		{% else %}
+		<p class="profile-note">
+			После создания откроется редактор системы:
+			в нём можно выбрать основу и настроить черновик правил.
+		</p>
+		{% endif %}
+		
 		{% endif %}
 	</div>
 	

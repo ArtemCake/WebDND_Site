@@ -253,6 +253,9 @@ class GameSystemRulesDraftRead(RulesModel):
 	created_at: datetime
 	updated_at: datetime
 
+class GameSystemRulesDraftState(RulesModel):
+	draft: GameSystemRulesDraftRead | None
+
 class GameSystemRulesVersionRead(RulesModel):
 	model_config = ConfigDict(
 		from_attributes=True,
