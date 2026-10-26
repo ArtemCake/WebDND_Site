@@ -194,7 +194,7 @@ def get_host() -> str:
 	if settings.ENVIRONMENT == "production":
 		return "0.0.0.0"
 	else:
-		return "127.0.0.1"
+		return "0.0.0.0"
 
 env.filters['static_url'] = static_url
 env.globals["static_url"] = static_url

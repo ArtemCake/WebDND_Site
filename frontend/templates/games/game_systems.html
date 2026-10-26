@@ -14,20 +14,16 @@
 {% endblock %}
 
 {% block content %}
-<section
-		class="admin-page"
-		data-game-systems-page
-		data-page-mode="{{ page_mode }}"
-		data-system-id="{{ system_id }}"
->
+<section class="admin-page{% if page_mode in ['create', 'edit'] %} game-system-editor-page{% endif %}"
+         data-game-systems-page data-page-mode="{{ page_mode }}" data-system-id="{{ system_id }}">
 	<h1 class="profile-heading">{{ page_titles[page_mode] }}</h1>
 	
 	{% if page_mode != "list" %}
-	<p>
-		<a href="/game-systems/catalog" class="btn btn-outline-primary">
-			К списку систем
-		</a>
-	</p>
+		<p>
+			<a href="/game-systems/catalog" class="btn btn-outline-primary">
+				К списку систем
+			</a>
+		</p>
 	{% endif %}
 	
 	<p data-page-message role="status" aria-live="polite">
@@ -40,173 +36,219 @@
 		</a>
 	</p>
 	
-	<button
-			type="button"
-			class="btn btn-outline-primary"
-			data-page-reload
-	>
+	<button type="button" class="btn btn-outline-primary" data-page-reload>
 		{% if page_mode == "list" %}
-		Обновить список
+			Обновить список
 		{% else %}
-		Загрузить страницу заново
+			Загрузить страницу заново
 		{% endif %}
 	</button>
 	
 	<div data-page-content hidden>
 		{% if page_mode == "list" %}
-		<p>
-			<a
-					href="/game-systems/catalog/new"
-					class="btn btn-primary"
-					data-system-create
-					hidden
-			>
-				Создать систему
-			</a>
-		</p>
-		
-		<p class="profile-note">
-			Активные системы доступны при создании игры.
-			Деактивация не удаляет существующие игры и связанный контент.
-		</p>
-		
-		<div class="admin-sections" data-systems-list></div>
-		
-		{% elif page_mode == "view" %}
-		<article>
-			<h2 data-system-name></h2>
-			<p data-system-details></p>
-			<p data-system-description></p>
-			
-			<a
-					class="btn btn-primary"
-					data-system-edit
-					hidden
-			>
-				Редактировать
-			</a>
-		</article>
-		
-		{% elif page_mode in ["create", "edit"] %}
-		<form data-system-form>
-			<fieldset data-system-fields disabled>
-				<legend>Параметры системы</legend>
-				
-				<p>
-					<label for="system-name">Название</label>
-					<input
-							id="system-name"
-							name="name"
-							type="text"
-							maxlength="100"
-							required
-					>
-				</p>
-				
-				<p>
-					<label for="system-slug">Код системы (slug)</label>
-					<input
-							id="system-slug"
-							name="slug"
-							type="text"
-							maxlength="100"
-							pattern="[a-z0-9]+([-_][a-z0-9]+)*"
-							aria-describedby="system-slug-help"
-							autocomplete="off"
-							spellcheck="false"
-							required
-					>
-					<small id="system-slug-help" class="profile-note">
-						Строчные латинские буквы, цифры, дефисы
-						и подчёркивания. Например: dnd-5e.
-					</small>
-				</p>
-				
-				<p>
-					<label for="system-description">Описание</label>
-					<textarea
-							id="system-description"
-							name="description"
-							rows="4"
-					></textarea>
-				</p>
-				
-				<p>
-					<label for="system-engine">Версия движка правил</label>
-					<input
-							id="system-engine"
-							name="rules_engine_version"
-							type="text"
-							value="1.0"
-							maxlength="20"
-							required
-					>
-				</p>
-				
-				<p>
-					<label>
-						<input name="is_active" type="checkbox" checked>
-						Доступна для новых игр
-					</label>
-				</p>
-				
-				<button type="submit" class="btn btn-primary">
-					{% if page_mode == "create" %}
-					Создать систему
-					{% else %}
-					Сохранить изменения
-					{% endif %}
-				</button>
-			</fieldset>
-			
 			<p>
-				<a
-						class="btn btn-outline-primary"
-						href="{% if page_mode == 'edit' %}/game-systems/catalog/{{ system_id }}{% else %}/game-systems/catalog{% endif %}"
-				>
-					Отмена
+				<a href="/game-systems/catalog/new" class="btn btn-primary" data-system-create hidden>
+					Создать систему
 				</a>
 			</p>
-		</form>
-		
-		{% if page_mode == "edit" %}
-		<section data-rules-editor>
-			<h2>Характеристики и показатели</h2>
 			
 			<p class="profile-note">
-				Это редактор черновика правил.
-				Основные сведения системы сохраняются отдельно.
-				Опубликованные версии не изменяются.
+				Активные системы доступны при создании игры.
+				Деактивация не удаляет существующие игры и связанный контент.
 			</p>
-			
-			<p
-					data-rules-message
-					role="status"
-					aria-live="polite"
-			></p>
-			
-			<button
-					type="button"
-					class="btn btn-outline-primary"
-					data-rules-reload
-			>
-				Перезагрузить черновик
-			</button>
-			
-			<fieldset data-rules-controls disabled>
-				<legend>Настройки правил</legend>
-				<div data-rules-body></div>
-			</fieldset>
-			
-			<pre data-rules-result hidden></pre>
-		</section>
-		{% else %}
-		<p class="profile-note">
-			После создания откроется редактор системы:
-			в нём можно выбрать основу и настроить черновик правил.
-		</p>
-		{% endif %}
 		
+			<div class="admin-sections" data-systems-list></div>
+		
+		{% elif page_mode == "view" %}
+			<article>
+				<h2 data-system-name></h2>
+				<p data-system-details></p>
+				<p data-system-description></p>
+				
+				<a class="btn btn-primary" data-system-edit hidden>
+					Редактировать
+				</a>
+			</article>
+		{% elif page_mode in ["create", "edit"] %}
+			<form class="system-editor" data-system-form data-rules-editor novalidate>
+				<header class="system-editor__heading">
+					<h2>
+						{% if page_mode == "create" %}
+							Создание игровой системы
+						{% else %}
+							Редактирование игровой системы
+						{% endif %}
+					</h2>
+					
+					<span class="system-editor__badge">
+				        {% if page_mode == "create" %}
+				            Новый черновик
+				        {% else %}
+				            Редактор черновика
+				        {% endif %}
+				    </span>
+				</header>
+				<nav class="system-editor__tabs" aria-label="Разделы конструктора">
+					<button type="button" class="btn btn-outline-primary"
+					        data-editor-tab="main" aria-current="step">
+						1. Основное
+					</button>
+					<button type="button" class="btn btn-outline-primary"
+					        data-editor-tab="attributes">
+						2. Характеристики
+					</button>
+					<button type="button" class="btn btn-outline-primary"
+					        data-editor-tab="derived">
+						3. Показатели
+					</button>
+					<button type="button" class="btn btn-outline-primary"
+					        data-editor-tab="preview">
+						4. Проверка и сохранение
+					</button>
+				</nav>
+				
+				<p data-editor-progress class="profile-note"></p>
+				
+				<section data-editor-panel="main" aria-label="Основные сведения">
+					<div class="system-editor__layout">
+						<div class="system-editor__panel">
+							<h2>Основные сведения</h2>
+							
+							<fieldset data-system-fields disabled>
+								<legend class="system-editor__legend">
+									Параметры системы
+								</legend>
+								
+								<label class="system-editor__field">
+									Название системы
+									<input id="system-name" name="name"
+									       type="text" maxlength="100" required>
+								</label>
+								
+								<label class="system-editor__field">
+									Описание
+									<textarea name="description" rows="4"></textarea>
+								</label>
+								
+								<label class="system-editor__check">
+									<input name="is_active" type="checkbox">
+									Доступна для новых игр
+								</label>
+								
+							</fieldset>
+							
+							<div data-rules-basis></div>
+							<details class="system-editor__details">
+								<summary>Дополнительные сведения</summary>
+								
+								<label class="system-editor__field">
+									Код системы
+									<input name="slug" type="text"
+									       maxlength="100"
+									       pattern="[a-z0-9]+([-_][a-z0-9]+)*"
+									       autocomplete="off"
+									       spellcheck="false"
+									       required>
+								</label>
+								<p class="profile-note">
+									При создании заполняется автоматически.
+									При необходимости его можно изменить.
+								</p>
+								
+								<label class="system-editor__field">
+									Версия движка
+									<input name="rules_engine_version"
+									       type="text" value="1.0"
+									       maxlength="20" readonly required>
+								</label>
+							</details>
+							
+						</div>
+						
+						<aside class="system-editor__panel system-editor__help">
+							<h2>С чего начать?</h2>
+							<p>
+								Укажите название и выберите основу правил.
+								Затем переходите к характеристикам и показателям.
+							</p>
+							<p>
+								Вкладки позволяют свободно переключаться между
+								страницами. Введённые данные остаются в форме,
+								но сохраняются на сервере только по вашей команде.
+							</p>
+							<p class="profile-note">
+								Основа содержит поддерживаемые настройки расчётов,
+								а не полный справочник выбранной ролевой системы.
+								Публикация правил выполняется отдельно.
+							</p>
+						</aside>
+					</div>
+				</section>
+				
+				<p data-rules-message role="status" aria-live="polite"></p>
+				
+				<fieldset data-rules-controls disabled>
+					<legend class="system-editor__legend">Настройки правил</legend>
+					<div data-rules-body></div>
+				</fieldset>
+				
+				<footer class="system-editor__footer">
+					<div>
+						<p data-editor-state role="status" aria-live="polite"></p>
+						<p class="profile-note">
+							Переход между страницами не сохраняет данные.
+						</p>
+					</div>
+					
+					<div class="system-editor__actions">
+						<button type="button" class="btn btn-outline-primary"
+						        data-editor-back>
+							← Назад
+						</button>
+						
+						<button type="button" class="btn btn-primary"
+						        data-editor-next>
+							Далее: характеристики →
+						</button>
+						
+						<button type="submit" class="btn btn-primary"
+						        data-editor-save hidden>
+							{% if page_mode == "create" %}
+							Создать систему и черновик
+							{% else %}
+							Сохранить изменения
+							{% endif %}
+						</button>
+					</div>
+				</footer>
+				
+				<a class="btn btn-outline-primary"
+				   href="{% if page_mode == 'edit' %}/game-systems/catalog/{{ system_id }}{% else %}/game-systems/catalog{% endif %}">
+					Отмена
+				</a>
+			</form>
+			{% if page_mode == "edit" %}
+				<section aria-label="Удаление системы">
+					<h2>Удаление системы</h2>
+					
+					<p class="profile-note">
+						Можно удалить только систему без игр, связанного контента
+						и опубликованных версий правил.
+						Черновик будет удалён вместе с системой.
+						Для используемой системы выберите деактивацию в списке.
+					</p>
+					
+					<button
+							type="button"
+							class="btn btn-outline-primary"
+							data-system-delete
+							hidden
+							disabled
+					>
+						Удалить систему
+					</button>
+				</section>
+			{% endif %}
 		{% endif %}
 	</div>
 	

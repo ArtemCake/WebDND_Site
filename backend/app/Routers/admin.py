@@ -3,6 +3,7 @@
 """Административная панель: пользователи, жалобы на контент, аудит-лог."""
 
 from Config.Config import settings
+from backend.app.Services.GameSystems.delete_service import (delete_game_system)
 from Config.imports import (APIRouter, Depends, Request, HTMLResponse, JSONResponse, RedirectResponse,
                             status, HTTPException, CsrfProtect, Form, UUID, AsyncSession, Response)
 from backend.app.Database.database import get_async_session
@@ -20,7 +21,8 @@ from backend.app.Services.GameSystems.rules_presets import (list_rules_presets, 
 from backend.app.Services.GameSystems.rules_engine import (evaluate_check)
 from backend.app.Schemas.rule_calculations import (AttributePreviewResult)
 from backend.app.Services.GameSystems.attribute_engine import (evaluate_attributes)
-from backend.app.Services.GameSystems import rules_service
+from backend.app.Services.GameSystems import rules_service, editor_service
+from backend.app.Schemas.game_system_editor import (GameSystemEditorCreate, GameSystemEditorUpdate, GameSystemEditorRead)
 
 
 router = APIRouter(
@@ -278,3 +280,33 @@ async def admin_update_game_system_rules_draft(system_id: UUID, data: GameSystem
 		system_id,
 		data,
 	)
+
+@router.post("/game-systems/editor/create", response_model=GameSystemEditorRead, status_code=status.HTTP_201_CREATED,
+	operation_id="adminCreateGameSystemWithDraft", dependencies=[Depends(enforce_csrf)])
+async def admin_create_game_system_with_draft(data: GameSystemEditorCreate, response: Response, session: AsyncSession = Depends(get_async_session),
+		actor: User = Depends(require_permission(AdminPermission.CONTENT))):
+	response.headers["Cache-Control"] = "no-store"
+
+	return await editor_service.create_system_with_draft(
+		session,
+		data,
+	)
+
+@router.put("/game-systems/{system_id}/editor", response_model=GameSystemEditorRead, operation_id="adminSaveGameSystemWithDraft",
+	dependencies=[Depends(enforce_csrf)])
+async def admin_save_game_system_with_draft(system_id: UUID, data: GameSystemEditorUpdate, response: Response, session: AsyncSession = Depends(get_async_session),
+		actor: User = Depends(require_permission(AdminPermission.CONTENT))):
+	response.headers["Cache-Control"] = "no-store"
+
+	return await editor_service.update_system_with_draft(
+		session,
+		system_id,
+		data,
+	)
+
+@router.delete("/game-systems/{system_id}", operation_id="adminDeleteGameSystem", dependencies=[Depends(enforce_csrf)])
+async def admin_delete_game_system(system_id: UUID, response: Response, session: AsyncSession = Depends(get_async_session),
+		actor: User = Depends(require_permission(AdminPermission.CONTENT))):
+	response.headers["Cache-Control"] = "no-store"
+
+	return await delete_game_system(session, system_id)

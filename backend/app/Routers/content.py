@@ -30,6 +30,7 @@ async def game_systems_catalog_access(current_user: User = Depends(get_current_u
 		"can_create": can_manage,
 		"can_edit": can_manage,
 		"can_toggle": can_manage,
+		"can_delete": can_manage,
 		"list_url": (
 			"/admin/game-systems/list"
 			if can_manage

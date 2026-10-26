@@ -33,12 +33,155 @@ function initGameSystemsPage(root) {
 	let ready = false;
 	let busy = false;
 	let systems = [];
-	const rulesEditor = mode === 'edit'
-    		? createRulesEditor(
-    			root.querySelector('[data-rules-editor]'),
-    			{ request, systemId }
-    		)
-    		: null;
+	let loadedSystem = null;
+    const deleteBlocked = new Set();
+
+    function syncDeleteButtons() {
+        root.querySelectorAll('[data-system-delete]').forEach((button) => {
+            const allowed = access?.can_delete === true;
+            button.hidden = !allowed;
+            button.disabled = !allowed || busy ||  !ready ||  deleteBlocked.has(button.dataset.systemDelete);
+        });
+    }
+	const editorPages = [
+        ['main', 'Основное'],
+        ['attributes', 'Характеристики'],
+        ['derived', 'Показатели'],
+        ['preview', 'Проверка и сохранение']
+    ];
+
+        let editorPage = 0;
+        let metadataDirty = false;
+        let saveBlocked = false;
+        let leaving = false;
+
+        const nextButton = root.querySelector('[data-editor-next]');
+        const backButton = root.querySelector('[data-editor-back]');
+        const saveButton = root.querySelector('[data-editor-save]');
+        const editorState = root.querySelector('[data-editor-state]');
+        const editorProgress = root.querySelector('[data-editor-progress]');
+
+        const rulesEditor = ['create', 'edit'].includes(mode)
+            ? createRulesEditor(root.querySelector('[data-rules-editor]'), {
+                request,
+                systemId: mode === 'edit' ? systemId : null,
+                onBusy: setBusy,
+                onChange: updateEditorState,
+                onInvalid: revealControl
+            })
+            : null;
+
+        function hasUnsaved() {
+            return metadataDirty || Boolean(rulesEditor?.hasUnsaved());
+        }
+
+        function updateEditorState() {
+            if (!form) return;
+
+            if (saveBlocked) {
+                editorState.textContent =
+                    'Сохранение заблокировано. Данные оставлены в форме. ' +
+                    'Перед новой попыткой проверьте состояние на сервере ' +
+                    'и загрузите страницу заново.';
+            } else if (busy) {
+                editorState.textContent = 'Выполняется запрос…';
+            } else {
+                editorState.textContent = hasUnsaved()
+                    ? 'Есть несохранённые изменения.'
+                    : 'Несохранённых изменений нет.';
+            }
+
+            nextButton.disabled = busy || !ready;
+            backButton.disabled = busy || !ready || editorPage === 0;
+            saveButton.disabled = busy || !ready || saveBlocked;
+        }
+
+        function openEditorPage(index, focus = false) {
+            if (!form || index < 0 || index >= editorPages.length) return;
+
+            editorPage = index;
+            const [name, title] = editorPages[index];
+
+            root.querySelectorAll('[data-editor-panel]').forEach((panel) => {
+                panel.hidden = panel.dataset.editorPanel !== name;
+            });
+
+            rulesEditor?.showPage(name);
+
+            root.querySelectorAll('[data-editor-tab]').forEach((tab) => {
+                const current = tab.dataset.editorTab === name;
+
+                if (current) tab.setAttribute('aria-current', 'step');
+                else tab.removeAttribute('aria-current');
+
+                tab.disabled = busy || !ready;
+            });
+
+            const last = index === editorPages.length - 1;
+            nextButton.hidden = last;
+            saveButton.hidden = !last;
+
+            if (!last) {
+                nextButton.textContent =
+                    `Далее: ${editorPages[index + 1][1].toLocaleLowerCase('ru')} →`;
+            }
+
+            editorProgress.textContent =
+                `Страница ${index + 1} из ${editorPages.length}: ${title}`;
+
+            updateEditorState();
+
+            if (focus) {
+                const panel = root.querySelector(
+                    `[data-editor-panel="${name}"]`
+                );
+                const heading = panel?.querySelector('h2');
+
+                if (heading) {
+                    heading.tabIndex = -1;
+                    heading.focus();
+                }
+            }
+        }
+
+        function revealControl(control) {
+            const panel = control.closest('[data-editor-panel]');
+
+            if (panel) {
+                const index = editorPages.findIndex(
+                    ([name]) => name === panel.dataset.editorPanel
+                );
+                if (index >= 0) openEditorPage(index);
+            }
+
+            let parent = control.parentElement;
+
+            while (parent && parent !== form) {
+                if (parent instanceof HTMLDetailsElement) parent.open = true;
+                parent = parent.parentElement;
+            }
+        }
+
+        function validateMetadata() {
+            for (const control of fields.querySelectorAll('input, textarea, select')) {
+                if (!control.checkValidity()) {
+                    revealControl(control);
+                    control.reportValidity();
+                    return false;
+                }
+            }
+
+            const name = form.elements.namedItem('name');
+            const slug = form.elements.namedItem('slug');
+
+            if (!name.value.trim() || !slug.value.trim()) {
+                openEditorPage(0);
+                message.textContent = 'Название и код не должны состоять из пробелов.';
+                return false;
+            }
+
+            return true;
+        }
 
 	function pageUrl(id) {
 		return `/game-systems/catalog/${encodeURIComponent(id)}`;
@@ -67,6 +210,13 @@ function initGameSystemsPage(root) {
 			button.disabled = value || !ready;
 		});
 		rulesEditor?.setParentBusy(value || !ready);
+		if (form) {
+            root.querySelectorAll('[data-editor-tab]').forEach((tab) => {
+                tab.disabled = value || !ready;
+            });
+            updateEditorState();
+        }
+        syncDeleteButtons();
 	}
 
 	function showError(error) {
@@ -75,7 +225,10 @@ function initGameSystemsPage(root) {
 
 		login.hidden = error.status !== 401;
 
-		if (error.status === 401 || error.status === 403) {
+		if (
+            (error.status === 401 || error.status === 403) &&
+            !(form && ready)
+        ) {
 			ready = false;
 			content.hidden = true;
 		}
@@ -244,11 +397,20 @@ function initGameSystemsPage(root) {
 				card.append(toggle);
 			}
 
+			if (access.can_delete === true) {
+                const remove = document.createElement('button');
+                remove.type = 'button';
+                remove.className = 'btn btn-outline-primary';
+                remove.textContent = 'Удалить';
+                remove.dataset.systemDelete = system.id;
+                card.append(remove);
+            }
 			fragment.append(card);
 		}
 
 		list.replaceChildren(fragment);
 		create.hidden = access.can_create !== true;
+		syncDeleteButtons();
 	}
 
 	function renderView(system) {
@@ -263,6 +425,13 @@ function initGameSystemsPage(root) {
 	}
 
 	function fillForm(system) {
+
+		loadedSystem = { ...system };
+        const deleteButton = root.querySelector('button[data-system-delete]');
+
+        if (deleteButton) {
+            deleteButton.dataset.systemDelete = system.id;
+        }
 		for (const name of [
 			'name', 'slug', 'description', 'rules_engine_version'
 		]) {
@@ -311,6 +480,11 @@ function initGameSystemsPage(root) {
 				}
 
 				form.reset();
+				form.elements.namedItem('slug').value =
+                    `system-${Date.now().toString(36)}-` +
+                     Math.random().toString(36).slice(2, 8);
+
+                await rulesEditor.load();
 			} else if (mode === 'view' || mode === 'edit') {
 				if (mode === 'edit' && access.can_edit !== true) {
 					throw makeError('Редактирование системы недоступно.', 403);
@@ -333,7 +507,14 @@ function initGameSystemsPage(root) {
 			}
 
 			ready = true;
+			deleteBlocked.clear();
+            syncDeleteButtons();
 			content.hidden = false;
+			if (form) {
+                metadataDirty = false;
+                saveBlocked = false;
+                openEditorPage(0);
+            }
 			message.textContent = mode === 'list'
 				? (
 					systems.length
@@ -348,77 +529,109 @@ function initGameSystemsPage(root) {
 		}
 	}
 
-	form?.addEventListener('submit', async (event) => {
-		event.preventDefault();
+	    form?.addEventListener('submit', async (event) => {
+            event.preventDefault();
 
-		if (rulesEditor?.isBusy()) {
-        			message.textContent =
-        				'Дождитесь завершения операции с черновиком правил.';
-        			return;
-        		}
+            if (
+                busy || !ready || saveBlocked ||
+                rulesEditor?.isBusy()
+            ) {
+                return;
+            }
 
-        if (rulesEditor?.hasUnsaved()) {
-            message.textContent =
-            'Сначала сохраните черновик правил. ' +
-            'Сохранение основных сведений переводит на страницу просмотра.';
-            return;
-        }
-         if (busy || !ready || !form.reportValidity()) return;
+            // Enter на промежуточной странице означает продолжение,
+            // а не неожиданное создание системы.
+            if (editorPage < editorPages.length - 1) {
+                nextButton.click();
+                return;
+            }
 
-		const isEditing = mode === 'edit';
-		const allowed = isEditing
-			? access.can_edit === true
-			: access.can_create === true;
+            const isEditing = mode === 'edit';
+            const allowed = isEditing
+                ? access.can_edit === true
+                : access.can_create === true;
 
-		if (!allowed) return;
+            if (!allowed || !validateMetadata()) return;
 
-		const values = new FormData(form);
-		const payload = {
-			name: String(values.get('name') || '').trim(),
-			slug: String(values.get('slug') || '').trim(),
-			description: String(values.get('description') || '').trim()
-				|| null,
-			rules_engine_version: String(
-				values.get('rules_engine_version') || ''
-			).trim(),
-			is_active: values.has('is_active')
-		};
+            let payload;
 
-		if (!payload.name || !payload.slug || !payload.rules_engine_version) {
-			message.textContent =
-				'Заполните обязательные поля без пустых пробелов.';
-			return;
-		}
+            try {
+                const values = new FormData(form);
 
-		setBusy(true);
-		login.hidden = true;
-		message.textContent = 'Сохранение…';
+                payload = {
+                    system: {
+                        name: String(values.get('name') || '').trim(),
+                        slug: String(values.get('slug') || '').trim(),
+                        description:
+                            String(values.get('description') || '').trim() || null,
+                        rules_engine_version: String(
+                            values.get('rules_engine_version') || ''
+                        ).trim(),
+                        is_active: values.has('is_active')
+                    },
+                    rules: rulesEditor.collect()
+                };
 
-		try {
-			const saved = await request(
-				isEditing ? adminUrl(systemId) : '/admin/game-systems',
-				isEditing ? 'PATCH' : 'POST',
-				payload
-			);
+                if (isEditing) {
+                    payload.expected_revision = rulesEditor.getRevision();
+                }
+            } catch (error) {
+                message.textContent =
+                    error.message || 'Проверьте заполнение конструктора.';
+                return;
+            }
 
-			if (typeof saved.id !== 'string' || !saved.id) {
-				throw makeError(
-					'Ответ сохранения не содержит идентификатор системы. ' +
-					'Проверьте список перед повторным сохранением.'
-				);
-			}
+            setBusy(true);
+            login.hidden = true;
+            message.textContent = 'Сохранение системы и черновика…';
 
-			window.location.assign(
-            				isEditing
-            					? pageUrl(saved.id)
-            					: `${pageUrl(saved.id)}/edit`
-            			);
-		} catch (error) {
-			showError(error);
-		} finally {
-			setBusy(false);
-		}
-	});
+            try {
+                const saved = await request(
+                    isEditing
+                        ? `${adminUrl(systemId)}/editor`
+                        : '/admin/game-systems/editor/create',
+                    isEditing ? 'PUT' : 'POST',
+                    payload
+                );
+
+                if (
+                    typeof saved?.system?.id !== 'string' ||
+                    !saved.system.id ||
+                    saved.draft?.system_id !== saved.system.id ||
+                    (isEditing && saved.system.id !== systemId)
+                ) {
+                    throw makeError(
+                        'Ответ сохранения не удалось проверить. ' +
+                        'Проверьте данные на сервере перед повторной попыткой.'
+                    );
+                }
+
+                rulesEditor.acceptSaved(saved.draft);
+                fillForm(saved.system);
+                metadataDirty = false;
+
+                message.textContent =
+                    'Система и черновик сохранены. Публикация не выполнялась.';
+
+                if (!isEditing) {
+                    leaving = true;
+                    window.location.assign(`${pageUrl(saved.system.id)}/edit`);
+                }
+            } catch (error) {
+                if (
+                    !error.status ||
+                    error.status === 401 ||
+                    error.status === 403 ||
+                    (isEditing && error.status === 409)
+                ) {
+                    saveBlocked = true;
+                }
+
+                showError(error);
+            } finally {
+                setBusy(false);
+            }
+        });
 
 	list?.addEventListener('click', async (event) => {
 		if (!(event.target instanceof Element)) return;
@@ -483,6 +696,190 @@ function initGameSystemsPage(root) {
 
 		void loadPage();
 	});
+
+	    form?.addEventListener('input', (event) => {
+            if (!(event.target instanceof HTMLElement)) return;
+            if (event.target.dataset.sample === 'true') return;
+
+            metadataDirty = true;
+            updateEditorState();
+        });
+
+        form?.addEventListener('change', (event) => {
+            if (!(event.target instanceof HTMLElement)) return;
+            if (event.target.dataset.sample === 'true') return;
+
+            metadataDirty = true;
+            updateEditorState();
+        });
+
+        root.querySelectorAll('[data-editor-tab]').forEach((tab) => {
+            tab.addEventListener('click', () => {
+                if (busy || !ready) return;
+
+                const index = editorPages.findIndex(
+                    ([name]) => name === tab.dataset.editorTab
+                );
+
+                openEditorPage(index, true);
+            });
+        });
+
+        backButton?.addEventListener('click', () => {
+            if (busy || !ready) return;
+            openEditorPage(editorPage - 1, true);
+        });
+
+        nextButton?.addEventListener('click', () => {
+            if (busy || !ready) return;
+
+            try {
+                if (editorPage === 0) {
+                    if (!validateMetadata()) return;
+                    rulesEditor.collect();
+                } else if (editorPage === 1 || editorPage === 2) {
+                    rulesEditor.collect();
+                }
+
+                message.textContent = '';
+                openEditorPage(editorPage + 1, true);
+            } catch (error) {
+                message.textContent =
+                    error.message || 'Проверьте настройки текущей страницы.';
+            }
+        });
+
+        root.addEventListener('click', (event) => {
+            if (!(event.target instanceof Element)) return;
+
+            const link = event.target.closest('a[href]');
+
+            if (
+                !link || !form || leaving ||
+                event.button !== 0 ||
+                event.ctrlKey || event.metaKey || event.shiftKey || event.altKey
+            ) {
+                return;
+            }
+
+            if (busy) {
+                event.preventDefault();
+                message.textContent = 'Дождитесь завершения запроса.';
+                return;
+            }
+
+            if (
+                hasUnsaved() &&
+                !window.confirm(
+                    'Покинуть конструктор? Несохранённые изменения будут потеряны.'
+                )
+            ) {
+                event.preventDefault();
+            }
+        });
+
+        window.addEventListener('beforeunload', (event) => {
+            if (leaving || (!hasUnsaved() && !busy)) return;
+            event.preventDefault();
+            event.returnValue = '';
+        });
+
+		root.addEventListener('click', async (event) => {
+        if (!(event.target instanceof Element)) return;
+
+        const button = event.target.closest(
+            'button[data-system-delete]'
+        );
+
+        if (
+            !button ||
+            !root.contains(button) ||
+            busy ||
+            !ready ||
+            rulesEditor?.isBusy() ||
+            access?.can_delete !== true
+        ) {
+            return;
+        }
+
+        const id = button.dataset.systemDelete;
+
+        if (!id || deleteBlocked.has(id)) return;
+
+        const system = mode === 'list'
+            ? systems.find((item) => item.id === id)
+            : loadedSystem;
+
+        if (!system || system.id !== id) return;
+
+        const unsavedWarning = form && hasUnsaved()
+            ? '\nНесохранённые изменения формы также будут потеряны.\n'
+            : '\n';
+
+        const confirmation = window.prompt(
+            `Удалить систему «${system.name}» и её черновик?\n` +
+            'Действие нельзя отменить.\n' +
+            'При наличии игр, контента или опубликованных правил ' +
+            'сервер запретит удаление.\n' +
+            unsavedWarning +
+            '\nДля подтверждения введите название системы:',
+            ''
+        );
+
+        if (confirmation === null) return;
+
+        if (confirmation !== system.name) {
+            message.textContent =
+                'Название не совпало. Удаление не выполнялось.';
+            return;
+        }
+
+        setBusy(true);
+        message.textContent = 'Удаление системы…';
+
+        try {
+            const result = await request(adminUrl(id), 'DELETE');
+
+            if (
+                result?.deleted !== true ||
+                result.system_id !== id
+            ) {
+                throw makeError(
+                    'Ответ удаления не удалось проверить. ' +
+                    'Загрузите актуальное состояние перед повторной попыткой.'
+                );
+            }
+
+            if (mode === 'list') {
+                systems = systems.filter((item) => item.id !== id);
+                renderList();
+                message.textContent =
+                    `Система «${system.name}» и её черновик удалены.`;
+            } else {
+                // Не показываем предупреждение о потере изменений
+                // после уже подтверждённого удаления.
+                leaving = true;
+                ready = false;
+                content.hidden = true;
+                message.textContent = 'Система и её черновик удалены.';
+                window.location.assign('/game-systems/catalog');
+            }
+        } catch (error) {
+            // Нет надёжного подтверждения результата:
+            // повторный DELETE до обновления данных не предлагаем.
+            if (!error.status || error.status >= 500) {
+                deleteBlocked.add(id);
+                message.textContent =
+                    'Результат удаления не подтверждён. ' +
+                    'Загрузите страницу заново, чтобы проверить, ' +
+                    'осталась ли система. Повторное удаление пока заблокировано.';
+            } else {
+                showError(error);
+            }
+        } finally {
+            setBusy(false);
+        }
+    });
 
 	void loadPage();
 }

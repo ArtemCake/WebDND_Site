@@ -28,6 +28,8 @@ Tests/
 │ 	├── test_auth_refresh.py
 │ 	├── test_csrf_coverage.py
 │ 	├── test_csrf_protection.py
+│ 	├── test_game_system_delete_service.py
+│ 	├── test_game_system_editor_service.py
 │ 	├── test_attribute_preview_api.py
 │ 	├── test_rules_draft_api.py
 │ 	└── test_rules_engine.py
@@ -63,6 +65,7 @@ backend/
 │   │   ├── auth.py
 │   │   ├── content.py
 │   │   ├── rule_calculations.py
+│   │   ├── game_system_editor.py
 │   │   ├── character.py
 │   │   ├── game_rules.py
 │   │   ├── maps.py
@@ -71,6 +74,8 @@ backend/
 │   │   ├── GameSystems/
 │   │   │    ├── __init__.py
 │   │   │    ├── dnd5e_system.py
+│   │   │    ├── delete_service.py
+│   │   │    ├── editor_service.py
 │   │   │    ├── registry.py
 │   │   │    ├── attribute_engine.py
 │   │   │    ├── rules_engine.py
@@ -202,6 +207,7 @@ frontend/
     │       ├── pages/
     │       │   ├── _admin.scss
     │       │   ├── _landing.scss
+    │       │   ├── _game-system-editor.scss
     │       │   ├── _legal.scss
     │       │   ├── _session-dice.scss
     │       │   ├── _lobby.scss

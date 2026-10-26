@@ -19,6 +19,7 @@
 @use 'modules/auth/_auth';
 @use 'modules/toast/_toast';
 @use 'modules/base/responsive';
+@use 'modules/pages/game-system-editor';
 
 /* Утилитарные классы */
 .flex { display: flex; }
