@@ -29,6 +29,7 @@ Tests/
 │ 	├── test_csrf_coverage.py
 │ 	├── test_csrf_protection.py
 │ 	├── test_game_system_delete_service.py
+│ 	├── test_custom_attribute_modifiers.py
 │ 	├── test_game_system_editor_service.py
 │ 	├── test_attribute_preview_api.py
 │ 	├── test_rules_draft_api.py
@@ -76,6 +77,7 @@ backend/
 │   │   │    ├── dnd5e_system.py
 │   │   │    ├── delete_service.py
 │   │   │    ├── editor_service.py
+│   │   │    ├── formula_engine.py
 │   │   │    ├── registry.py
 │   │   │    ├── attribute_engine.py
 │   │   │    ├── rules_engine.py

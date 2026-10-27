@@ -1,6 +1,8 @@
 # backend/app/Services/GameSystems/rules_engine.py
 
 from backend.app.Schemas.game_rules import (RulesProfile, CheckInput, CheckResult)
+from backend.app.Schemas.rule_calculations import CalculationStep
+from backend.app.Services.GameSystems.formula_engine import (bounded, evaluate_formula)
 
 
 _DEGREES = (
@@ -10,14 +12,105 @@ _DEGREES = (
 	"critical_success",
 )
 
-def calculate_attribute_modifier(rules: RulesProfile, value: int) -> int:
-	if rules.attribute_mode == "modifier":
-		return value
+def calculate_attribute_modifier(rules: RulesProfile, value: int, attribute_code: str | None = None, *, steps: list[CalculationStep] | None = None) -> int:
+	"""Единый расчёт модификатора.
 
-	return (
-			(value - rules.modifier_offset)
-			// rules.modifier_divisor
+	Приоритет:
+	1. Прямой ввод модификатора.
+	2. Формула конкретной характеристики.
+	3. Общая формула системы.
+	4. Прежнее правило offset/divisor.
+	"""
+
+	if (
+			attribute_code is not None
+			and attribute_code not in rules.attribute_codes
+	):
+		raise ValueError(
+			"Характеристика отсутствует в выбранном наборе правил"
+		)
+
+	step_code = (
+		f"modifier.{attribute_code}"
+		if attribute_code is not None
+		else "modifier"
 	)
+
+	if rules.attribute_mode == "modifier":
+		result = bounded(value)
+
+		if steps is not None:
+			steps.append(
+				CalculationStep(
+					code=step_code,
+					operation="identity",
+					arguments=["attribute.value"],
+					resolved_arguments=[value],
+					value=result,
+				)
+			)
+
+		return result
+
+	formula = rules.modifier_formula
+
+	if rules.calculations is not None:
+		definitions = rules.calculations.attributes
+
+		if attribute_code is None:
+			# Старые вызовы с двумя аргументами остаются допустимыми,
+			# пока результат не зависит от конкретной характеристики.
+			if any(
+					item.modifier_formula is not None
+					for item in definitions.values()
+			):
+				raise ValueError(
+					"Для индивидуальных формул модификатора "
+					"необходимо передать код характеристики"
+				)
+		else:
+			definition = definitions.get(attribute_code)
+
+			if definition is None:
+				raise ValueError(
+					"Не найдено определение характеристики"
+				)
+
+			if definition.modifier_formula is not None:
+				formula = definition.modifier_formula
+
+	if formula is not None:
+		return evaluate_formula(
+			formula=formula,
+			context={"attribute.value": value},
+			steps=steps,
+			code=step_code,
+		)
+
+	numerator = bounded(value - rules.modifier_offset)
+
+	result = bounded(
+		numerator // rules.modifier_divisor
+	)
+
+	if steps is not None:
+		steps.append(
+			CalculationStep(
+				code=step_code,
+				operation="floor_div",
+				arguments=[
+					numerator,
+					rules.modifier_divisor,
+				],
+				resolved_arguments=[
+					numerator,
+					rules.modifier_divisor,
+				],
+				value=result,
+			)
+		)
+
+	return result
 
 def calculate_proficiency(rules: RulesProfile, level: int, rank_code: str, kind: str) -> int:
 	if level < 1 or level > rules.max_level:
@@ -132,7 +225,9 @@ def evaluate_check(rules: RulesProfile, check: CheckInput) -> CheckResult:
 	die = _select_die(rules, check)
 
 	attribute_modifier = calculate_attribute_modifier(
-		rules, check.attribute_value,
+		rules,
+		check.attribute_value,
+		check.attribute_code,
 	)
 
 	proficiency_bonus = calculate_proficiency(

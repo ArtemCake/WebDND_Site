@@ -253,6 +253,10 @@ export function createRulesEditor(host, {
     let sampleLevel = '1';
     let samples = {};
     let sourceControls = [];
+    // Временная память редактора, не часть отправляемых правил.
+    // Позволяет переключиться на общее правило и обратно,
+    // не потеряв набранную формулу до перезагрузки или сохранения.
+    const modifierFormulaDrafts = new WeakMap();
 
     function sync() {
         controls.disabled = busy || parentBusy;
@@ -331,12 +335,22 @@ export function createRulesEditor(host, {
         return field(title, input);
     }
 
-    function sources(excludeCode) {
+	function sources(excludeCode, scope = 'derived') {
         const values = [
             ['#number', 'Число'],
-            ['#formula', 'Вложенное вычисление'],
-            ['level', 'Уровень персонажа']
+            ['#formula', 'Вложенное вычисление']
         ];
+
+        if (scope === 'modifier') {
+            values.push([
+                'attribute.value',
+                'Значение этой характеристики'
+            ]);
+
+            return values;
+        }
+
+        values.push(['level', 'Уровень персонажа']);
 
         if (!profile) return values;
 
@@ -368,7 +382,7 @@ export function createRulesEditor(host, {
     function refreshSources() {
         for (const item of sourceControls) {
             const current = item.select.value;
-            const options = sources(item.code);
+            const options = sources(item.code, item.scope);
 
             if (!options.some(([value]) => value === current)) {
                 options.push([
@@ -378,6 +392,7 @@ export function createRulesEditor(host, {
             }
 
             const replacement = choices(options, current);
+
             item.select.replaceChildren(...replacement.children);
             item.select.value = current;
         }
@@ -600,6 +615,156 @@ export function createRulesEditor(host, {
         ));
     }
 
+    function standardModifierFormula() {
+        // Переносим прежнее правило в дерево вычислений.
+        // При некорректных исходных числах не создаём повреждённую формулу.
+        const offset = integer(
+            profile.modifier_offset,
+            'Вычитаемое число',
+            -1000,
+            1000
+        );
+
+        const divisor = integer(
+            profile.modifier_divisor,
+            'Делитель',
+            1,
+            1000
+        );
+
+        return {
+            operation: 'floor_div',
+            arguments: [
+                {
+                    operation: 'subtract',
+                    arguments: ['attribute.value', offset]
+                },
+                divisor
+            ]
+        };
+    }
+
+    function renderModifierSettings(owner, individual = false) {
+        const block = element(
+            'div',
+            undefined,
+            'system-editor__modifier-settings'
+        );
+
+        const custom = owner.modifier_formula != null;
+
+        const mode = choices([
+            [
+                'inherit',
+                individual
+                    ? 'По общему правилу системы'
+                    : 'Стандартное правило: вычесть и разделить'
+            ],
+            ['custom', 'Своя формула']
+        ], custom ? 'custom' : 'inherit');
+
+        mode.addEventListener('change', () => {
+            try {
+                if (mode.value === 'custom') {
+                    const cached = modifierFormulaDrafts.get(owner);
+
+                    if (cached) {
+                        owner.modifier_formula = clone(cached);
+                    } else if (
+                        individual &&
+                        isFormula(profile.modifier_formula)
+                    ) {
+                        // Начинаем с независимой копии общей формулы.
+                        owner.modifier_formula = clone(
+                            profile.modifier_formula
+                        );
+                    } else {
+                        owner.modifier_formula = standardModifierFormula();
+                    }
+                } else {
+                    if (isFormula(owner.modifier_formula)) {
+                        modifierFormulaDrafts.set(
+                            owner,
+                            clone(owner.modifier_formula)
+                        );
+                    }
+
+                    owner.modifier_formula = null;
+                }
+
+                changed();
+                render();
+            } catch (error) {
+                mode.value = custom ? 'custom' : 'inherit';
+
+                message.textContent =
+                    error.message || 'Не удалось изменить правило расчёта.';
+            }
+        });
+
+        block.append(field(
+            individual
+                ? 'Расчёт модификатора характеристики'
+                : 'Общее правило модификаторов',
+            mode
+        ));
+
+        if (custom) {
+            block.append(element(
+                'p',
+                individual
+                    ? 'Эта формула заменяет общее правило только для ' +
+                        'данной характеристики.'
+                    : 'Эта формула применяется к характеристикам, ' +
+                        'у которых не задано собственное правило.',
+                'profile-note'
+            ));
+
+            if (isFormula(owner.modifier_formula)) {
+                block.append(
+                    renderFormula(
+                        owner.modifier_formula,
+                        null,
+                        1,
+                        'modifier'
+                    )
+                );
+            } else {
+                block.append(element(
+                    'p',
+                    'Формула имеет неподдерживаемую структуру. ' +
+                        'Выберите стандартное или общее правило, ' +
+                        'затем создайте свою формулу заново.',
+                    'profile-note'
+                ));
+            }
+        } else if (individual) {
+            block.append(element(
+                'p',
+                'Используется общая формула системы, а если она не задана — ' +
+                    'стандартное правило вычитания и деления.',
+                'profile-note'
+            ));
+        }
+
+        return block;
+    }
+
+    function validateModifierFormula(formula, title) {
+        if (formula == null) return;
+
+        if (!isFormula(formula)) {
+            throw new Error(`${title}: не задана корректная формула.`);
+        }
+
+        validateFormulaTree(
+            formula,
+            null,
+            title,
+            'modifier'
+        );
+    }
+
     function renderAttributes(panel) {
         const mode = choices([
             ['score', 'Значение → вычисляемый модификатор'],
@@ -615,17 +780,28 @@ export function createRulesEditor(host, {
         panel.append(field('Как используются характеристики', mode));
 
         if (profile.attribute_mode === 'score') {
-            panel.append(element(
-                'p',
-                'Из значения вычитается заданное число, затем результат ' +
-                'делится с округлением вниз. Например: (14 − 10) / 2 → +2.'
-            ));
-
-            const settings = details(
-                'Настроить расчёт модификатора'
+            panel.append(
+                element(
+                    'p',
+                    'Задайте общее правило расчёта модификаторов. ' +
+                        'Для отдельных характеристик его можно переопределить.',
+                    'profile-note'
+                ),
+                renderModifierSettings(profile)
             );
 
-            settings.append(
+            const standard = details(
+                'Стандартное правило: вычитание и деление'
+            );
+
+            standard.append(
+                element(
+                    'p',
+                    'Используется, если общая и индивидуальная формулы ' +
+                        'не заданы. Из значения вычитается число, затем ' +
+                        'результат делится с округлением вниз.',
+                    'profile-note'
+                ),
                 bindInput(
                     'Вычесть из значения',
                     profile.modifier_offset,
@@ -656,7 +832,15 @@ export function createRulesEditor(host, {
                 )
             );
 
-            panel.append(settings);
+            panel.append(standard);
+        } else {
+            panel.append(element(
+                'p',
+                'Введённое значение уже является модификатором. ' +
+                    'Настроенные формулы сохраняются, но в этом режиме ' +
+                    'не применяются.',
+                'profile-note'
+            ));
         }
 
         const cards = element(
@@ -719,13 +903,16 @@ export function createRulesEditor(host, {
                 )
             );
 
-            card.append(
-                settings,
-                button(
-                    'Удалить характеристику',
-                    () => deleteEntry('attributes', code)
-                )
-            );
+            card.append(settings);
+
+            if (profile.attribute_mode === 'score') {
+                card.append(renderModifierSettings(item, true));
+            }
+
+            card.append(button(
+                'Удалить характеристику',
+                () => deleteEntry('attributes', code)
+            ));
 
             cards.append(card);
         }
@@ -751,7 +938,8 @@ export function createRulesEditor(host, {
                         : -10,
                     max_value: profile.attribute_mode === 'score'
                         ? 30
-                        : 20
+                        : 20,
+                    modifier_formula: null
                 };
 
                 changed();
@@ -760,7 +948,8 @@ export function createRulesEditor(host, {
         );
     }
 
-    function renderFormula(formula, code, depth = 1) {
+    function renderFormula(formula, code, depth = 1, scope = 'derived') {
+
         const block = element(
             'div',
             undefined,
@@ -770,7 +959,11 @@ export function createRulesEditor(host, {
         block.append(element(
             'h4',
             depth === 1
-                ? 'Формула показателя'
+                ? (
+                    scope === 'modifier'
+                        ? 'Формула модификатора'
+                        : 'Формула показателя'
+                )
                 : 'Вложенное вычисление'
         ));
 
@@ -831,7 +1024,7 @@ export function createRulesEditor(host, {
                 ? '#formula'
                 : numeric ? '#number' : argument;
 
-            const options = sources(code);
+            const options = sources(code, scope);
 
             if (!options.some(([value]) => value === current)) {
                 options.push([
@@ -841,7 +1034,7 @@ export function createRulesEditor(host, {
             }
 
             const source = choices(options, current);
-            sourceControls.push({ select: source, code });
+            sourceControls.push({ select: source, code, scope });
 
             source.addEventListener('change', () => {
                 if (
@@ -925,7 +1118,7 @@ export function createRulesEditor(host, {
 
             if (nested) {
                 argumentBlock.append(
-                    renderFormula(argument, code, depth + 1)
+                    renderFormula(argument, code, depth + 1, scope)
                 );
             }
 
@@ -1164,9 +1357,9 @@ export function createRulesEditor(host, {
         }
     }
 
-    function validateFormulaTree(formula, code, title) {
+    function validateFormulaTree(formula, code, title, scope = 'derived') {
         const allowed = new Set(
-            sources(code)
+            sources(code, scope)
                 .map(([value]) => value)
                 .filter((value) => !value.startsWith('#'))
         );
@@ -1332,6 +1525,13 @@ export function createRulesEditor(host, {
             1000
         );
 
+        rules.modifier_formula ??= null;
+
+        validateModifierFormula(
+            rules.modifier_formula,
+            'Общая формула модификатора'
+        );
+
         for (const item of Object.values(
             rules.calculations.attributes
         )) {
@@ -1356,10 +1556,17 @@ export function createRulesEditor(host, {
             );
 
             if (item.min_value > item.max_value) {
-                throw new Error(
-                    `${item.label}: минимум больше максимума.`
+                    throw new Error(
+                        `${item.label}: минимум больше максимума.`
+                    );
+                }
+
+                item.modifier_formula ??= null;
+
+                validateModifierFormula(
+                    item.modifier_formula,
+                    `Модификатор «${item.label}»`
                 );
-            }
         }
 
         const dependencies = new Map();
@@ -1400,41 +1607,54 @@ export function createRulesEditor(host, {
     function appendCalculationSteps(steps, rules) {
         if (!Array.isArray(steps)) return;
 
-        const statSteps = steps.filter((step) =>
-            typeof step.code === 'string' &&
-            step.code.startsWith('stat.')
-        );
-
-        if (!statSteps.length) return;
-
-        const explanation = details('Как получен результат');
         const list = element('ol');
 
-        for (const step of statSteps) {
+        for (const step of steps) {
+            if (typeof step.code !== 'string') continue;
+
             const [reference, ...path] = step.code.split('/');
-            const code = reference.slice(5);
-            const definition = rules.calculations.derived[code];
+            let name;
 
-            if (!definition) continue;
+            if (reference.startsWith('modifier.')) {
+                const code = reference.slice('modifier.'.length);
+                const definition = rules.calculations.attributes[code];
 
-            const name = definition.label;
+                if (!definition) continue;
+
+                name = `Модификатор «${definition.label}»`;
+            } else if (reference.startsWith('stat.')) {
+                const code = reference.slice('stat.'.length);
+                const definition = rules.calculations.derived[code];
+
+                if (!definition) continue;
+
+                name = definition.label;
+            } else {
+                continue;
+            }
 
             const location = path.length
                 ? ' — вложенное действие ' +
                     path.map((part) => Number(part) + 1).join('.')
                 : ' — итог';
 
-            const operation = OPERATIONS.find(
-                ([value]) => value === step.operation
-            )?.[1] || 'Вычисление';
+            const operation = step.operation === 'identity'
+                ? 'Использовать введённое значение'
+                : OPERATIONS.find(
+                    ([value]) => value === step.operation
+                )?.[1] || 'Вычисление';
 
             list.append(element(
                 'li',
                 `${name}${location}: ${operation}. ` +
-                `Значения: ${step.resolved_arguments.join(', ')}. ` +
-                `Результат: ${step.value}.`
+                    `Значения: ${step.resolved_arguments.join(', ')}. ` +
+                    `Результат: ${step.value}.`
             ));
         }
+
+        if (!list.children.length) return;
+
+        const explanation = details('Как получен результат');
 
         explanation.append(list);
         result.append(explanation);

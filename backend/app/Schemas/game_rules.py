@@ -2,7 +2,7 @@
 
 from Config.imports import (BaseModel, ConfigDict, Field, Literal,
 	field_validator, model_validator, re, UUID, datetime)
-from backend.app.Schemas.rule_calculations import (AttributeCalculations)
+from backend.app.Schemas.rule_calculations import (AttributeCalculations, StatFormula, validate_modifier_formula)
 
 
 CheckKind = Literal["ability", "save", "attack"]
@@ -104,6 +104,9 @@ class RulesProfile(RulesModel):
 
 	modifier_offset: int = Field(default=10, ge=-1000, le=1000)
 	modifier_divisor: int = Field(default=2, ge=1, le=1000)
+	# None — использовать прежнее правило offset/divisor.
+	modifier_formula: StatFormula | None = None
+
 
 	max_level: int = Field(default=20, ge=1, le=100)
 
@@ -118,10 +121,18 @@ class RulesProfile(RulesModel):
 
 	@model_validator(mode="after")
 	def validate_calculations(self):
+		validate_modifier_formula(self.modifier_formula)
+
 		if self.schema_version == 1:
 			if self.calculations is not None:
 				raise ValueError(
 					"Настраиваемые вычисления требуют "
+					"schema_version=2"
+				)
+
+			if self.modifier_formula is not None:
+				raise ValueError(
+					"Собственная формула модификатора требует "
 					"schema_version=2"
 				)
 

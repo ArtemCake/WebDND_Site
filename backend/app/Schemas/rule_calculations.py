@@ -152,6 +152,52 @@ class StatFormula(CalculationModel):
 			else:
 				yield argument
 
+def validate_modifier_formula(formula: StatFormula | None) -> None:
+	"""Формула модификатора использует только собственное значение.
+
+	attribute.value — локальная ссылка на значение характеристики,
+	модификатор которой сейчас рассчитывается.
+	"""
+
+	if formula is None:
+		return
+
+	for argument in formula.iter_leaf_arguments():
+		if type(argument) is int:
+			continue
+
+		if argument != "attribute.value":
+			raise ValueError(
+				"В формуле модификатора разрешены только числа "
+				"и значение этой характеристики"
+			)
+
+class AttributeDefinition(CalculationModel):
+	label: str = Field(min_length=1, max_length=100)
+
+	# Технический диапазон. Конкретная система может его сузить.
+	min_value: int = Field(default=-1000, ge=-1000, le=1000)
+	max_value: int = Field(default=1000, ge=-1000, le=1000)
+
+	# None — использовать общее правило системы.
+	modifier_formula: StatFormula | None = None
+
+	@model_validator(mode="after")
+	def validate_definition(self):
+		if not self.label.strip():
+			raise ValueError(
+				"Название характеристики не может быть пустым"
+			)
+
+		if self.min_value > self.max_value:
+			raise ValueError(
+				"Минимум характеристики не может превышать максимум"
+			)
+
+		validate_modifier_formula(self.modifier_formula)
+
+		return self
+
 class DerivedStat(CalculationModel):
 	label: str = Field(min_length=1, max_length=100)
 	formula: StatFormula
