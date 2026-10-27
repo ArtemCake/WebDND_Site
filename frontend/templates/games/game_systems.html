@@ -14,7 +14,7 @@
 {% endblock %}
 
 {% block content %}
-<section class="admin-page{% if page_mode in ['create', 'edit'] %} game-system-editor-page{% endif %}"
+<section class="admin-page{% if page_mode in ['create', 'edit'] %} game-system-editor-page{% elif page_mode == 'view' %} game-system-view-page{% endif %}"
          data-game-systems-page data-page-mode="{{ page_mode }}" data-system-id="{{ system_id }}">
 	<h1 class="profile-heading">{{ page_titles[page_mode] }}</h1>
 	
@@ -60,15 +60,30 @@
 			<div class="admin-sections" data-systems-list></div>
 		
 		{% elif page_mode == "view" %}
-			<article>
+		<article class="system-view__panel system-view__header">
+			<div class="system-view__heading">
 				<h2 data-system-name></h2>
-				<p data-system-details></p>
-				<p data-system-description></p>
 				
-				<a class="btn btn-primary" data-system-edit hidden>
-					Редактировать
-				</a>
-			</article>
+				<div class="system-view__actions">
+					<a class="btn btn-primary"
+					   data-system-edit hidden>
+						Редактировать
+					</a>
+				</div>
+			</div>
+			
+			<p class="system-view__note" data-system-details></p>
+			
+			<p class="system-view__description"
+			   data-system-description></p>
+			
+			<p class="system-view__note">
+				Название и описание — текущие сведения о системе.
+				Выбор версии ниже меняет только отображаемые правила.
+			</p>
+		</article>
+		
+		<div data-system-rules-view></div>
 		{% elif page_mode in ["create", "edit"] %}
 			<form class="system-editor" data-system-form data-rules-editor novalidate>
 				<header class="system-editor__heading">

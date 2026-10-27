@@ -306,3 +306,25 @@ async def get_rules_version(session: AsyncSession, system_id: UUID, version_id: 
 		)
 
 	return GameSystemRulesVersionRead.model_validate(version)
+
+async def get_latest_rules_version(session: AsyncSession, system_id: UUID) -> GameSystemRulesVersionRead | None:
+	"""Последняя публикация по номеру версии.
+
+	Проверка существования системы и прав доступа —
+	ответственность вызывающего маршрута.
+	Черновик эта функция не читает.
+	"""
+
+	result = await session.execute(
+		select(_VERSIONS)
+		.where(_VERSIONS.c.system_id == system_id)
+		.order_by(_VERSIONS.c.version_number.desc())
+		.limit(1)
+	)
+
+	version = result.mappings().one_or_none()
+
+	if version is None:
+		return None
+
+	return GameSystemRulesVersionRead.model_validate(version)

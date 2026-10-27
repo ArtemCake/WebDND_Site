@@ -27,6 +27,7 @@ Tests/
 │ 	├── test_attribute_engine.py
 │ 	├── test_auth_refresh.py
 │ 	├── test_csrf_coverage.py
+│ 	├── test_game_system_rules_view.py
 │ 	├── test_csrf_protection.py
 │ 	├── test_game_system_delete_service.py
 │ 	├── test_custom_attribute_modifiers.py
@@ -292,6 +293,7 @@ frontend/
             │   └── TokenFactory.js
             └── systems/
                 ├── Dnd5eSystem.js
+                ├── game-system-rules-view.js
                 ├── game-system-rules-editor.js
                 ├── game-systems-catalog.js
                 └── ISystem.js

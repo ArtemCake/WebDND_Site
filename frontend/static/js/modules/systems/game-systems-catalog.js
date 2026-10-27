@@ -1,12 +1,8 @@
 // frontend/static/js/modules/systems/game-systems-catalog.js
 
-import {
-	sessionClient,
-	SessionRefreshError
-} from '../games/session-client.js';
-import {
-	createRulesEditor
-} from './game-system-rules-editor.js';
+import {sessionClient, SessionRefreshError} from '../games/session-client.js';
+import {createRulesEditor} from './game-system-rules-editor.js';
+import {mountRulesView} from './game-system-rules-view.js';
 
 const root = document.querySelector('[data-game-systems-page]');
 
@@ -458,16 +454,33 @@ function initGameSystemsPage(root) {
 		syncDeleteButtons();
 	}
 
-	function renderView(system) {
-		root.querySelector('[data-system-name]').textContent = system.name;
-		root.querySelector('[data-system-details]').textContent =
-			details(system);
-		root.querySelector('[data-system-description]').textContent =
-			system.description || 'Без описания';
+	async function renderView(system) {
+        root.querySelector('[data-system-name]').textContent =
+            system.name;
 
-		edit.href = `${pageUrl(system.id)}/edit`;
-		edit.hidden = access.can_edit !== true;
-	}
+        root.querySelector('[data-system-details]').textContent =
+            details(system);
+
+        root.querySelector('[data-system-description]').textContent =
+            system.description || 'Описание пока не добавлено.';
+
+        edit.href = `${pageUrl(system.id)}/edit`;
+        edit.hidden = access.can_edit !== true;
+
+        const host = root.querySelector('[data-system-rules-view]');
+
+        if (!host) {
+            throw makeError(
+                'В шаблоне страницы отсутствует блок просмотра правил.'
+            );
+        }
+
+        await mountRulesView(host, {
+            systemId: system.id,
+            canEdit: access.can_edit === true,
+            request
+        });
+    }
 
 	function fillForm(system) {
 
@@ -542,8 +555,8 @@ function initGameSystemsPage(root) {
 				const system = await request(path);
 
 				if (mode === 'view') {
-					renderView(system);
-				} else {
+                    await renderView(system);
+                } else {
                 	fillForm(system);
                 	await rulesEditor?.load();
                 }

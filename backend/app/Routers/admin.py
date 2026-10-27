@@ -16,7 +16,7 @@ from backend.app.Core.csrf import (enforce_csrf,  ensure_csrf_tokens, apply_csrf
 from backend.app.Schemas.content import (GameSystemCreate,GameSystemUpdate,	GameSystemAdminRead)
 from backend.app.Services import content_service
 from backend.app.Schemas.game_rules import (CheckPreviewInput, CheckResult, AttributePreviewInput, GameSystemRulesDraftCreate,
-                                            GameSystemRulesDraftUpdate, GameSystemRulesDraftRead, GameSystemRulesDraftState)
+                                            GameSystemRulesDraftUpdate, GameSystemRulesDraftRead, GameSystemRulesDraftState, GameSystemRulesPublishedState)
 from backend.app.Services.GameSystems.rules_presets import (list_rules_presets, create_calculation_profile)
 from backend.app.Services.GameSystems.rules_engine import (evaluate_check)
 from backend.app.Schemas.rule_calculations import (AttributePreviewResult)
@@ -56,8 +56,7 @@ async def admin_dashboard(request: Request, user: User = Depends(get_admin_user)
 async def admin_users_page(request: Request, search: str | None = None, page: int = 1,
 		session: AsyncSession = Depends(get_async_session),
 		user: User = Depends(require_permission(AdminPermission.USERS)),
-		csrf_protect: CsrfProtect = Depends(),
-):
+		csrf_protect: CsrfProtect = Depends()):
 	csrf_page = ensure_csrf_tokens(request, csrf_protect)
 	csrf_token = csrf_page.token
 	users, total = await list_users(session, search=search, page=page)
@@ -239,8 +238,7 @@ async def admin_list_calculation_presets(response: Response,actor: User = Depend
 		for preset in list_rules_presets()
 	]
 
-@router.get(
-	"/game-systems/{system_id}/rules/draft", response_model=GameSystemRulesDraftState, operation_id="adminGetGameSystemRulesDraft")
+@router.get("/game-systems/{system_id}/rules/draft", response_model=GameSystemRulesDraftState, operation_id="adminGetGameSystemRulesDraft")
 async def admin_get_game_system_rules_draft(system_id: UUID, response: Response, session: AsyncSession = Depends(get_async_session),
 		actor: User = Depends(require_permission(AdminPermission.CONTENT))):
 	response.headers["Cache-Control"] = "no-store"
@@ -314,3 +312,19 @@ async def admin_delete_game_system(system_id: UUID, response: Response, session:
 	response.headers["Cache-Control"] = "no-store"
 
 	return await delete_game_system(session, system_id)
+
+@router.get("/game-systems/{system_id}/rules/latest", response_model=GameSystemRulesPublishedState, operation_id="adminGetGameSystemPublishedRules")
+async def admin_get_game_system_published_rules(system_id: UUID, response: Response, session: AsyncSession = Depends(get_async_session),
+		actor: User = Depends(require_permission(AdminPermission.CONTENT))):
+	response.headers["Cache-Control"] = "no-store"
+
+	# Администратор может просматривать и неактивные системы.
+	# Отсутствующую систему отличаем от отсутствующей публикации.
+	await content_service.get_game_system(session, system_id)
+
+	version = await rules_service.get_latest_rules_version(
+		session,
+		system_id,
+	)
+
+	return GameSystemRulesPublishedState(version=version)

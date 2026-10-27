@@ -281,3 +281,6 @@ class GameSystemRulesVersionRead(RulesModel):
 
 	rules_engine_version: str
 	published_at: datetime
+
+class GameSystemRulesPublishedState(RulesModel):
+	version: GameSystemRulesVersionRead | None
