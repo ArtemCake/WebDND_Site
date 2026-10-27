@@ -3,6 +3,7 @@
 from Config.Config import settings
 from Config.imports import (os, URLSafeTimedSerializer, HTTPException, TemplateNotFound, CsrfProtect,
                             Request, APIRouter, HTMLResponse, status, RedirectResponse, Depends, UUID)
+from backend.app.Core.csrf import ensure_csrf_tokens, apply_csrf_tokens
 from backend.app.Services.Core.user_service import get_optional_user
 from backend.app.Database.Models.Core.user import User
 from backend.app.Services.legal_service import render_legal_markdown
@@ -19,12 +20,12 @@ async def get_main_page(request: Request, user: User | None = Depends(get_option
 	Главная заглушка сайта.
 	"""
 	templates = request.app.state.templates
-	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+	csrf_page = ensure_csrf_tokens(request, csrf_protect)
+	csrf_token = csrf_page.token
 	context = {"user": user, "csrf_token": csrf_token}
 	try:
 		response = templates.TemplateResponse(request=request, name="index.html", context=context)
-		csrf_protect.set_csrf_cookie(signed_token, response)
-		response.headers["X-CSRF-Token"] = csrf_token
+		apply_csrf_tokens(response, csrf_protect, csrf_page)
 		return response
 	except TemplateNotFound:
 		# Fallback-заглушка, если шаблон еще не создан
@@ -45,7 +46,8 @@ async def get_login_page(request: Request, user: User | None = Depends(get_optio
 	if user:
 		return RedirectResponse(url="/profile", status_code=status.HTTP_302_FOUND)
 
-	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+	csrf_page = ensure_csrf_tokens(request, csrf_protect)
+	csrf_token = csrf_page.token
 	context = {"project_name": settings.PROJECT_NAME, "csrf_token": csrf_token}
 	templates = request.app.state.templates
 	try:
@@ -53,8 +55,7 @@ async def get_login_page(request: Request, user: User | None = Depends(get_optio
 	except TemplateNotFound:
 		raise HTTPException(status_code=404, detail="Страница login.html не найдена")
 
-	csrf_protect.set_csrf_cookie(signed_token, response)
-	response.headers["X-CSRF-Token"] = csrf_token
+	apply_csrf_tokens(response, csrf_protect, csrf_page)
 	return response
 
 @router.get("/register", response_class=HTMLResponse, name="register_page_get")
@@ -66,7 +67,8 @@ async def get_register_page(request: Request, user: User | None = Depends(get_op
 	if user:
 		return RedirectResponse(url="/profile", status_code=status.HTTP_302_FOUND)
 
-	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+	csrf_page = ensure_csrf_tokens(request, csrf_protect)
+	csrf_token = csrf_page.token
 	context = {"project_name": settings.PROJECT_NAME, "csrf_token": csrf_token}
 	templates = request.app.state.templates
 
@@ -75,14 +77,14 @@ async def get_register_page(request: Request, user: User | None = Depends(get_op
 	except TemplateNotFound:
 		raise HTTPException(status_code=404, detail="Страница register.html не найдена")
 
-	csrf_protect.set_csrf_cookie(signed_token, response)
-	response.headers["X-CSRF-Token"] = csrf_token
+	apply_csrf_tokens(response, csrf_protect, csrf_page)
 	return response
 
 @router.get("/cookie-policy", response_class=HTMLResponse, name="cookie_policy_page_get")
 async def get_cookie_policy_page(request: Request, user: User | None = Depends(get_optional_user), csrf_protect: CsrfProtect = Depends()):
 	"""Статичная страница политики использования cookie."""
-	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+	csrf_page = ensure_csrf_tokens(request, csrf_protect)
+	csrf_token = csrf_page.token
 	context = {
 	"user": user, "project_name": settings.PROJECT_NAME, "csrf_token": csrf_token,
 	"legal_content": render_legal_markdown("cookie_policy.md")
@@ -92,30 +94,31 @@ async def get_cookie_policy_page(request: Request, user: User | None = Depends(g
 		response = templates.TemplateResponse(request=request, name="docs/cookie_policy.html", context=context)
 	except TemplateNotFound:
 		raise HTTPException(status_code=404, detail="Страница cookie_policy.html не найдена")
-	csrf_protect.set_csrf_cookie(signed_token, response)
-	response.headers["X-CSRF-Token"] = csrf_token
+	apply_csrf_tokens(response, csrf_protect, csrf_page)
 	return response
 
 @router.get("/terms", response_class=HTMLResponse, name="terms_page_get")
 async def get_terms_page(request: Request, user: User | None = Depends(get_optional_user), csrf_protect: CsrfProtect = Depends()):
-	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+	csrf_page = ensure_csrf_tokens(request, csrf_protect)
+	csrf_token = csrf_page.token
 	context = {
 		"user": user, "project_name": settings.PROJECT_NAME, "csrf_token": csrf_token,
 		"legal_content": render_legal_markdown("terms_of_service.md")
 	}
 	response = request.app.state.templates.TemplateResponse(request=request, name="docs/terms.html", context=context)
-	csrf_protect.set_csrf_cookie(signed_token, response)
+	apply_csrf_tokens(response, csrf_protect, csrf_page)
 	return response
 
 @router.get("/privacy-policy", response_class=HTMLResponse, name="privacy_policy_page_get")
 async def get_privacy_policy_page(request: Request, user: User | None = Depends(get_optional_user), csrf_protect: CsrfProtect = Depends()):
-	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+	csrf_page = ensure_csrf_tokens(request, csrf_protect)
+	csrf_token = csrf_page.token
 	context = {
 		"user": user, "project_name": settings.PROJECT_NAME, "csrf_token": csrf_token,
 		"legal_content": render_legal_markdown("privacy_policy.md")
 	}
 	response = request.app.state.templates.TemplateResponse(request=request, name="docs/privacy_policy.html", context=context)
-	csrf_protect.set_csrf_cookie(signed_token, response)
+	apply_csrf_tokens(response, csrf_protect, csrf_page)
 	return response
 
 @router.get("/dashboard", response_class=HTMLResponse, name="dashboard_page_get")
@@ -125,7 +128,8 @@ async def get_dashboard_page(request: Request, user: User | None = Depends(get_o
 	if not user.is_email_verified:
 			return RedirectResponse(url="/profile?verify=required", status_code=status.HTTP_303_SEE_OTHER)
 
-	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+	csrf_page = ensure_csrf_tokens(request, csrf_protect)
+	csrf_token = csrf_page.token
 	context = {
 		"user": user,
 		"nickname": user.nickname,
@@ -139,8 +143,7 @@ async def get_dashboard_page(request: Request, user: User | None = Depends(get_o
 	except TemplateNotFound:
 		raise HTTPException(status_code=404, detail="Шаблон dashboard.html не найден")
 
-	csrf_protect.set_csrf_cookie(signed_token, response)
-	response.headers["X-CSRF-Token"] = csrf_token
+	apply_csrf_tokens(response, csrf_protect, csrf_page)
 	return response
 
 @router.get("/forgot-password", response_class=HTMLResponse, name="forgot_password_page_get")
@@ -148,7 +151,8 @@ async def get_forgot_password_page(request: Request, user: User | None = Depends
 	if user:
 		return RedirectResponse(url="/profile", status_code=status.HTTP_302_FOUND)
 
-	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+	csrf_page = ensure_csrf_tokens(request, csrf_protect)
+	csrf_token = csrf_page.token
 	context = {"project_name": settings.PROJECT_NAME, "csrf_token": csrf_token}
 	templates = request.app.state.templates
 	try:
@@ -156,8 +160,7 @@ async def get_forgot_password_page(request: Request, user: User | None = Depends
 	except TemplateNotFound:
 		raise HTTPException(status_code=404, detail="Страница forgot_password.html не найдена")
 
-	csrf_protect.set_csrf_cookie(signed_token, response)
-	response.headers["X-CSRF-Token"] = csrf_token
+	apply_csrf_tokens(response, csrf_protect, csrf_page)
 	return response
 
 @router.get("/reset-password", response_class=HTMLResponse, name="reset_password_page_get")
@@ -165,7 +168,8 @@ async def get_reset_password_page(request: Request, token: str = "", user: User 
 	if user:
 		return RedirectResponse(url="/profile", status_code=status.HTTP_302_FOUND)
 
-	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+	csrf_page = ensure_csrf_tokens(request, csrf_protect)
+	csrf_token = csrf_page.token
 	context = {"project_name": settings.PROJECT_NAME, "csrf_token": csrf_token, "reset_token": token}
 	templates = request.app.state.templates
 	try:
@@ -173,12 +177,11 @@ async def get_reset_password_page(request: Request, token: str = "", user: User 
 	except TemplateNotFound:
 		raise HTTPException(status_code=404, detail="Страница reset_password.html не найдена")
 
-	csrf_protect.set_csrf_cookie(signed_token, response)
-	response.headers["X-CSRF-Token"] = csrf_token
+	apply_csrf_tokens(response, csrf_protect, csrf_page)
 	return response
 
 def _render_game_systems_page(request: Request, user: User | None, csrf_protect: CsrfProtect, page_mode: str, system_id: UUID | None = None):
-	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+	csrf_page = ensure_csrf_tokens(request, csrf_protect)
 
 	response = request.app.state.templates.TemplateResponse(
 		request=request,
@@ -186,15 +189,13 @@ def _render_game_systems_page(request: Request, user: User | None, csrf_protect:
 		context={
 			"user": user,
 			"project_name": settings.PROJECT_NAME,
-			"csrf_token": csrf_token,
+			"csrf_token": csrf_page.token,
 			"page_mode": page_mode,
 			"system_id": str(system_id) if system_id else "",
 		},
 	)
 
-	csrf_protect.set_csrf_cookie(signed_token, response)
-	response.headers["X-CSRF-Token"] = csrf_token
-	response.headers["Cache-Control"] = "no-store"
+	apply_csrf_tokens(response, csrf_protect, csrf_page)
 
 	return response
 

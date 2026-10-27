@@ -78,13 +78,23 @@ function initGameSystemsPage(root) {
         function updateEditorState() {
             if (!form) return;
 
+            let saveReason = '';
+
             if (saveBlocked) {
+                saveReason =
+                    'Повторное сохранение заблокировано после ошибки. ' +
+                    'Сверьте данные на сервере перед повторной попыткой.';
+
                 editorState.textContent =
-                    'Сохранение заблокировано. Данные оставлены в форме. ' +
-                    'Перед новой попыткой проверьте состояние на сервере ' +
-                    'и загрузите страницу заново.';
+                    saveReason + ' Введённые данные оставлены в форме.';
             } else if (busy) {
-                editorState.textContent = 'Выполняется запрос…';
+                saveReason = 'Дождитесь завершения текущего запроса.';
+                editorState.textContent = saveReason;
+            } else if (!ready) {
+                saveReason =
+                    'Конструктор ещё не загружен или загрузка завершилась ошибкой.';
+
+                editorState.textContent = saveReason;
             } else {
                 editorState.textContent = hasUnsaved()
                     ? 'Есть несохранённые изменения.'
@@ -94,6 +104,12 @@ function initGameSystemsPage(root) {
             nextButton.disabled = busy || !ready;
             backButton.disabled = busy || !ready || editorPage === 0;
             saveButton.disabled = busy || !ready || saveBlocked;
+
+            saveButton.title = saveReason;
+            saveButton.setAttribute(
+                'aria-disabled',
+                String(saveButton.disabled)
+            );
         }
 
         function openEditorPage(index, focus = false) {
@@ -163,10 +179,33 @@ function initGameSystemsPage(root) {
         }
 
         function validateMetadata() {
-            for (const control of fields.querySelectorAll('input, textarea, select')) {
+            const names = [
+                'name',
+                'slug',
+                'description',
+                'rules_engine_version',
+                'is_active'
+            ];
+
+            for (const name of names) {
+                const control = form.elements.namedItem(name);
+
+                if (
+                    !(control instanceof HTMLInputElement) &&
+                    !(control instanceof HTMLTextAreaElement) &&
+                    !(control instanceof HTMLSelectElement)
+                ) {
+                    message.textContent =
+                        'Не удалось найти одно из полей основных сведений. ' +
+                        'Обновите страницу после сборки фронтенда.';
+                    return false;
+                }
+
                 if (!control.checkValidity()) {
                     revealControl(control);
                     control.reportValidity();
+                    message.textContent =
+                        'Проверьте выделенное поле основных сведений.';
                     return false;
                 }
             }
@@ -175,8 +214,14 @@ function initGameSystemsPage(root) {
             const slug = form.elements.namedItem('slug');
 
             if (!name.value.trim() || !slug.value.trim()) {
-                openEditorPage(0);
-                message.textContent = 'Название и код не должны состоять из пробелов.';
+                const invalid = !name.value.trim() ? name : slug;
+
+                revealControl(invalid);
+                invalid.focus();
+
+                message.textContent =
+                    'Название и код не должны состоять из пробелов.';
+
                 return false;
             }
 

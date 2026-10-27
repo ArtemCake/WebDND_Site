@@ -3,7 +3,7 @@
 from Config.imports import (APIRouter, Depends, status, AsyncSession, UUID,
                             Request, HTMLResponse, CsrfProtect, HTTPException, JSONResponse)
 from backend.app.Database.database import get_async_session
-from backend.app.Core.csrf import enforce_csrf
+from backend.app.Core.csrf import (enforce_csrf,  ensure_csrf_tokens, apply_csrf_tokens)
 from backend.app.Services.Core.user_service import get_current_user
 from backend.app.Database.Models.Core.user import User
 from backend.app.Schemas.lobby import (GameCreate, GameUpdate, GameRead,
@@ -18,14 +18,15 @@ router = APIRouter(
 
 @router.get("", response_class=HTMLResponse, name="games_page_get")
 async def get_games_page(request: Request, user: User = Depends(get_current_user), csrf_protect: CsrfProtect = Depends()):
-	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+	csrf_page = ensure_csrf_tokens(request, csrf_protect)
+	csrf_token = csrf_page.token
 	context = {
 		"user": user,
 		"csrf_token": csrf_token,
 	}
 	templates = request.app.state.templates
 	response = templates.TemplateResponse(request, "games/games.html", context)
-	csrf_protect.set_csrf_cookie(signed_token, response)
+	apply_csrf_tokens(response, csrf_protect, csrf_page)
 	return response
 
 @router.get("/list", response_model=list[GameRead], operation_id="listGames")
@@ -45,7 +46,8 @@ async def get_game_details_page(request: Request, game_id: UUID, session: AsyncS
 	# Мастер либо активный незаблокированный участник.
 	game = await svc.get_game(session, game_id, user.id)
 
-	csrf_token, signed_token = (csrf_protect.generate_csrf_tokens())
+	csrf_page = ensure_csrf_tokens(request, csrf_protect)
+	csrf_token = csrf_page.token
 
 	context = {
 		"user": user,
@@ -60,10 +62,7 @@ async def get_game_details_page(request: Request, game_id: UUID, session: AsyncS
 		context,
 	)
 
-	csrf_protect.set_csrf_cookie(
-		signed_token,
-		response,
-	)
+	apply_csrf_tokens(response, csrf_protect, csrf_page)
 	return response
 
 @router.get("/{game_id}", response_model=GameRead, operation_id="getGame")
@@ -164,7 +163,8 @@ async def get_game_play_page(request: Request, game_id: UUID, session_id: UUID |
 			None,
 		)
 
-	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+	csrf_page = ensure_csrf_tokens(request, csrf_protect)
+	csrf_token = csrf_page.token
 	context = {
 		"user": user,
 		"csrf_token": csrf_token,
@@ -180,7 +180,7 @@ async def get_game_play_page(request: Request, game_id: UUID, session_id: UUID |
 		"games/game_play.html",
 		context,
 	)
-	csrf_protect.set_csrf_cookie(signed_token, response)
+	apply_csrf_tokens(response, csrf_protect, csrf_page)
 	return response
 
 @router.delete("/{game_id}/permanent", name="delete_game_permanently", operation_id="deleteGamePermanently",dependencies=[Depends(enforce_csrf)])

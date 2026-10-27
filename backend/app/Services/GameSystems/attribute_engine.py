@@ -1,7 +1,7 @@
 # backend/app/Services/GameSystems/attribute_engine.py
 
 from backend.app.Schemas.game_rules import AttributePreviewInput
-from backend.app.Schemas.rule_calculations import (AttributePreviewResult, CalculationStep, VALUE_LIMIT)
+from backend.app.Schemas.rule_calculations import (AttributePreviewResult, CalculationStep, StatFormula, VALUE_LIMIT)
 from backend.app.Services.GameSystems.rules_engine import (calculate_attribute_modifier)
 
 
@@ -46,6 +46,52 @@ def _apply_operation(operation: str, values: list[int]) -> int:
 		return max(values)
 
 	raise ValueError("Неизвестная операция вычисления")
+
+def _evaluate_formula(formula: StatFormula, context: dict[str, int], steps: list[CalculationStep], code: str) -> int:
+	"""Вычислить дочерние операции, затем родительскую."""
+	resolved = []
+
+	for index, argument in enumerate(formula.arguments):
+		if isinstance(argument, StatFormula):
+			value = _evaluate_formula(
+				formula=argument,
+				context=context,
+				steps=steps,
+				code=f"{code}/{index}",
+			)
+		elif type(argument) is int:
+			value = argument
+		else:
+			if argument not in context:
+				raise ValueError(
+					f"Недоступный источник: {argument}"
+				)
+
+			value = context[argument]
+
+		resolved.append(value)
+
+	try:
+		value = _apply_operation(
+			formula.operation,
+			resolved,
+		)
+	except ValueError as exc:
+		raise ValueError(
+			f"Вычисление {code}: {exc}"
+		) from exc
+
+	steps.append(
+		CalculationStep(
+			code=code,
+			operation=formula.operation,
+			arguments=list(formula.arguments),
+			resolved_arguments=resolved,
+			value=value,
+		)
+	)
+
+	return value
 
 def evaluate_attributes(data: AttributePreviewInput) -> AttributePreviewResult:
 	"""Чистый предпросмотр без бросков и изменения состояния."""
@@ -139,35 +185,15 @@ def evaluate_attributes(data: AttributePreviewInput) -> AttributePreviewResult:
 	for code in config.calculation_order():
 		formula = config.derived[code].formula
 
-		resolved = [
-			argument
-			if isinstance(argument, int)
-			else context[argument]
-			for argument in formula.arguments
-		]
-
-		try:
-			value = _apply_operation(
-				formula.operation,
-				resolved,
-			)
-		except ValueError as exc:
-			raise ValueError(
-				f"Показатель {code}: {exc}"
-			) from exc
+		value = _evaluate_formula(
+			formula=formula,
+			context=context,
+			steps=steps,
+			code=f"stat.{code}",
+		)
 
 		derived[code] = value
 		context[f"stat.{code}"] = value
-
-		steps.append(
-			CalculationStep(
-				code=f"stat.{code}",
-				operation=formula.operation,
-				arguments=list(formula.arguments),
-				resolved_arguments=resolved,
-				value=value,
-			)
-		)
 
 	return AttributePreviewResult(
 		level=data.level,

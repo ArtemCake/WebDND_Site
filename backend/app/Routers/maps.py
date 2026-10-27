@@ -6,7 +6,7 @@ from backend.app.Database.database import get_async_session
 from Config.Config import settings
 from backend.app.Services.Maps import (map_image_service, map_hex_service as svc, map_management_service,
 	map_storage_service, map_preview_service)
-from backend.app.Core.csrf import enforce_csrf
+from backend.app.Core.csrf import (enforce_csrf,  ensure_csrf_tokens, apply_csrf_tokens)
 from backend.app.Services.Core.user_service import get_current_user
 from backend.app.Database.Models.Core.user import User
 from backend.app.Services.Games import lobby_service
@@ -54,7 +54,8 @@ async def get_maps_page(request: Request, game_id: UUID | None = None,
 				selected_game.id,
 			)
 
-	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+	csrf_page = ensure_csrf_tokens(request, csrf_protect)
+	csrf_token = csrf_page.token
 
 	context = {
 		"user": user,
@@ -72,7 +73,7 @@ async def get_maps_page(request: Request, game_id: UUID | None = None,
 		context,
 	)
 
-	csrf_protect.set_csrf_cookie(signed_token, response)
+	apply_csrf_tokens(response, csrf_protect, csrf_page)
 	return response
 
 @router.post("", response_model=MapRead, operation_id="createMap", dependencies=[Depends(enforce_csrf)])
@@ -124,7 +125,8 @@ async def get_map_edit_page(request: Request,map_id: UUID,session: AsyncSession 
 		user: User = Depends(get_current_user),	csrf_protect: CsrfProtect = Depends()):
 	campaign_map = await svc._get_map_and_check_master(session, map_id, user.id)
 
-	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+	csrf_page = ensure_csrf_tokens(request, csrf_protect)
+	csrf_token = csrf_page.token
 
 	context = {
 		"user": user,
@@ -139,7 +141,7 @@ async def get_map_edit_page(request: Request,map_id: UUID,session: AsyncSession 
 		context,
 	)
 
-	csrf_protect.set_csrf_cookie(signed_token, response)
+	apply_csrf_tokens(response, csrf_protect, csrf_page)
 	return response
 
 @router.get("/{map_id}/background", response_class=Response, operation_id="getMapBackground")
@@ -179,7 +181,8 @@ async def get_map_create_page(request: Request,	game_id: UUID,	session: AsyncSes
 			detail="Только мастер игры может создавать карты",
 		)
 
-	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+	csrf_page = ensure_csrf_tokens(request, csrf_protect)
+	csrf_token = csrf_page.token
 
 	context = {
 		"user": user,
@@ -194,7 +197,7 @@ async def get_map_create_page(request: Request,	game_id: UUID,	session: AsyncSes
 		context,
 	)
 
-	csrf_protect.set_csrf_cookie(signed_token, response)
+	apply_csrf_tokens(response, csrf_protect, csrf_page)
 	return response
 
 @router.get("/{map_id}/view", response_class=HTMLResponse, name="map_view_page_get", operation_id="getMapViewPage")
@@ -204,7 +207,8 @@ async def get_map_view_page(request: Request, map_id: UUID, session: AsyncSessio
 	campaign_map = await svc._get_map_and_check_master(session, map_id,	user.id)
 	target_games = await map_management_service.list_target_games(session, user.id, campaign_map.game_id)
 
-	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+	csrf_page = ensure_csrf_tokens(request, csrf_protect)
+	csrf_token = csrf_page.token
 
 	context = {
 		"user": user,
@@ -219,7 +223,7 @@ async def get_map_view_page(request: Request, map_id: UUID, session: AsyncSessio
 		context,
 	)
 
-	csrf_protect.set_csrf_cookie(signed_token, response)
+	apply_csrf_tokens(response, csrf_protect, csrf_page)
 	return response
 
 @router.get("/{map_id}",response_model=MapRead,operation_id="getMap")

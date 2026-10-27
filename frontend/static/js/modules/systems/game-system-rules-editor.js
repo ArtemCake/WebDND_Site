@@ -2,7 +2,7 @@
 
 const OPERATIONS = [
     ['sum', 'Сложить'],
-    ['subtract', 'Вычесть из первого значения остальные'],
+    ['subtract', 'Из первого значения вычесть второе'],
     ['multiply', 'Перемножить'],
     ['floor_div', 'Разделить с округлением вниз'],
     ['ceil_div', 'Разделить с округлением вверх'],
@@ -20,13 +20,48 @@ const LABELS = {
 };
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
+
 const own = (object, key) =>
     Object.prototype.hasOwnProperty.call(object, key);
 
+const FORMULA_MAX_DEPTH = 8;
+const FORMULA_MAX_NODES = 256;
+const FORMULA_MAX_ARGUMENTS = 16;
+const FORMULA_VALUE_LIMIT = 1_000_000_000;
+
+const BINARY_OPERATIONS = new Set([
+    'subtract',
+    'floor_div',
+    'ceil_div'
+]);
+
+function isFormula(value) {
+    return value !== null &&
+        typeof value === 'object' &&
+        !Array.isArray(value) &&
+        Array.isArray(value.arguments);
+}
+
+function* leafArguments(formula) {
+    const stack = [...formula.arguments].reverse();
+
+    while (stack.length) {
+        const argument = stack.pop();
+
+        if (isFormula(argument)) {
+            stack.push(...[...argument.arguments].reverse());
+        } else {
+            yield argument;
+        }
+    }
+}
+
 function element(tag, text, className) {
     const result = document.createElement(tag);
+
     if (text !== undefined) result.textContent = text;
     if (className) result.className = className;
+
     return result;
 }
 
@@ -184,7 +219,9 @@ function upgrade(raw) {
         !result.calculations?.attributes ||
         !result.calculations?.derived
     ) {
-        throw new Error('Эта версия правил пока не поддерживается редактором.');
+        throw new Error(
+            'Эта версия правил пока не поддерживается редактором.'
+        );
     }
 
     return result;
@@ -248,16 +285,30 @@ export function createRulesEditor(host, {
     }
 
     function page(name, title, help) {
-        const panel = element('section', undefined, 'system-editor__panel');
+        const panel = element(
+            'section',
+            undefined,
+            'system-editor__panel'
+        );
+
         panel.dataset.editorPanel = name;
         panel.setAttribute('aria-label', title);
-        panel.append(element('h2', title), element('p', help, 'profile-note'));
+        panel.append(
+            element('h2', title),
+            element('p', help, 'profile-note')
+        );
+
         body.append(panel);
         return panel;
     }
 
     function details(title) {
-        const result = element('details', undefined, 'system-editor__details');
+        const result = element(
+            'details',
+            undefined,
+            'system-editor__details'
+        );
+
         result.append(element('summary', title));
         return result;
     }
@@ -269,8 +320,12 @@ export function createRulesEditor(host, {
 
         input.addEventListener('input', () => {
             setter(input.value);
-            if (sample) clearResult();
-            else changed();
+
+            if (sample) {
+                clearResult();
+            } else {
+                changed();
+            }
         });
 
         return field(title, input);
@@ -279,6 +334,7 @@ export function createRulesEditor(host, {
     function sources(excludeCode) {
         const values = [
             ['#number', 'Число'],
+            ['#formula', 'Вложенное вычисление'],
             ['level', 'Уровень персонажа']
         ];
 
@@ -315,7 +371,10 @@ export function createRulesEditor(host, {
             const options = sources(item.code);
 
             if (!options.some(([value]) => value === current)) {
-                options.push([current, 'Недоступный источник — выберите другой']);
+                options.push([
+                    current,
+                    'Недоступный источник — выберите другой'
+                ]);
             }
 
             const replacement = choices(options, current);
@@ -326,7 +385,11 @@ export function createRulesEditor(host, {
 
     function newCode(prefix, collection) {
         let number = 1;
-        while (own(collection, `${prefix}_${number}`)) number += 1;
+
+        while (own(collection, `${prefix}_${number}`)) {
+            number += 1;
+        }
+
         return `${prefix}_${number}`;
     }
 
@@ -336,14 +399,21 @@ export function createRulesEditor(host, {
             : [`stat.${code}`];
 
         const usedBy = Object.entries(profile.calculations.derived)
-            .filter(([, item]) =>
-                item.formula.arguments.some((arg) => references.includes(arg))
-            )
+            .filter(([dependentCode, item]) => {
+                // Собственная некорректная ссылка не должна
+                // мешать удалить сам этот показатель.
+                if (kind === 'derived' && dependentCode === code) {
+                    return false;
+                }
+
+                return [...leafArguments(item.formula)]
+                    .some((argument) => references.includes(argument));
+            })
             .map(([, item]) => item.label || 'Показатель без названия');
 
         if (usedBy.length) {
             message.textContent =
-                `Сначала измените формулы, использующие этот элемент: ` +
+                'Сначала измените формулы, использующие этот элемент: ' +
                 usedBy.join(', ') + '.';
             return;
         }
@@ -357,10 +427,18 @@ export function createRulesEditor(host, {
             return;
         }
 
-        if (!window.confirm('Удалить этот элемент из черновика?')) return;
+        if (!window.confirm('Удалить этот элемент из черновика?')) {
+            return;
+        }
 
         delete profile.calculations[kind][code];
-        delete samples[code];
+
+        // В samples находятся только характеристики примера.
+        // Удаление показателя не должно очищать их значения.
+        if (kind === 'attributes') {
+            delete samples[code];
+        }
+
         changed();
         render();
     }
@@ -371,7 +449,8 @@ export function createRulesEditor(host, {
 
         if (profile) {
             const names = {
-                dnd5e_2014_srd51: 'D&D 5e — SRD 5.1 / правила 2014 года',
+                dnd5e_2014_srd51:
+                    'D&D 5e — SRD 5.1 / правила 2014 года',
                 pf2e_remaster: 'Pathfinder 2e Remaster'
             };
 
@@ -379,6 +458,7 @@ export function createRulesEditor(host, {
                 'p',
                 names[profile.base_ruleset] || profile.base_ruleset
             ));
+
             basis.append(element(
                 'p',
                 'Настройки основы можно изменять. ' +
@@ -434,13 +514,18 @@ export function createRulesEditor(host, {
                     )) {
                         option.classList.toggle(
                             'is-selected',
-                            option.querySelector('input').checked
+                            option.querySelector('input')?.checked === true
                         );
                     }
                 });
 
                 card.classList.toggle('is-selected', radio.checked);
-                card.append(radio, createBasisIcon(preset.code), text);
+                card.append(
+                    radio,
+                    createBasisIcon(preset.code),
+                    text
+                );
+
                 cards.append(card);
             }
 
@@ -448,7 +533,8 @@ export function createRulesEditor(host, {
             const custom = element(
                 'div',
                 undefined,
-                'system-editor__basis-card system-editor__basis-card--unavailable'
+                'system-editor__basis-card ' +
+                'system-editor__basis-card--unavailable'
             );
 
             const customText = element(
@@ -462,7 +548,11 @@ export function createRulesEditor(host, {
                 element('small', 'После расширения движка')
             );
 
-            custom.append(createBasisIcon('custom'), customText);
+            custom.append(
+                createBasisIcon('custom'),
+                customText
+            );
+
             cards.append(custom);
 
             const apply = button('Использовать основу', () => {
@@ -471,7 +561,8 @@ export function createRulesEditor(host, {
                 );
 
                 if (!preset?.rules) {
-                    message.textContent = 'Сначала выберите основу правил.';
+                    message.textContent =
+                        'Сначала выберите основу правил.';
                     cards.querySelector('input')?.focus();
                     return;
                 }
@@ -530,32 +621,58 @@ export function createRulesEditor(host, {
                 'делится с округлением вниз. Например: (14 − 10) / 2 → +2.'
             ));
 
-            const settings = details('Настроить расчёт модификатора');
+            const settings = details(
+                'Настроить расчёт модификатора'
+            );
 
             settings.append(
                 bindInput(
                     'Вычесть из значения',
                     profile.modifier_offset,
-                    { type: 'number', required: true, min: -1000, max: 1000, step: 1 },
-                    (value) => { profile.modifier_offset = value; }
+                    {
+                        type: 'number',
+                        required: true,
+                        min: -1000,
+                        max: 1000,
+                        step: 1
+                    },
+                    (value) => {
+                        profile.modifier_offset = value;
+                    }
                 ),
                 bindInput(
                     'Разделить на',
                     profile.modifier_divisor,
-                    { type: 'number', required: true, min: 1, max: 1000, step: 1 },
-                    (value) => { profile.modifier_divisor = value; }
+                    {
+                        type: 'number',
+                        required: true,
+                        min: 1,
+                        max: 1000,
+                        step: 1
+                    },
+                    (value) => {
+                        profile.modifier_divisor = value;
+                    }
                 )
             );
 
             panel.append(settings);
         }
 
-        const cards = element('div', undefined, 'system-editor__cards');
+        const cards = element(
+            'div',
+            undefined,
+            'system-editor__cards'
+        );
 
         for (const [code, item] of Object.entries(
             profile.calculations.attributes
         )) {
-            const card = element('article', undefined, 'system-editor__card');
+            const card = element(
+                'article',
+                undefined,
+                'system-editor__card'
+            );
 
             card.append(bindInput(
                 'Название характеристики',
@@ -567,135 +684,310 @@ export function createRulesEditor(host, {
                 }
             ));
 
-            const settings = details('Настроить допустимые значения');
+            const settings = details(
+                'Настроить допустимые значения'
+            );
 
             settings.append(
                 bindInput(
                     'Минимальное значение',
                     item.min_value,
-                    { type: 'number', required: true, min: -1000, max: 1000, step: 1 },
-                    (value) => { item.min_value = value; }
+                    {
+                        type: 'number',
+                        required: true,
+                        min: -1000,
+                        max: 1000,
+                        step: 1
+                    },
+                    (value) => {
+                        item.min_value = value;
+                    }
                 ),
                 bindInput(
                     'Максимальное значение',
                     item.max_value,
-                    { type: 'number', required: true, min: -1000, max: 1000, step: 1 },
-                    (value) => { item.max_value = value; }
+                    {
+                        type: 'number',
+                        required: true,
+                        min: -1000,
+                        max: 1000,
+                        step: 1
+                    },
+                    (value) => {
+                        item.max_value = value;
+                    }
                 )
             );
 
-            card.append(settings, button(
-                'Удалить характеристику',
-                () => deleteEntry('attributes', code)
-            ));
+            card.append(
+                settings,
+                button(
+                    'Удалить характеристику',
+                    () => deleteEntry('attributes', code)
+                )
+            );
+
             cards.append(card);
         }
 
-        panel.append(cards, button('Добавить характеристику', () => {
-            const collection = profile.calculations.attributes;
+        panel.append(
+            cards,
+            button('Добавить характеристику', () => {
+                const collection = profile.calculations.attributes;
 
-            if (Object.keys(collection).length >= 40) {
-                message.textContent =
-                    'Текущая версия движка поддерживает до 40 характеристик.';
-                return;
+                if (Object.keys(collection).length >= 40) {
+                    message.textContent =
+                        'Текущая версия движка поддерживает ' +
+                        'до 40 характеристик.';
+                    return;
+                }
+
+                const code = newCode('attribute', collection);
+
+                collection[code] = {
+                    label: 'Новая характеристика',
+                    min_value: profile.attribute_mode === 'score'
+                        ? 1
+                        : -10,
+                    max_value: profile.attribute_mode === 'score'
+                        ? 30
+                        : 20
+                };
+
+                changed();
+                render();
+            })
+        );
+    }
+
+    function renderFormula(formula, code, depth = 1) {
+        const block = element(
+            'div',
+            undefined,
+            'system-editor__formula'
+        );
+
+        block.append(element(
+            'h4',
+            depth === 1
+                ? 'Формула показателя'
+                : 'Вложенное вычисление'
+        ));
+
+        const operation = choices(OPERATIONS, formula.operation);
+
+        operation.addEventListener('change', () => {
+            formula.operation = operation.value;
+
+            // Для вычитания и деления нужны два аргумента.
+            // Уже введённые лишние аргументы не удаляем:
+            // пользователь сам решит, какие оставить.
+            if (BINARY_OPERATIONS.has(formula.operation)) {
+                while (formula.arguments.length < 2) {
+                    formula.arguments.push(
+                        formula.operation === 'subtract' ? 0 : 1
+                    );
+                }
             }
-
-            const code = newCode('attribute', collection);
-            collection[code] = {
-                label: 'Новая характеристика',
-                min_value: profile.attribute_mode === 'score' ? 1 : -10,
-                max_value: profile.attribute_mode === 'score' ? 30 : 20
-            };
 
             changed();
             render();
-        }));
+        });
+
+        block.append(field('Математическое действие', operation));
+
+        const binary = BINARY_OPERATIONS.has(formula.operation);
+
+        if (binary) {
+            block.append(element(
+                'p',
+                formula.operation === 'subtract'
+                    ? 'Из первого значения вычитается второе. ' +
+                        'Нужны ровно два значения.'
+                    : 'Первое значение делится на второе. ' +
+                        'Нужны ровно два значения.',
+                'profile-note'
+            ));
+        }
+
+        formula.arguments.forEach((argument, index) => {
+            const argumentBlock = element(
+                'div',
+                undefined,
+                'system-editor__formula-argument'
+            );
+
+            const row = element(
+                'div',
+                undefined,
+                'system-editor__operand'
+            );
+
+            const nested = isFormula(argument);
+            const numeric =
+                typeof argument === 'number' || argument === null;
+
+            const current = nested
+                ? '#formula'
+                : numeric ? '#number' : argument;
+
+            const options = sources(code);
+
+            if (!options.some(([value]) => value === current)) {
+                options.push([
+                    current,
+                    'Недоступный источник — выберите другой'
+                ]);
+            }
+
+            const source = choices(options, current);
+            sourceControls.push({ select: source, code });
+
+            source.addEventListener('change', () => {
+                if (
+                    source.value === '#formula' &&
+                    depth >= FORMULA_MAX_DEPTH
+                ) {
+                    source.value = current;
+                    message.textContent =
+                        'Достигнута допустимая глубина вычислений. ' +
+                        'Упростите формулу или используйте другой показатель.';
+                    return;
+                }
+
+                if (source.value === '#formula') {
+                    // Берём последнее значение из модели:
+                    // число могло измениться после отрисовки поля.
+                    const previous = formula.arguments[index];
+
+                    formula.arguments[index] = {
+                        operation: 'sum',
+                        arguments: [previous]
+                    };
+                } else if (source.value === '#number') {
+                    formula.arguments[index] = 0;
+                } else {
+                    formula.arguments[index] = source.value;
+                }
+
+                changed();
+                render();
+            });
+
+            let title = `Значение ${index + 1}`;
+
+            if (formula.operation === 'subtract') {
+                title = index === 0
+                    ? 'Из какого значения вычесть'
+                    : index === 1 ? 'Что вычесть' : title;
+            } else if (
+                formula.operation === 'floor_div' ||
+                formula.operation === 'ceil_div'
+            ) {
+                title = index === 0
+                    ? 'Что разделить'
+                    : index === 1 ? 'На что разделить' : title;
+            }
+
+            row.append(field(title, source));
+
+            if (numeric) {
+                row.append(bindInput(
+                    'Число',
+                    argument,
+                    {
+                        type: 'number',
+                        required: true,
+                        min: -FORMULA_VALUE_LIMIT,
+                        max: FORMULA_VALUE_LIMIT,
+                        step: 1
+                    },
+                    (value) => {
+                        formula.arguments[index] =
+                            value === '' ? null : Number(value);
+                    }
+                ));
+            }
+
+            const remove = button('Убрать значение', () => {
+                formula.arguments.splice(index, 1);
+                changed();
+                render();
+            });
+
+            // Не оставляем операцию без аргументов,
+            // а двоичную операцию — менее чем с двумя.
+            remove.disabled =
+                formula.arguments.length <= (binary ? 2 : 1);
+
+            row.append(remove);
+            argumentBlock.append(row);
+
+            if (nested) {
+                argumentBlock.append(
+                    renderFormula(argument, code, depth + 1)
+                );
+            }
+
+            block.append(argumentBlock);
+        });
+
+        const add = button('Добавить значение', () => {
+            formula.arguments.push(0);
+            changed();
+            render();
+        });
+
+        add.disabled = formula.arguments.length >= (
+            binary ? 2 : FORMULA_MAX_ARGUMENTS
+        );
+
+        block.append(add);
+
+        if (binary && formula.arguments.length > 2) {
+            block.append(element(
+                'p',
+                'Для выбранного действия оставьте ровно два значения. ' +
+                'Уже введённые данные не удалены автоматически.',
+                'profile-note'
+            ));
+        }
+
+        return block;
     }
 
     function renderDerived(panel) {
         panel.append(element(
             'p',
-            'Источники выбираются по игровым названиям. ' +
-            'Например: «Сложить» → число 10 и «Модификатор: Ловкость».'
+            'Для каждого значения выберите число, источник или ' +
+            'вложенное вычисление. Вложенный блок сначала рассчитывается ' +
+            'целиком, затем его результат используется во внешнем действии.'
         ));
 
         for (const [code, item] of Object.entries(
             profile.calculations.derived
         )) {
-            const card = element('article', undefined, 'system-editor__card');
-
-            card.append(bindInput(
-                'Название показателя',
-                item.label,
-                { required: true, maxlength: 100 },
-                (value) => {
-                    item.label = value;
-                    refreshSources();
-                }
-            ));
-
-            const operation = choices(OPERATIONS, item.formula.operation);
-
-            operation.addEventListener('change', () => {
-                item.formula.operation = operation.value;
-                changed();
-            });
-
-            card.append(field('Что сделать со значениями', operation));
-
-            item.formula.arguments.forEach((arg, index) => {
-                const row = element('div', undefined, 'system-editor__operand');
-                const numeric = typeof arg === 'number' || arg === null;
-                const current = numeric ? '#number' : arg;
-                const options = sources(code);
-
-                if (!options.some(([value]) => value === current)) {
-                    options.push([
-                        current,
-                        'Недоступный источник — выберите другой'
-                    ]);
-                }
-
-                const source = choices(options, current);
-                sourceControls.push({ select: source, code });
-
-                source.addEventListener('change', () => {
-                    item.formula.arguments[index] =
-                        source.value === '#number' ? 0 : source.value;
-                    changed();
-                    render();
-                });
-
-                row.append(field(`Значение ${index + 1}`, source));
-
-                if (numeric) {
-                    row.append(bindInput(
-                        'Число',
-                        arg,
-                        { type: 'number', required: true, step: 1 },
-                        (value) => {
-                            item.formula.arguments[index] =
-                                value === '' ? null : Number(value);
-                        }
-                    ));
-                }
-
-                row.append(button('Убрать значение', () => {
-                    item.formula.arguments.splice(index, 1);
-                    changed();
-                    render();
-                }));
-
-                card.append(row);
-            });
+            const card = element(
+                'article',
+                undefined,
+                'system-editor__card'
+            );
 
             card.append(
-                button('Добавить значение в формулу', () => {
-                    item.formula.arguments.push(0);
-                    changed();
-                    render();
-                }),
-                button('Удалить показатель', () => deleteEntry('derived', code))
+                bindInput(
+                    'Название показателя',
+                    item.label,
+                    { required: true, maxlength: 100 },
+                    (value) => {
+                        item.label = value;
+                        refreshSources();
+                    }
+                ),
+                renderFormula(item.formula, code),
+                button(
+                    'Удалить показатель',
+                    () => deleteEntry('derived', code)
+                )
             );
 
             panel.append(card);
@@ -706,13 +998,17 @@ export function createRulesEditor(host, {
 
             if (Object.keys(collection).length >= 128) {
                 message.textContent =
-                    'Текущая версия движка поддерживает до 128 показателей.';
+                    'Текущая версия движка поддерживает ' +
+                    'до 128 показателей.';
                 return;
             }
 
             collection[newCode('stat', collection)] = {
                 label: 'Новый показатель',
-                formula: { operation: 'sum', arguments: [10] }
+                formula: {
+                    operation: 'sum',
+                    arguments: [10]
+                }
             };
 
             changed();
@@ -730,15 +1026,25 @@ export function createRulesEditor(host, {
         panel.append(bindInput(
             'Уровень персонажа для примера',
             sampleLevel,
-            { type: 'number', required: true, min: 1, max: profile.max_level, step: 1 },
-            (value) => { sampleLevel = value; },
+            {
+                type: 'number',
+                required: true,
+                min: 1,
+                max: profile.max_level,
+                step: 1
+            },
+            (value) => {
+                sampleLevel = value;
+            },
             true
         ));
 
         for (const [code, item] of Object.entries(
             profile.calculations.attributes
         )) {
-            const initial = profile.attribute_mode === 'score' ? 10 : 0;
+            const initial = profile.attribute_mode === 'score'
+                ? 10
+                : 0;
 
             if (!own(samples, code)) {
                 samples[code] = String(Math.max(
@@ -757,13 +1063,24 @@ export function createRulesEditor(host, {
                     max: item.max_value,
                     step: 1
                 },
-                (value) => { samples[code] = value; },
+                (value) => {
+                    samples[code] = value;
+                },
                 true
             ));
         }
 
-        panel.append(button('Проверить расчёт', () => void preview()));
-        result = element('div', undefined, 'system-editor__result');
+        panel.append(button(
+            'Проверить расчёт',
+            () => void preview()
+        ));
+
+        result = element(
+            'div',
+            undefined,
+            'system-editor__result'
+        );
+
         result.setAttribute('aria-live', 'polite');
         result.hidden = true;
         panel.append(result);
@@ -780,20 +1097,27 @@ export function createRulesEditor(host, {
                 ['derived', 'Показатели'],
                 ['preview', 'Проверка и сохранение']
             ]) {
-                page(name, title, 'Сначала выберите основу на странице «Основное».');
+                page(
+                    name,
+                    title,
+                    'Сначала выберите основу на странице «Основное».'
+                );
             }
         } else {
             renderAttributes(page(
                 'attributes',
                 'Характеристики',
-                'Это определения характеристик системы, а не значения персонажа.'
+                'Это определения характеристик системы, ' +
+                'а не значения персонажа.'
             ));
+
             renderDerived(page(
                 'derived',
                 'Вычисляемые показатели',
                 'Порядок значений важен для вычитания и деления. ' +
                 'Проверка допустимости формул выполняется сервером.'
             ));
+
             renderPreview(page(
                 'preview',
                 'Проверка на примере персонажа',
@@ -809,12 +1133,15 @@ export function createRulesEditor(host, {
         const number = Number(value);
 
         if (
-            value === null || String(value).trim() === '' ||
+            value === null ||
+            String(value).trim() === '' ||
             !Number.isSafeInteger(number) ||
             (min !== undefined && number < min) ||
             (max !== undefined && number > max)
         ) {
-            throw new Error(`${title}: укажите целое число в допустимом диапазоне.`);
+            throw new Error(
+                `${title}: укажите целое число в допустимом диапазоне.`
+            );
         }
 
         return number;
@@ -822,7 +1149,12 @@ export function createRulesEditor(host, {
 
     function validateControls(includeSamples = false) {
         for (const input of body.querySelectorAll('input, select')) {
-            if (!includeSamples && input.dataset.sample === 'true') continue;
+            if (
+                !includeSamples &&
+                input.dataset.sample === 'true'
+            ) {
+                continue;
+            }
 
             if (!input.checkValidity()) {
                 onInvalid(input);
@@ -832,61 +1164,280 @@ export function createRulesEditor(host, {
         }
     }
 
+    function validateFormulaTree(formula, code, title) {
+        const allowed = new Set(
+            sources(code)
+                .map(([value]) => value)
+                .filter((value) => !value.startsWith('#'))
+        );
+
+        const operations = new Set(
+            OPERATIONS.map(([value]) => value)
+        );
+
+        const dependencies = new Set();
+        const stack = [{ value: formula, depth: 1 }];
+        let nodes = 0;
+
+        while (stack.length) {
+            const { value, depth } = stack.pop();
+            nodes += 1;
+
+            if (nodes > FORMULA_MAX_NODES) {
+                throw new Error(
+                    `${title}: формула слишком велика. ` +
+                    'Упростите её или вынесите часть в другой показатель.'
+                );
+            }
+
+            if (typeof value === 'number') {
+                if (
+                    !Number.isSafeInteger(value) ||
+                    Math.abs(value) > FORMULA_VALUE_LIMIT
+                ) {
+                    throw new Error(
+                        `${title}: константа должна быть целым числом ` +
+                        'в допустимом диапазоне.'
+                    );
+                }
+
+                continue;
+            }
+
+            if (typeof value === 'string') {
+                if (!allowed.has(value)) {
+                    throw new Error(
+                        `${title}: выберите доступный источник значения.`
+                    );
+                }
+
+                if (value.startsWith('stat.')) {
+                    dependencies.add(value.slice(5));
+                }
+
+                continue;
+            }
+
+            if (
+                !isFormula(value) ||
+                !operations.has(value.operation)
+            ) {
+                throw new Error(
+                    `${title}: проверьте математическое действие ` +
+                    'и его значения.'
+                );
+            }
+
+            if (depth > FORMULA_MAX_DEPTH) {
+                throw new Error(
+                    `${title}: слишком большая глубина ` +
+                    'вложенных вычислений.'
+                );
+            }
+
+            const count = value.arguments.length;
+
+            if (count < 1 || count > FORMULA_MAX_ARGUMENTS) {
+                throw new Error(
+                    `${title}: недопустимое количество значений в действии.`
+                );
+            }
+
+            if (
+                BINARY_OPERATIONS.has(value.operation) &&
+                count !== 2
+            ) {
+                throw new Error(
+                    `${title}: для вычитания или деления ` +
+                    'нужны ровно два значения.'
+                );
+            }
+
+            if (
+                (value.operation === 'floor_div' ||
+                    value.operation === 'ceil_div') &&
+                value.arguments[1] === 0
+            ) {
+                throw new Error(`${title}: нельзя делить на ноль.`);
+            }
+
+            for (const argument of value.arguments) {
+                stack.push({
+                    value: argument,
+                    depth: depth + 1
+                });
+            }
+        }
+
+        return dependencies;
+    }
+
+    function validateDependencyGraph(dependencies, definitions) {
+        const remaining = new Map(
+            [...dependencies].map(([code, required]) => [
+                code,
+                new Set(required)
+            ])
+        );
+
+        while (remaining.size) {
+            const ready = [...remaining]
+                .filter(([, required]) => required.size === 0)
+                .map(([code]) => code);
+
+            if (!ready.length) {
+                const names = [...remaining.keys()]
+                    .map((code) => definitions[code].label)
+                    .join(', ');
+
+                throw new Error(
+                    'Обнаружена циклическая зависимость показателей: ' +
+                    names + '. Проверьте их ссылки друг на друга.'
+                );
+            }
+
+            for (const code of ready) {
+                remaining.delete(code);
+            }
+
+            for (const required of remaining.values()) {
+                for (const code of ready) {
+                    required.delete(code);
+                }
+            }
+        }
+    }
+
     function collect() {
         if (!profile) {
-            throw new Error('Выберите и примените основу на странице «Основное».');
+            throw new Error(
+                'Выберите и примените основу на странице «Основное».'
+            );
         }
 
         validateControls();
         const rules = clone(profile);
 
         rules.modifier_offset = integer(
-            rules.modifier_offset, 'Вычитаемое число', -1000, 1000
-        );
-        rules.modifier_divisor = integer(
-            rules.modifier_divisor, 'Делитель', 1, 1000
+            rules.modifier_offset,
+            'Вычитаемое число',
+            -1000,
+            1000
         );
 
-        for (const item of Object.values(rules.calculations.attributes)) {
+        rules.modifier_divisor = integer(
+            rules.modifier_divisor,
+            'Делитель',
+            1,
+            1000
+        );
+
+        for (const item of Object.values(
+            rules.calculations.attributes
+        )) {
             item.label = item.label.trim();
 
-            if (!item.label) throw new Error('Укажите название характеристики.');
+            if (!item.label) {
+                throw new Error('Укажите название характеристики.');
+            }
 
-            item.min_value = integer(item.min_value, 'Минимум', -1000, 1000);
-            item.max_value = integer(item.max_value, 'Максимум', -1000, 1000);
+            item.min_value = integer(
+                item.min_value,
+                'Минимум',
+                -1000,
+                1000
+            );
+
+            item.max_value = integer(
+                item.max_value,
+                'Максимум',
+                -1000,
+                1000
+            );
 
             if (item.min_value > item.max_value) {
-                throw new Error(`${item.label}: минимум больше максимума.`);
+                throw new Error(
+                    `${item.label}: минимум больше максимума.`
+                );
             }
         }
 
-        for (const [code, item] of Object.entries(rules.calculations.derived)) {
+        const dependencies = new Map();
+
+        for (const [code, item] of Object.entries(
+            rules.calculations.derived
+        )) {
             item.label = item.label.trim();
 
-            if (!item.label) throw new Error('Укажите название показателя.');
-            if (!item.formula.arguments.length) {
-                throw new Error(`${item.label}: добавьте значения в формулу.`);
+            if (!item.label) {
+                throw new Error('Укажите название показателя.');
             }
 
-            const allowed = new Set(sources(code).map(([value]) => value));
-
-            for (const arg of item.formula.arguments) {
-                if (typeof arg === 'number' && Number.isSafeInteger(arg)) continue;
-
-                if (
-                    typeof arg !== 'string' ||
-                    arg === '#number' ||
-                    !allowed.has(arg)
-                ) {
-                    throw new Error(
-                        `${item.label}: проверьте число или источник в формуле.`
-                    );
-                }
+            if (!isFormula(item.formula)) {
+                throw new Error(
+                    `${item.label}: не задана формула показателя.`
+                );
             }
+
+            dependencies.set(
+                code,
+                validateFormulaTree(item.formula, code, item.label)
+            );
         }
 
-        rules.attribute_codes = Object.keys(rules.calculations.attributes);
+        validateDependencyGraph(
+            dependencies,
+            rules.calculations.derived
+        );
+
+        rules.attribute_codes = Object.keys(
+            rules.calculations.attributes
+        );
+
         return rules;
+    }
+
+    function appendCalculationSteps(steps, rules) {
+        if (!Array.isArray(steps)) return;
+
+        const statSteps = steps.filter((step) =>
+            typeof step.code === 'string' &&
+            step.code.startsWith('stat.')
+        );
+
+        if (!statSteps.length) return;
+
+        const explanation = details('Как получен результат');
+        const list = element('ol');
+
+        for (const step of statSteps) {
+            const [reference, ...path] = step.code.split('/');
+            const code = reference.slice(5);
+            const definition = rules.calculations.derived[code];
+
+            if (!definition) continue;
+
+            const name = definition.label;
+
+            const location = path.length
+                ? ' — вложенное действие ' +
+                    path.map((part) => Number(part) + 1).join('.')
+                : ' — итог';
+
+            const operation = OPERATIONS.find(
+                ([value]) => value === step.operation
+            )?.[1] || 'Вычисление';
+
+            list.append(element(
+                'li',
+                `${name}${location}: ${operation}. ` +
+                `Значения: ${step.resolved_arguments.join(', ')}. ` +
+                `Результат: ${step.value}.`
+            ));
+        }
+
+        explanation.append(list);
+        result.append(explanation);
     }
 
     async function preview() {
@@ -897,13 +1448,24 @@ export function createRulesEditor(host, {
             validateControls(true);
 
             const attributes = Object.fromEntries(
-                Object.entries(rules.calculations.attributes).map(([code, item]) => [
-                    code,
-                    integer(samples[code], item.label, item.min_value, item.max_value)
-                ])
+                Object.entries(rules.calculations.attributes)
+                    .map(([code, item]) => [
+                        code,
+                        integer(
+                            samples[code],
+                            item.label,
+                            item.min_value,
+                            item.max_value
+                        )
+                    ])
             );
 
-            const level = integer(sampleLevel, 'Уровень', 1, rules.max_level);
+            const level = integer(
+                sampleLevel,
+                'Уровень',
+                1,
+                rules.max_level
+            );
 
             busy = true;
             onBusy(true);
@@ -919,21 +1481,34 @@ export function createRulesEditor(host, {
             );
 
             if (!data?.modifiers || !data?.derived) {
-                throw new Error('Ответ предпросмотра имеет неожиданный формат.');
+                throw new Error(
+                    'Ответ предпросмотра имеет неожиданный формат.'
+                );
             }
 
             result.append(element('h3', 'Результат'));
 
             for (const [title, values, definitions] of [
-                ['Модификаторы', data.modifiers, rules.calculations.attributes],
-                ['Показатели', data.derived, rules.calculations.derived]
+                [
+                    'Модификаторы',
+                    data.modifiers,
+                    rules.calculations.attributes
+                ],
+                [
+                    'Показатели',
+                    data.derived,
+                    rules.calculations.derived
+                ]
             ]) {
                 result.append(element('h4', title));
                 const list = element('dl');
 
                 for (const [code, value] of Object.entries(values)) {
                     list.append(
-                        element('dt', definitions[code]?.label || code),
+                        element(
+                            'dt',
+                            definitions[code]?.label || code
+                        ),
                         element('dd', String(value))
                     );
                 }
@@ -941,11 +1516,15 @@ export function createRulesEditor(host, {
                 result.append(list);
             }
 
+            appendCalculationSteps(data.steps, rules);
             result.hidden = false;
+
             message.textContent =
-                'Расчёт выполнен. Пример персонажа и правила ещё не сохранены.';
+                'Расчёт выполнен. Пример персонажа ' +
+                'и правила ещё не сохранены.';
         } catch (error) {
-            message.textContent = error.message || 'Не удалось проверить расчёт.';
+            message.textContent =
+                error.message || 'Не удалось проверить расчёт.';
         } finally {
             busy = false;
             onBusy(false);
@@ -964,11 +1543,14 @@ export function createRulesEditor(host, {
 
             if (systemId) {
                 const state = await request(
-                    `/admin/game-systems/${encodeURIComponent(systemId)}/rules/draft`
+                    `/admin/game-systems/${encodeURIComponent(systemId)}` +
+                    '/rules/draft'
                 );
 
                 if (!state || !own(state, 'draft')) {
-                    throw new Error('Не удалось проверить состояние черновика.');
+                    throw new Error(
+                        'Не удалось проверить состояние черновика.'
+                    );
                 }
 
                 loaded = state.draft;
@@ -979,7 +1561,9 @@ export function createRulesEditor(host, {
                     loaded.revision < 1 ||
                     !loaded.rules
                 )) {
-                    throw new Error('Сервер вернул некорректный черновик.');
+                    throw new Error(
+                        'Сервер вернул некорректный черновик.'
+                    );
                 }
             }
 
@@ -990,12 +1574,19 @@ export function createRulesEditor(host, {
                     '/admin/game-systems/rules/calculation-presets'
                 );
 
-                if (!Array.isArray(nextPresets) || !nextPresets.length) {
-                    throw new Error('Не удалось загрузить основы правил.');
+                if (
+                    !Array.isArray(nextPresets) ||
+                    !nextPresets.length
+                ) {
+                    throw new Error(
+                        'Не удалось загрузить основы правил.'
+                    );
                 }
             }
 
-            const nextProfile = loaded ? upgrade(loaded.rules) : null;
+            const nextProfile = loaded
+                ? upgrade(loaded.rules)
+                : null;
 
             profile = nextProfile;
             revision = loaded?.revision ?? null;
@@ -1010,7 +1601,8 @@ export function createRulesEditor(host, {
 
             message.textContent = loaded
                 ? `Черновик загружен. Ревизия: ${revision}.`
-                : 'Выберите основу правил. Создание на сервере ещё не выполнялось.';
+                : 'Выберите основу правил. ' +
+                    'Создание на сервере ещё не выполнялось.';
         } finally {
             busy = false;
             sync();
@@ -1024,7 +1616,9 @@ export function createRulesEditor(host, {
             draft.revision < 1 ||
             (systemId && draft.system_id !== systemId)
         ) {
-            throw new Error('Ответ сохранения черновика не удалось проверить.');
+            throw new Error(
+                'Ответ сохранения черновика не удалось проверить.'
+            );
         }
 
         profile = upgrade(draft.rules);
@@ -1032,8 +1626,10 @@ export function createRulesEditor(host, {
         dirty = false;
         renderBasis();
         render();
+
         message.textContent =
-            `Сохранён черновик, ревизия ${revision}. Публикация не выполнялась.`;
+            `Сохранён черновик, ревизия ${revision}. ` +
+            'Публикация не выполнялась.';
     }
 
     return {

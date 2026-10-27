@@ -1,6 +1,7 @@
 # main.py
 
 from Config.Config import settings
+from backend.app.Core.csrf import ensure_csrf_tokens, apply_csrf_tokens
 from backend.app.Database.database import engine
 import backend.app.Routers.api as api_module
 import backend.app.Routers.web as web_module
@@ -276,12 +277,13 @@ async def not_found_exception_handler(request: Request, exc):
 
 	try:
 		csrf_protect = CsrfProtect()
-		csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+		csrf_page = ensure_csrf_tokens(request, csrf_protect)
+		csrf_token = csrf_page.token
 		context = {"project_name": settings.PROJECT_NAME, "csrf_token": csrf_token, "user": user}
 		response = app.state.templates.TemplateResponse(
 			request=request, name="not_found.html", context=context, status_code=404
 		)
-		csrf_protect.set_csrf_cookie(signed_token, response)
+		apply_csrf_tokens(response, csrf_protect, csrf_page)
 		return response
 	except Exception as e:
 		log.error(f"[404] Не удалось отрендерить страницу-заглушку: {e}", exc_info=True)

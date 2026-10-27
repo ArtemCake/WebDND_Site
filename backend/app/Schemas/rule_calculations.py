@@ -1,9 +1,18 @@
 # backend/app/Schemas/rule_calculations.py
 
+from __future__ import annotations
 from Config.imports import (BaseModel, ConfigDict, Field, Literal, model_validator, re)
 
 
 VALUE_LIMIT = 1_000_000_000
+
+# Ограничения сложности одной формулы.
+# Корневая операция считается первым уровнем.
+MAX_FORMULA_DEPTH = 8
+
+# Считаются все операции, числа и ссылки внутри одной формулы.
+MAX_FORMULA_NODES = 256
+
 
 CalculationOperation = Literal[
 	"sum",
@@ -44,15 +53,52 @@ class AttributeDefinition(CalculationModel):
 class StatFormula(CalculationModel):
 	operation: CalculationOperation
 
-	# Целые константы или ссылки:
-	# level
-	# attribute.dex
-	# modifier.dex
-	# stat.other_value
-	arguments: list[int | str] = Field(
+	# Аргумент:
+	# - целое число;
+	# - ссылка на источник;
+	# - вложенная формула той же структуры.
+	arguments: list[int | str | StatFormula] = Field(
 		min_length=1,
 		max_length=16,
 	)
+
+	@model_validator(mode="before")
+	@classmethod
+	def validate_complexity(cls, raw):
+		"""Проверить размер дерева до рекурсивного разбора Pydantic."""
+		stack = [(raw, 1)]
+		nodes = 0
+
+		while stack:
+			current, depth = stack.pop()
+			nodes += 1
+
+			if nodes > MAX_FORMULA_NODES:
+				raise ValueError(
+					"Формула содержит слишком много элементов"
+				)
+
+			if isinstance(current, cls):
+				arguments = current.arguments
+			elif isinstance(current, dict):
+				arguments = current.get("arguments")
+			else:
+				# Числа и ссылки тоже учитываются в размере,
+				# но не увеличивают глубину операций.
+				continue
+
+			if depth > MAX_FORMULA_DEPTH:
+				raise ValueError(
+					"Превышена допустимая глубина вложенных вычислений"
+				)
+
+			if isinstance(arguments, list):
+				stack.extend(
+					(argument, depth + 1)
+					for argument in arguments
+				)
+
+		return raw
 
 	@model_validator(mode="after")
 	def validate_formula(self):
@@ -64,7 +110,11 @@ class StatFormula(CalculationModel):
 			)
 
 		for argument in self.arguments:
-			if isinstance(argument, int):
+			if isinstance(argument, StatFormula):
+				# Вложенная операция проходит собственную проверку.
+				continue
+
+			if type(argument) is int:
 				if abs(argument) > VALUE_LIMIT:
 					raise ValueError(
 						"Константа формулы выходит за допустимый диапазон"
@@ -82,13 +132,25 @@ class StatFormula(CalculationModel):
 					f"Недопустимая ссылка в формуле: {argument}"
 				)
 
-		if (
-				self.operation in {"floor_div", "ceil_div"}
-				and self.arguments[1] == 0
-		):
-			raise ValueError("Деление на ноль")
+		if self.operation in {"floor_div", "ceil_div"}:
+			denominator = self.arguments[1]
+
+			if type(denominator) is int and denominator == 0:
+				raise ValueError("Деление на ноль")
 
 		return self
+
+	def iter_leaf_arguments(self):
+		"""Все числа и ссылки, включая вложенные вычисления."""
+		stack = list(reversed(self.arguments))
+
+		while stack:
+			argument = stack.pop()
+
+			if isinstance(argument, StatFormula):
+				stack.extend(reversed(argument.arguments))
+			else:
+				yield argument
 
 class DerivedStat(CalculationModel):
 	label: str = Field(min_length=1, max_length=100)
@@ -128,7 +190,7 @@ class AttributeCalculations(CalculationModel):
 		for code, definition in self.derived.items():
 			required = set()
 
-			for argument in definition.formula.arguments:
+			for argument in definition.formula.iter_leaf_arguments():
 				if isinstance(argument, int) or argument == "level":
 					continue
 
@@ -194,7 +256,7 @@ class CalculationStep(CalculationModel):
 		"max",
 	]
 
-	arguments: list[int | str]
+	arguments: list[int | str | StatFormula]
 	resolved_arguments: list[int]
 	value: int
 

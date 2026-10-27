@@ -12,7 +12,7 @@ from backend.app.Enums.enums_BD import SystemRole, AdminPermission
 from backend.app.Services.Core.user_service import soft_delete_user, hard_delete_user, get_user_by_id
 from backend.app.Services.admin_service import (get_admin_user, require_permission, list_users, admin_set_roles, admin_set_permissions,
 	list_reports, update_report, get_report_by_id, list_audit_logs)
-from backend.app.Core.csrf import enforce_csrf
+from backend.app.Core.csrf import (enforce_csrf,  ensure_csrf_tokens, apply_csrf_tokens)
 from backend.app.Schemas.content import (GameSystemCreate,GameSystemUpdate,	GameSystemAdminRead)
 from backend.app.Services import content_service
 from backend.app.Schemas.game_rules import (CheckPreviewInput, CheckResult, AttributePreviewInput, GameSystemRulesDraftCreate,
@@ -42,13 +42,14 @@ PERMISSION_LABELS = {
 
 @router.get("/", response_class=HTMLResponse, name="admin_dashboard_get")
 async def admin_dashboard(request: Request, user: User = Depends(get_admin_user), csrf_protect: CsrfProtect = Depends()):
-	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+	csrf_page = ensure_csrf_tokens(request, csrf_protect)
+	csrf_token = csrf_page.token
 	context = {
 		"user": user, "project_name": settings.PROJECT_NAME, "csrf_token": csrf_token,
 		"permission_labels": PERMISSION_LABELS,
 	}
 	response = request.app.state.templates.TemplateResponse(request=request, name="admin/dashboard.html", context=context)
-	csrf_protect.set_csrf_cookie(signed_token, response)
+	apply_csrf_tokens(response, csrf_protect, csrf_page)
 	return response
 
 @router.get("/users", response_class=HTMLResponse, name="admin_users_get")
@@ -57,7 +58,8 @@ async def admin_users_page(request: Request, search: str | None = None, page: in
 		user: User = Depends(require_permission(AdminPermission.USERS)),
 		csrf_protect: CsrfProtect = Depends(),
 ):
-	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+	csrf_page = ensure_csrf_tokens(request, csrf_protect)
+	csrf_token = csrf_page.token
 	users, total = await list_users(session, search=search, page=page)
 	context = {
 		"user": user, "project_name": settings.PROJECT_NAME, "csrf_token": csrf_token,
@@ -66,7 +68,7 @@ async def admin_users_page(request: Request, search: str | None = None, page: in
 		"all_permissions": list(AdminPermission), "permission_labels": PERMISSION_LABELS,
 	}
 	response = request.app.state.templates.TemplateResponse(request=request, name="admin/users.html", context=context)
-	csrf_protect.set_csrf_cookie(signed_token, response)
+	apply_csrf_tokens(response, csrf_protect, csrf_page)
 	return response
 
 @router.patch("/users/{user_id}/roles", response_class=JSONResponse, operation_id="adminUpdateUserRoles", dependencies=[Depends(enforce_csrf)])
@@ -124,14 +126,15 @@ async def admin_delete_user(user_id: UUID, permanent: bool = Form(False), sessio
 async def admin_reports_page(request: Request, status_filter: str | None = None, page: int = 1,
 		session: AsyncSession = Depends(get_async_session), user: User = Depends(require_permission(AdminPermission.REPORTS)),
 		csrf_protect: CsrfProtect = Depends()):
-	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+	csrf_page = ensure_csrf_tokens(request, csrf_protect)
+	csrf_token = csrf_page.token
 	reports, total = await list_reports(session, status_filter=status_filter, page=page)
 	context = {
 		"user": user, "project_name": settings.PROJECT_NAME, "csrf_token": csrf_token,
 		"reports": reports, "total": total, "page": page, "status_filter": status_filter or "",
 	}
 	response = request.app.state.templates.TemplateResponse(request=request, name="admin/reports.html", context=context)
-	csrf_protect.set_csrf_cookie(signed_token, response)
+	apply_csrf_tokens(response, csrf_protect, csrf_page)
 	return response
 
 @router.patch("/reports/{report_id}", response_class=JSONResponse, operation_id="adminUpdateReport", dependencies=[Depends(enforce_csrf)])
@@ -147,14 +150,15 @@ async def admin_update_report(report_id: UUID,  new_status: str = Form(...), mod
 @router.get("/audit", response_class=HTMLResponse, name="admin_audit_get")
 async def admin_audit_page(request: Request, page: int = 1, session: AsyncSession = Depends(get_async_session),
 		user: User = Depends(require_permission(AdminPermission.AUDIT)), csrf_protect: CsrfProtect = Depends()):
-	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+	csrf_page = ensure_csrf_tokens(request, csrf_protect)
+	csrf_token = csrf_page.token
 	logs, total = await list_audit_logs(session, page=page)
 	context = {
 		"user": user, "project_name": settings.PROJECT_NAME, "csrf_token": csrf_token,
 		"logs": logs, "total": total, "page": page,
 	}
 	response = request.app.state.templates.TemplateResponse(request=request, name="admin/audit.html", context=context)
-	csrf_protect.set_csrf_cookie(signed_token, response)
+	apply_csrf_tokens(response, csrf_protect, csrf_page)
 	return response
 
 # --- Игровые системы ---

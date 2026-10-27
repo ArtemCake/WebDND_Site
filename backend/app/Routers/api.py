@@ -14,7 +14,7 @@ from backend.app.Database.Models.Core.user import User
 from backend.app.Services.Core import user_service, security_service, mfa_service
 from backend.app.Services.Core.mail_service import mail_service
 from backend.app.Schemas.auth import RegisterRequest, validate_password_complexity
-from backend.app.Core.csrf import enforce_csrf
+from backend.app.Core.csrf import (enforce_csrf,  ensure_csrf_tokens, apply_csrf_tokens)
 
 router = APIRouter(
 	prefix="/auth",

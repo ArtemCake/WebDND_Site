@@ -583,3 +583,55 @@
         }
     }
 }
+
+/* Вложенные формулы. Все цвета — из действующей темы. */
+.game-system-editor-page .system-editor {
+    &__formula {
+        min-width: 0;
+        padding: 1rem;
+        margin: 1rem 0;
+        border: 1px solid var(--color-border-subtle);
+        border-left: 3px solid var(--color-border-accent);
+        border-radius: var(--radius-sm, 10px);
+        background: var(--color-bg-panel);
+
+        > h4 {
+            margin-bottom: 1rem;
+            font-size: 1rem;
+        }
+    }
+
+    &__formula-argument {
+        min-width: 0;
+        margin: 1rem 0;
+        padding-top: 1rem;
+        border-top: 1px solid var(--color-border-subtle);
+
+        > .system-editor__operand {
+            margin-bottom: 0;
+        }
+
+        > .system-editor__formula {
+            margin-left: 0.75rem;
+        }
+    }
+
+    &__result ol {
+        padding-left: 1.5rem;
+    }
+
+    &__result li {
+        margin-bottom: 0.75rem;
+        overflow-wrap: anywhere;
+    }
+
+    @media (max-width: 768px) {
+        &__formula {
+            padding: 0.65rem;
+        }
+
+        &__formula-argument > .system-editor__formula {
+            margin-left: 0.25rem;
+        }
+    }
+}

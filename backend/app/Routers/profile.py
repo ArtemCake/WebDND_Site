@@ -12,7 +12,7 @@ from backend.app.Database.Models.Core.user import User
 from backend.app.Services.Core.user_service import (update_user_profile, change_password, get_current_user, update_own_roles,
                                                     verify_user_password)
 from backend.app.Enums.enums_BD import SystemRole
-from backend.app.Core.csrf import enforce_csrf
+from backend.app.Core.csrf import (enforce_csrf,  ensure_csrf_tokens, apply_csrf_tokens)
 
 
 router = APIRouter(
@@ -48,7 +48,8 @@ class ProfileResponseDTO(BaseModel):
 
 @router.get("/", response_class=HTMLResponse, name="profile_page_get")
 async def get_profile_page(request: Request, user: User = Depends(get_current_user), csrf_protect: CsrfProtect = Depends()):
-	csrf_token, signed_token = csrf_protect.generate_csrf_tokens()
+	csrf_page = ensure_csrf_tokens(request, csrf_protect)
+	csrf_token = csrf_page.token
 
 	# Какие роли показывать как редактируемые чекбоксы — зависит от текущих ролей пользователя.
 	editable_roles = list(SystemRole) if SystemRole.ADMIN in user.roles else [SystemRole.PLAYER, SystemRole.MASTER]
@@ -65,7 +66,7 @@ async def get_profile_page(request: Request, user: User = Depends(get_current_us
 	}
 	templates = request.app.state.templates
 	response = templates.TemplateResponse(request, "profile.html", context)
-	csrf_protect.set_csrf_cookie(signed_token, response)
+	apply_csrf_tokens(response, csrf_protect, csrf_page)
 	return response
 
 @router.patch("/roles", response_class=JSONResponse, status_code=status.HTTP_200_OK, operation_id="updateUserRoles", dependencies=[Depends(enforce_csrf)])
