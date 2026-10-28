@@ -1,4 +1,4 @@
-# backend/app/Services/GameSystems/admin_service.py
+# backend/app/Services/GameSystems/i_system.py
 
 from Config.imports import (ABC, abstractmethod, Any)
 
