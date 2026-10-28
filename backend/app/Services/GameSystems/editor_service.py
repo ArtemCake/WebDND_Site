@@ -14,6 +14,8 @@ from backend.app.Database._models import (GameSystem, GameSystemRulesDraft)
 from backend.app.Schemas.content import (GameSystemAdminRead, GameSystemCreate)
 from backend.app.Schemas.game_rules import (GameSystemRulesDraftRead, RulesProfile)
 from backend.app.Schemas.game_system_editor import (GameSystemEditorCreate, GameSystemEditorUpdate, GameSystemEditorRead)
+from backend.app.Schemas.game_system_origin import (GameSystemFromEngineCreate)
+from backend.app.Services.GameSystems.system_rule_origin import (load_engine_origin, require_standalone_draft)
 
 
 _SYSTEMS = GameSystem.__table__
@@ -54,13 +56,14 @@ def _response(system, draft) -> GameSystemEditorRead:
 		draft=GameSystemRulesDraftRead.model_validate(dict(draft)),
 	)
 
-async def _insert_draft(session: AsyncSession, system_id: UUID, payload: dict):
+async def _insert_draft(session: AsyncSession, system_id: UUID, payload: dict, *, origin: dict | None = None):
 	result = await session.execute(
 		insert(_DRAFTS)
 		.values(
 			system_id=system_id,
 			rules_json=payload,
 			revision=1,
+			**(origin or {}),
 		)
 		.returning(*_DRAFTS.c)
 	)
@@ -153,7 +156,7 @@ async def update_system_with_draft(session: AsyncSession, system_id: UUID, data:
 				"не сохранены. Загрузите актуальную ревизию "
 				"перед повторным сохранением."
 			)
-
+		require_standalone_draft(draft)
 		# Нельзя незаметно изменить движок уже существующей
 		# системы через пользовательскую форму.
 		if (
@@ -213,6 +216,52 @@ async def update_system_with_draft(session: AsyncSession, system_id: UUID, data:
 				)
 
 		response = _response(updated_system, updated_draft)
+
+		await session.commit()
+		return response
+
+	except IntegrityError as exc:
+		await _rollback_integrity(session, exc)
+		raise
+
+	except Exception:
+		await session.rollback()
+		raise
+
+async def create_system_from_engine(session: AsyncSession, actor_id: UUID, data: GameSystemFromEngineCreate) -> GameSystemEditorRead:
+	"""Создать карточку системы и связанный черновик атомарно.
+
+	Право создавать игровые системы проверяет вызывающий слой.
+	actor_id поступает из проверенной аутентификации.
+	"""
+	try:
+		assembled = await load_engine_origin(
+			session,
+			data,
+			actor_id,
+			data.system.rules_engine_version,
+		)
+
+		await _check_unique(session, data.system)
+
+		system_result = await session.execute(
+			insert(_SYSTEMS)
+			.values(**data.system.model_dump())
+			.returning(*_SYSTEMS.c)
+		)
+		system = system_result.mappings().one()
+
+		draft = await _insert_draft(
+			session,
+			system["id"],
+			assembled["rules_json"],
+			origin={
+				"engine_version_id": assembled["engine_version_id"],
+				"rules_overrides_json": assembled["rules_overrides_json"],
+			},
+		)
+
+		response = _response(system, draft)
 
 		await session.commit()
 		return response

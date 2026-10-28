@@ -1,7 +1,7 @@
 # backend/app/Schemas/game_rules.py
 
 from Config.imports import (BaseModel, ConfigDict, Field, Literal,
-	field_validator, model_validator, re, UUID, datetime)
+	field_validator, model_validator, re, UUID, datetime, Any)
 from backend.app.Schemas.rule_calculations import (AttributeCalculations, StatFormula, validate_modifier_formula)
 
 
@@ -254,7 +254,12 @@ class GameSystemRulesDraftRead(RulesModel):
 		from_attributes=True,
 		populate_by_name=True,
 	)
+	engine_version_id: UUID | None = None
 
+	rules_overrides: dict[str, Any] | None = Field(
+		default=None,
+		validation_alias="rules_overrides_json",
+	)
 	id: UUID
 	system_id: UUID
 	revision: int
@@ -271,6 +276,13 @@ class GameSystemRulesVersionRead(RulesModel):
 	model_config = ConfigDict(
 		from_attributes=True,
 		populate_by_name=True,
+	)
+
+	engine_version_id: UUID | None = None
+
+	rules_overrides: dict[str, Any] | None = Field(
+		default=None,
+		validation_alias="rules_overrides_json",
 	)
 
 	id: UUID

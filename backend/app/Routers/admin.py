@@ -6,6 +6,7 @@ from Config.Config import settings
 from backend.app.Services.GameSystems.delete_service import (delete_game_system)
 from Config.imports import (APIRouter, Depends, Request, HTMLResponse, JSONResponse, RedirectResponse,
                             status, HTTPException, CsrfProtect, Form, UUID, AsyncSession, Response)
+from backend.app.Routers.game_system_engines import (router as game_system_engines_router)
 from backend.app.Database.database import get_async_session
 from backend.app.Database.Models.Core.user import User
 from backend.app.Enums.enums_BD import SystemRole, AdminPermission
@@ -328,3 +329,5 @@ async def admin_get_game_system_published_rules(system_id: UUID, response: Respo
 	)
 
 	return GameSystemRulesPublishedState(version=version)
+
+router.include_router(game_system_engines_router)

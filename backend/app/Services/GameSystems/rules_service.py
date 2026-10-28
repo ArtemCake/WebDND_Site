@@ -16,6 +16,8 @@ from Config.imports import (AsyncSession, HTTPException, UUID, ValidationError, 
 from backend.app.Database._models import (GameSystem, GameSystemRulesDraft, GameSystemRulesVersion)
 from backend.app.Schemas.game_rules import (GameSystemRulesDraftCreate, GameSystemRulesDraftRead, GameSystemRulesDraftUpdate,
 	GameSystemRulesPublish, GameSystemRulesVersionRead, RulesProfile)
+from backend.app.Schemas.game_system_origin import (GameSystemDraftEngineSet)
+from backend.app.Services.GameSystems.system_rule_origin import (load_engine_origin, origin_for_publication, require_standalone_draft)
 
 
 _SYSTEMS = GameSystem.__table__
@@ -164,6 +166,7 @@ async def update_rules_draft(session: AsyncSession, system_id: UUID, data: GameS
 			draft["revision"],
 			data.expected_revision,
 		)
+		require_standalone_draft(draft)
 
 		payload = _rules_payload(
 			data.rules.model_dump(mode="json"),
@@ -231,6 +234,13 @@ async def publish_rules_version(session: AsyncSession, system_id: UUID, data: Ga
 				),
 			) from exc
 
+		origin = await origin_for_publication(
+			session,
+			draft,
+			system["rules_engine_version"],
+			payload,
+		)
+
 		# Все публикации через этот сервис сначала блокируют
 		# одну и ту же строку игровой системы.
 		# Поэтому вычисление следующего номера сериализовано.
@@ -253,6 +263,7 @@ async def publish_rules_version(session: AsyncSession, system_id: UUID, data: Ga
 				version_number=next_number,
 				rules_json=payload,
 				rules_engine_version=system["rules_engine_version"],
+				**origin,
 			)
 			.returning(*_VERSIONS.c)
 		)
@@ -328,3 +339,80 @@ async def get_latest_rules_version(session: AsyncSession, system_id: UUID) -> Ga
 		return None
 
 	return GameSystemRulesVersionRead.model_validate(version)
+
+async def set_rules_draft_engine(session: AsyncSession, system_id: UUID, actor_id: UUID, data: GameSystemDraftEngineSet) -> GameSystemRulesDraftRead:
+	"""Создать или заменить черновик правилами выбранной основы.
+
+	Право изменять игровую систему проверяет вызывающий слой.
+	actor_id передаётся из проверенной аутентификации.
+	"""
+	async with _rules_write(session):
+		system = await _lock_system(session, system_id)
+
+		draft = await _find_draft(
+			session,
+			system_id,
+			for_update=True,
+		)
+
+		if draft is None:
+			if data.expected_revision is not None:
+				raise HTTPException(
+					status_code=409,
+					detail=(
+						"Черновик отсутствует. "
+						"Загрузите актуальное состояние системы."
+					),
+				)
+		else:
+			_check_revision(
+				draft["revision"],
+				data.expected_revision,
+			)
+
+		origin = await load_engine_origin(
+			session,
+			data,
+			actor_id,
+			system["rules_engine_version"],
+		)
+
+		if draft is None:
+			result = await session.execute(
+				insert(_DRAFTS)
+				.values(
+					system_id=system_id,
+					revision=1,
+					**origin,
+				)
+				.returning(*_DRAFTS.c)
+			)
+			saved = result.mappings().one()
+		else:
+			result = await session.execute(
+				update(_DRAFTS)
+				.where(
+					_DRAFTS.c.id == draft["id"],
+					_DRAFTS.c.revision == data.expected_revision,
+					)
+				.values(
+					**origin,
+					revision=_DRAFTS.c.revision + 1,
+					updated_at=func.now(),
+				)
+				.returning(*_DRAFTS.c)
+			)
+			saved = result.mappings().one_or_none()
+
+			if saved is None:
+				raise HTTPException(
+					status_code=409,
+					detail=(
+						"Черновик изменился во время сохранения. "
+						"Изменения отменены."
+					),
+				)
+
+		response = GameSystemRulesDraftRead.model_validate(saved)
+
+	return response

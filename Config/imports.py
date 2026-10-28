@@ -58,7 +58,7 @@ from sqlalchemy import (select, delete, insert, or_, JSON, Boolean, DateTime, Fo
 
 # --- Веб-сервер (FastAPI & Starlette) ---
 from fastapi import (APIRouter,	Depends, FastAPI, File, Form, HTTPException,
-	Request, Response, status, UploadFile)
+	Request, Response, status, UploadFile, Query)
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.security import (OAuth2PasswordBearer, OAuth2PasswordRequestForm, SecurityScopes)
 from fastapi.staticfiles import StaticFiles

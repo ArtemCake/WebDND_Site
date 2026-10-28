@@ -67,3 +67,21 @@ class RuleEngineVersionRead(RulesModel):
 class RuleEngineEditorRead(RulesModel):
 	engine: RuleEngineRead
 	draft: RuleEngineDraftRead
+
+class RuleEngineVersionSummary(RulesModel):
+	"""Сведения о публикации без полного профиля правил."""
+
+	id: UUID
+	engine_id: UUID
+	version_number: int = Field(ge=1)
+	source_draft_revision: int = Field(ge=1)
+	rules_engine_version: str
+	published_at: datetime
+
+class RuleEnginePage(RulesModel):
+	items: list[RuleEngineRead]
+	next_offset: int | None = None
+
+class RuleEngineVersionPage(RulesModel):
+	items: list[RuleEngineVersionSummary]
+	next_offset: int | None = None

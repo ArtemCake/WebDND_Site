@@ -18,12 +18,12 @@ actor_id должен приходить от проверенной аутен�
 - смена программного исполнителя не предусмотрена.
 """
 
-from Config.imports import (AsyncSession, HTTPException, IntegrityError, UUID, ValidationError,
+from Config.imports import (AsyncSession, HTTPException, IntegrityError, UUID, or_, ValidationError,
 	asynccontextmanager, func, insert, select, update)
 from backend.app.Database._models import (RuleEngine, RuleEngineDraft, RuleEngineVersion)
 from backend.app.Schemas.game_rules import RulesProfile
 from backend.app.Schemas.rule_engines import (RuleEngineCreate, RuleEngineDraftRead, RuleEngineDraftUpdate, RuleEngineEditorRead,
-	RuleEnginePublish, RuleEngineRead, RuleEngineVersionRead)
+	RuleEnginePublish, RuleEngineRead, RuleEngineVersionRead, RuleEnginePage, RuleEngineVersionPage, RuleEngineVersionSummary)
 
 
 _ENGINES = RuleEngine.__table__
@@ -322,3 +322,87 @@ async def get_engine_version(session: AsyncSession, engine_id: UUID, version_id:
 		raise _error(404, "Публикация движка не найдена.")
 
 	return RuleEngineVersionRead.model_validate(dict(version))
+
+def _check_page(limit: int, offset: int) -> None:
+	if not 1 <= limit <= 100 or offset < 0:
+		raise _error(422, "Некорректные параметры страницы.")
+
+async def list_rule_engines(session: AsyncSession, actor_id: UUID, *, owned_only: bool = False, limit: int = 50, offset: int = 0) -> RuleEnginePage:
+	_require_actor(actor_id)
+	_check_page(limit, offset)
+
+	statement = select(_ENGINES)
+
+	if owned_only:
+		# Для управления показываем все свои движки:
+		# в том числе неактивные и ещё не опубликованные.
+		statement = statement.where(
+			_ENGINES.c.owner_id == actor_id,
+			)
+	else:
+		# Для выбора основы — только активные доступные
+		# движки, у которых есть хотя бы одна публикация.
+		has_publication = (
+			select(_VERSIONS.c.id)
+			.where(_VERSIONS.c.engine_id == _ENGINES.c.id)
+			.exists()
+		)
+
+		statement = statement.where(
+			_ENGINES.c.is_active.is_(True),
+			or_(
+				_ENGINES.c.owner_id == actor_id,
+				_ENGINES.c.visibility == "public",
+				),
+			has_publication,
+		)
+
+	result = await session.execute(
+		statement
+		.order_by(_ENGINES.c.slug, _ENGINES.c.id)
+		.offset(offset)
+		.limit(limit + 1)
+	)
+	rows = list(result.mappings().all())
+
+	return RuleEnginePage(
+		items=[
+			RuleEngineRead.model_validate(dict(row))
+			for row in rows[:limit]
+		],
+		next_offset=offset + limit if len(rows) > limit else None,
+	)
+
+async def list_engine_versions(session: AsyncSession, engine_id: UUID, actor_id: UUID, *, limit: int = 50, offset: int = 0) -> RuleEngineVersionPage:
+	_check_page(limit, offset)
+
+	await _find_engine(
+		session,
+		engine_id,
+		actor_id,
+		owner_only=False,
+	)
+
+	result = await session.execute(
+		select(
+			_VERSIONS.c.id,
+			_VERSIONS.c.engine_id,
+			_VERSIONS.c.version_number,
+			_VERSIONS.c.source_draft_revision,
+			_VERSIONS.c.rules_engine_version,
+			_VERSIONS.c.published_at,
+		)
+		.where(_VERSIONS.c.engine_id == engine_id)
+		.order_by(_VERSIONS.c.version_number.desc())
+		.offset(offset)
+		.limit(limit + 1)
+	)
+	rows = list(result.mappings().all())
+
+	return RuleEngineVersionPage(
+		items=[
+			RuleEngineVersionSummary.model_validate(dict(row))
+			for row in rows[:limit]
+		],
+		next_offset=offset + limit if len(rows) > limit else None,
+	)
