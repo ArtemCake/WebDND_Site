@@ -61,12 +61,15 @@
 				<a href="/dm-tools" class="nav-link">Инструменты DM</a>
 				{% endif %}
 				
+				{% if menu_user %}
+				<a href="/game-systems/catalog" class="nav-link">Игровые системы</a>
+				{% endif %}
+				
 				{% if menu_is_master or menu_is_admin %}
 				<div class="nav-dropdown">
 					<button class="nav-dropdown-toggle" type="button">Управление контентом</button>
 					<div class="nav-dropdown-menu">
 						<a href="/content-management">Контент</a>
-						<a href="/game-systems/catalog">Игровые системы</a>
 					</div>
 				</div>
 				{% endif %}
