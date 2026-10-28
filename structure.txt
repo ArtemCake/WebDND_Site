@@ -28,7 +28,11 @@ Tests/
 │ 	├── test_auth_refresh.py
 │ 	├── test_csrf_coverage.py
 │ 	├── test_game_system_rules_view.py
+│ 	├── test_rules_composition.py
 │ 	├── test_csrf_protection.py
+│ 	├── test_rule_engine_models.py
+│ 	├── test_rule_engine_service.py
+│ 	├── test_rule_engine_protection.py
 │ 	├── test_game_system_delete_service.py
 │ 	├── test_custom_attribute_modifiers.py
 │ 	├── test_game_system_editor_service.py
@@ -67,6 +71,7 @@ backend/
 │   │   ├── auth.py
 │   │   ├── content.py
 │   │   ├── rule_calculations.py
+│   │   ├── rule_engines.py
 │   │   ├── game_system_editor.py
 │   │   ├── character.py
 │   │   ├── game_rules.py
@@ -79,6 +84,8 @@ backend/
 │   │   │    ├── delete_service.py
 │   │   │    ├── editor_service.py
 │   │   │    ├── formula_engine.py
+│   │   │    ├── rules_composition.py
+│   │   │    ├── rule_engine_service.py
 │   │   │    ├── registry.py
 │   │   │    ├── attribute_engine.py
 │   │   │    ├── rules_engine.py
@@ -123,6 +130,7 @@ backend/
 │           │   ├── character_building.py
 │           │   ├── equipment.py
 │           │   ├── game_systems.py
+│           │   ├── rules_composition.py
 │           │   ├── magic.py
 │           │   ├── skills.py
 │           │   └── worldbuilding.py
@@ -144,6 +152,7 @@ backend/
 └── db_migrations/
     ├── README
     ├── env.py
+    ├── rule_engine_protection.py
     ├── script.py.mako
     └── versions/
 

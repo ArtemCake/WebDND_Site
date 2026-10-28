@@ -6,6 +6,7 @@ from alembic import context
 from backend.app.Database.database import Base
 from Config.Config import settings
 import backend.app.Database._models
+from backend.db_migrations.rule_engine_protection import (add_rule_engine_protection)
 
 config = context.config
 
@@ -38,6 +39,7 @@ def run_migrations_online():
             target_metadata=target_metadata,
             compare_type=True,
             compare_server_default=True,
+            process_revision_directives=add_rule_engine_protection,
         )
 
         with context.begin_transaction():

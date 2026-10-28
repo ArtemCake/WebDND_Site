@@ -33,7 +33,7 @@ from typing import Literal
 from abc import ABC, abstractmethod
 from enum import Enum, StrEnum
 from cryptography.fernet import Fernet, InvalidToken
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import lru_cache
 from typing import Any, Dict, List, Optional, Sequence, Type, Union
 from uuid import UUID, uuid4

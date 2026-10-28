@@ -1,8 +1,8 @@
 """add_tables
 
-Revision ID: 39fcee023dfa
+Revision ID: b191c2d0a472
 Revises: 
-Create Date: 2026-10-25 16:45:06.445238
+Create Date: 2026-10-28 21:22:19.467606
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '39fcee023dfa'
+revision: str = 'b191c2d0a472'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -337,33 +337,6 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('user_id', 'friend_user_id')
     )
-    op.create_table('game_system_rules_drafts',
-    sa.Column('id', sa.UUID(), nullable=False),
-    sa.Column('system_id', sa.UUID(), nullable=False),
-    sa.Column('rules_json', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
-    sa.Column('revision', sa.Integer(), server_default=sa.text('1'), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.CheckConstraint("jsonb_typeof(rules_json) = 'object'", name='ck_game_system_rules_drafts_rules_object'),
-    sa.CheckConstraint('revision >= 1', name='ck_game_system_rules_drafts_revision_positive'),
-    sa.ForeignKeyConstraint(['system_id'], ['game_systems.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('system_id', name='uq_game_system_rules_drafts_system')
-    )
-    op.create_table('game_system_rules_versions',
-    sa.Column('id', sa.UUID(), nullable=False),
-    sa.Column('system_id', sa.UUID(), nullable=False),
-    sa.Column('version_number', sa.Integer(), nullable=False),
-    sa.Column('rules_json', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
-    sa.Column('rules_engine_version', sa.String(length=20), nullable=False),
-    sa.Column('published_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.CheckConstraint("jsonb_typeof(rules_json) = 'object'", name='ck_game_system_rules_versions_rules_object'),
-    sa.CheckConstraint('version_number >= 1', name='ck_game_system_rules_versions_number_positive'),
-    sa.ForeignKeyConstraint(['system_id'], ['game_systems.id'], ondelete='RESTRICT'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('system_id', 'id', name='uq_game_system_rules_versions_system_id'),
-    sa.UniqueConstraint('system_id', 'version_number', name='uq_game_system_rules_versions_number')
-    )
     op.create_table('homebrew_rules',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('system_id', sa.UUID(), nullable=False),
@@ -523,6 +496,22 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_rarities_owner_id'), 'rarities', ['owner_id'], unique=False)
     op.create_index(op.f('ix_rarities_system_id'), 'rarities', ['system_id'], unique=False)
+    op.create_table('rule_engines',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('owner_id', sa.UUID(), nullable=True),
+    sa.Column('name', sa.String(length=100), nullable=False),
+    sa.Column('slug', sa.String(length=100), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('visibility', sa.String(length=20), server_default=sa.text("'private'"), nullable=False),
+    sa.Column('is_active', sa.Boolean(), server_default=sa.text('true'), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.CheckConstraint("visibility IN ('private', 'public')", name='ck_rule_engines_visibility'),
+    sa.ForeignKeyConstraint(['owner_id'], ['users.id'], ondelete='SET NULL'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('slug', name='uq_rule_engines_slug')
+    )
+    op.create_index(op.f('ix_rule_engines_owner_id'), 'rule_engines', ['owner_id'], unique=False)
     op.create_table('spell_levels',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('system_id', sa.UUID(), nullable=False),
@@ -680,29 +669,6 @@ def upgrade() -> None:
     op.create_index(op.f('ix_equipment_owner_id'), 'equipment', ['owner_id'], unique=False)
     op.create_index(op.f('ix_equipment_rarity_id'), 'equipment', ['rarity_id'], unique=False)
     op.create_index(op.f('ix_equipment_system_id'), 'equipment', ['system_id'], unique=False)
-    op.create_table('games',
-    sa.Column('id', sa.UUID(), nullable=False),
-    sa.Column('master_id', sa.UUID(), nullable=True),
-    sa.Column('system_id', sa.UUID(), nullable=False),
-    sa.Column('rules_version_id', sa.UUID(), nullable=True),
-    sa.Column('title', sa.String(length=255), nullable=False),
-    sa.Column('description', sa.Text(), nullable=True),
-    sa.Column('status', sa.String(length=20), server_default='draft', nullable=False),
-    sa.Column('privacy_level', sa.String(length=20), server_default='private', nullable=False),
-    sa.Column('voice_chat_config', postgresql.JSONB(astext_type=sa.Text()), server_default='{}', nullable=True),
-    sa.Column('is_homebrew_allowed', sa.Boolean(), nullable=False),
-    sa.Column('maps_storage_folder', sa.String(length=160), nullable=True),
-    sa.Column('next_map_number', sa.Integer(), server_default='1', nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['master_id'], ['users.id'], ondelete='SET NULL'),
-    sa.ForeignKeyConstraint(['system_id', 'rules_version_id'], ['game_system_rules_versions.system_id', 'game_system_rules_versions.id'], name='fk_games_rules_version_same_system', ondelete='RESTRICT'),
-    sa.ForeignKeyConstraint(['system_id'], ['game_systems.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_games_master_id'), 'games', ['master_id'], unique=False)
-    op.create_index(op.f('ix_games_rules_version_id'), 'games', ['rules_version_id'], unique=False)
-    op.create_index(op.f('ix_games_system_id'), 'games', ['system_id'], unique=False)
     op.create_table('races',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('system_id', sa.UUID(), nullable=False),
@@ -726,6 +692,35 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_races_owner_id'), 'races', ['owner_id'], unique=False)
     op.create_index(op.f('ix_races_system_id'), 'races', ['system_id'], unique=False)
+    op.create_table('rule_engine_drafts',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('engine_id', sa.UUID(), nullable=False),
+    sa.Column('rules_json', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column('rules_engine_version', sa.String(length=20), nullable=False),
+    sa.Column('revision', sa.Integer(), server_default=sa.text('1'), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.CheckConstraint("jsonb_typeof(rules_json) = 'object'", name='ck_rule_engine_drafts_rules_object'),
+    sa.CheckConstraint('revision >= 1', name='ck_rule_engine_drafts_revision'),
+    sa.ForeignKeyConstraint(['engine_id'], ['rule_engines.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('engine_id', name='uq_rule_engine_drafts_engine')
+    )
+    op.create_table('rule_engine_versions',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('engine_id', sa.UUID(), nullable=False),
+    sa.Column('version_number', sa.Integer(), nullable=False),
+    sa.Column('source_draft_revision', sa.Integer(), nullable=False),
+    sa.Column('rules_json', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column('rules_engine_version', sa.String(length=20), nullable=False),
+    sa.Column('published_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.CheckConstraint("jsonb_typeof(rules_json) = 'object'", name='ck_rule_engine_versions_rules_object'),
+    sa.CheckConstraint('source_draft_revision >= 1', name='ck_rule_engine_versions_source_revision'),
+    sa.CheckConstraint('version_number >= 1', name='ck_rule_engine_versions_number'),
+    sa.ForeignKeyConstraint(['engine_id'], ['rule_engines.id'], ondelete='RESTRICT'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('engine_id', 'version_number', name='uq_rule_engine_versions_number')
+    )
     op.create_table('skills',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('system_id', sa.UUID(), nullable=False),
@@ -819,23 +814,6 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_weapon_classes_system_id'), 'weapon_classes', ['system_id'], unique=False)
     op.create_index(op.f('ix_weapon_classes_type_id'), 'weapon_classes', ['type_id'], unique=False)
-    op.create_table('active_sessions_cache',
-    sa.Column('id', sa.UUID(), nullable=False),
-    sa.Column('user_id', sa.UUID(), nullable=False),
-    sa.Column('socket_id', sa.String(length=255), nullable=False),
-    sa.Column('connection_info_json', postgresql.JSONB(astext_type=sa.Text()), server_default='{}', nullable=False),
-    sa.Column('last_heartbeat', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('is_online', sa.Boolean(), nullable=False),
-    sa.Column('current_game_id', sa.UUID(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['current_game_id'], ['games.id'], ondelete='SET NULL'),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id'),
-    sa.UniqueConstraint('socket_id')
-    )
-    op.create_index(op.f('ix_active_sessions_cache_current_game_id'), 'active_sessions_cache', ['current_game_id'], unique=False)
-    op.create_index(op.f('ix_active_sessions_cache_user_id'), 'active_sessions_cache', ['user_id'], unique=True)
     op.create_table('armor',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('base_item_id', sa.UUID(), nullable=False),
@@ -920,25 +898,43 @@ def upgrade() -> None:
     )
     op.create_index('ix_creature_type_race_race', 'creature_type_race_link', ['race_id'], unique=False)
     op.create_index('ix_creature_type_race_type', 'creature_type_race_link', ['creature_type_id'], unique=False)
-    op.create_table('invites',
-    sa.Column('token', sa.String(length=64), nullable=False),
-    sa.Column('game_id', sa.UUID(), nullable=False),
-    sa.Column('creator_id', sa.UUID(), nullable=True),
-    sa.Column('claimed_by', sa.UUID(), nullable=True),
-    sa.Column('expires_at', sa.DateTime(timezone=True), nullable=False),
-    sa.Column('uses_limit', sa.Integer(), server_default='1', nullable=False),
-    sa.Column('uses_current', sa.Integer(), server_default='0', nullable=False),
-    sa.Column('message', sa.Text(), nullable=True),
+    op.create_table('game_system_rules_drafts',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('system_id', sa.UUID(), nullable=False),
+    sa.Column('engine_version_id', sa.UUID(), nullable=True),
+    sa.Column('rules_overrides_json', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('rules_json', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column('revision', sa.Integer(), server_default=sa.text('1'), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['claimed_by'], ['users.id'], ondelete='SET NULL'),
-    sa.ForeignKeyConstraint(['creator_id'], ['users.id'], ondelete='SET NULL'),
-    sa.ForeignKeyConstraint(['game_id'], ['games.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('token')
+    sa.CheckConstraint("\n\t\t\t(\n\t\t\t\tengine_version_id IS NULL\n\t\t\t\tAND rules_overrides_json IS NULL\n\t\t\t)\n\t\t\tOR\n\t\t\t(\n\t\t\t\tengine_version_id IS NOT NULL\n\t\t\t\tAND rules_overrides_json IS NOT NULL\n\t\t\t\tAND jsonb_typeof(rules_overrides_json) = 'object'\n\t\t\t)\n\t\t\t", name='ck_game_system_rules_drafts_engine_origin'),
+    sa.CheckConstraint("jsonb_typeof(rules_json) = 'object'", name='ck_game_system_rules_drafts_rules_object'),
+    sa.CheckConstraint('revision >= 1', name='ck_game_system_rules_drafts_revision_positive'),
+    sa.ForeignKeyConstraint(['engine_version_id'], ['rule_engine_versions.id'], ondelete='RESTRICT'),
+    sa.ForeignKeyConstraint(['system_id'], ['game_systems.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('system_id', name='uq_game_system_rules_drafts_system')
     )
-    op.create_index(op.f('ix_invites_claimed_by'), 'invites', ['claimed_by'], unique=False)
-    op.create_index(op.f('ix_invites_creator_id'), 'invites', ['creator_id'], unique=False)
-    op.create_index(op.f('ix_invites_game_id'), 'invites', ['game_id'], unique=False)
+    op.create_index(op.f('ix_game_system_rules_drafts_engine_version_id'), 'game_system_rules_drafts', ['engine_version_id'], unique=False)
+    op.create_table('game_system_rules_versions',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('system_id', sa.UUID(), nullable=False),
+    sa.Column('version_number', sa.Integer(), nullable=False),
+    sa.Column('engine_version_id', sa.UUID(), nullable=True),
+    sa.Column('rules_overrides_json', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
+    sa.Column('rules_json', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
+    sa.Column('rules_engine_version', sa.String(length=20), nullable=False),
+    sa.Column('published_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.CheckConstraint("\n\t\t\t(\n\t\t\t\tengine_version_id IS NULL\n\t\t\t\tAND rules_overrides_json IS NULL\n\t\t\t)\n\t\t\tOR\n\t\t\t(\n\t\t\t\tengine_version_id IS NOT NULL\n\t\t\t\tAND rules_overrides_json IS NOT NULL\n\t\t\t\tAND jsonb_typeof(rules_overrides_json) = 'object'\n\t\t\t)\n\t\t\t", name='ck_game_system_rules_versions_engine_origin'),
+    sa.CheckConstraint("jsonb_typeof(rules_json) = 'object'", name='ck_game_system_rules_versions_rules_object'),
+    sa.CheckConstraint('version_number >= 1', name='ck_game_system_rules_versions_number_positive'),
+    sa.ForeignKeyConstraint(['engine_version_id'], ['rule_engine_versions.id'], ondelete='RESTRICT'),
+    sa.ForeignKeyConstraint(['system_id'], ['game_systems.id'], ondelete='RESTRICT'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('system_id', 'id', name='uq_game_system_rules_versions_system_id'),
+    sa.UniqueConstraint('system_id', 'version_number', name='uq_game_system_rules_versions_number')
+    )
+    op.create_index(op.f('ix_game_system_rules_versions_engine_version_id'), 'game_system_rules_versions', ['engine_version_id'], unique=False)
     op.create_table('magical_items',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('base_item_id', sa.UUID(), nullable=False),
@@ -1020,21 +1016,6 @@ def upgrade() -> None:
     op.create_index(op.f('ix_origins_owner_id'), 'origins', ['owner_id'], unique=False)
     op.create_index(op.f('ix_origins_race_id'), 'origins', ['race_id'], unique=False)
     op.create_index(op.f('ix_origins_system_id'), 'origins', ['system_id'], unique=False)
-    op.create_table('party',
-    sa.Column('id', sa.UUID(), nullable=False),
-    sa.Column('game_id', sa.UUID(), nullable=False),
-    sa.Column('user_id', sa.UUID(), nullable=False),
-    sa.Column('joined_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('role_in_game', sa.String(length=20), server_default='player', nullable=False),
-    sa.Column('is_active', sa.Boolean(), nullable=False),
-    sa.Column('notification_settings', postgresql.JSONB(astext_type=sa.Text()), server_default='{}', nullable=True),
-    sa.ForeignKeyConstraint(['game_id'], ['games.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_party_game_id'), 'party', ['game_id'], unique=False)
-    op.create_index(op.f('ix_party_id'), 'party', ['id'], unique=False)
-    op.create_index(op.f('ix_party_user_id'), 'party', ['user_id'], unique=False)
     op.create_table('race_languages',
     sa.Column('race_id', sa.UUID(), nullable=False),
     sa.Column('language_id', sa.UUID(), nullable=False),
@@ -1042,20 +1023,6 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['race_id'], ['races.id'], ),
     sa.PrimaryKeyConstraint('race_id', 'language_id')
     )
-    op.create_table('sessions',
-    sa.Column('id', sa.UUID(), nullable=False),
-    sa.Column('game_id', sa.UUID(), nullable=False),
-    sa.Column('title', sa.String(length=255), nullable=True),
-    sa.Column('summary_log', sa.Text(), nullable=True),
-    sa.Column('start_time', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('end_time', sa.DateTime(timezone=True), nullable=True),
-    sa.Column('is_active', sa.Boolean(), nullable=False),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.ForeignKeyConstraint(['game_id'], ['games.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index(op.f('ix_sessions_game_id'), 'sessions', ['game_id'], unique=False)
     op.create_table('skill_characteristic_map',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('system_id', sa.UUID(), nullable=False),
@@ -1120,6 +1087,122 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_artifact_properties_artifact_id'), 'artifact_properties', ['artifact_id'], unique=False)
+    op.create_table('games',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('master_id', sa.UUID(), nullable=True),
+    sa.Column('system_id', sa.UUID(), nullable=False),
+    sa.Column('rules_version_id', sa.UUID(), nullable=True),
+    sa.Column('title', sa.String(length=255), nullable=False),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('status', sa.String(length=20), server_default='draft', nullable=False),
+    sa.Column('privacy_level', sa.String(length=20), server_default='private', nullable=False),
+    sa.Column('voice_chat_config', postgresql.JSONB(astext_type=sa.Text()), server_default='{}', nullable=True),
+    sa.Column('is_homebrew_allowed', sa.Boolean(), nullable=False),
+    sa.Column('maps_storage_folder', sa.String(length=160), nullable=True),
+    sa.Column('next_map_number', sa.Integer(), server_default='1', nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['master_id'], ['users.id'], ondelete='SET NULL'),
+    sa.ForeignKeyConstraint(['system_id', 'rules_version_id'], ['game_system_rules_versions.system_id', 'game_system_rules_versions.id'], name='fk_games_rules_version_same_system', ondelete='RESTRICT'),
+    sa.ForeignKeyConstraint(['system_id'], ['game_systems.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_games_master_id'), 'games', ['master_id'], unique=False)
+    op.create_index(op.f('ix_games_rules_version_id'), 'games', ['rules_version_id'], unique=False)
+    op.create_index(op.f('ix_games_system_id'), 'games', ['system_id'], unique=False)
+    op.create_table('item_effects',
+    sa.Column('item_id', sa.UUID(), nullable=False),
+    sa.Column('effect_id', sa.UUID(), nullable=False),
+    sa.ForeignKeyConstraint(['effect_id'], ['effects.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['item_id'], ['magical_items.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('item_id', 'effect_id')
+    )
+    op.create_table('npc_npctag_link',
+    sa.Column('npc_id', sa.UUID(), nullable=False),
+    sa.Column('npctag_id', sa.UUID(), nullable=False),
+    sa.ForeignKeyConstraint(['npc_id'], ['npcs.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['npctag_id'], ['npc_types.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('npc_id', 'npctag_id')
+    )
+    op.create_table('npc_type_links',
+    sa.Column('npc_id', sa.UUID(), nullable=False),
+    sa.Column('type_id', sa.UUID(), nullable=False),
+    sa.ForeignKeyConstraint(['npc_id'], ['npcs.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['type_id'], ['npc_types.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('npc_id', 'type_id')
+    )
+    op.create_table('origin_languages',
+    sa.Column('origin_id', sa.UUID(), nullable=False),
+    sa.Column('language_id', sa.UUID(), nullable=False),
+    sa.ForeignKeyConstraint(['language_id'], ['languages.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['origin_id'], ['origins.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('origin_id', 'language_id')
+    )
+    op.create_table('active_sessions_cache',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('user_id', sa.UUID(), nullable=False),
+    sa.Column('socket_id', sa.String(length=255), nullable=False),
+    sa.Column('connection_info_json', postgresql.JSONB(astext_type=sa.Text()), server_default='{}', nullable=False),
+    sa.Column('last_heartbeat', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('is_online', sa.Boolean(), nullable=False),
+    sa.Column('current_game_id', sa.UUID(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['current_game_id'], ['games.id'], ondelete='SET NULL'),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('socket_id')
+    )
+    op.create_index(op.f('ix_active_sessions_cache_current_game_id'), 'active_sessions_cache', ['current_game_id'], unique=False)
+    op.create_index(op.f('ix_active_sessions_cache_user_id'), 'active_sessions_cache', ['user_id'], unique=True)
+    op.create_table('invites',
+    sa.Column('token', sa.String(length=64), nullable=False),
+    sa.Column('game_id', sa.UUID(), nullable=False),
+    sa.Column('creator_id', sa.UUID(), nullable=True),
+    sa.Column('claimed_by', sa.UUID(), nullable=True),
+    sa.Column('expires_at', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('uses_limit', sa.Integer(), server_default='1', nullable=False),
+    sa.Column('uses_current', sa.Integer(), server_default='0', nullable=False),
+    sa.Column('message', sa.Text(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['claimed_by'], ['users.id'], ondelete='SET NULL'),
+    sa.ForeignKeyConstraint(['creator_id'], ['users.id'], ondelete='SET NULL'),
+    sa.ForeignKeyConstraint(['game_id'], ['games.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('token')
+    )
+    op.create_index(op.f('ix_invites_claimed_by'), 'invites', ['claimed_by'], unique=False)
+    op.create_index(op.f('ix_invites_creator_id'), 'invites', ['creator_id'], unique=False)
+    op.create_index(op.f('ix_invites_game_id'), 'invites', ['game_id'], unique=False)
+    op.create_table('party',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('game_id', sa.UUID(), nullable=False),
+    sa.Column('user_id', sa.UUID(), nullable=False),
+    sa.Column('joined_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('role_in_game', sa.String(length=20), server_default='player', nullable=False),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('notification_settings', postgresql.JSONB(astext_type=sa.Text()), server_default='{}', nullable=True),
+    sa.ForeignKeyConstraint(['game_id'], ['games.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_party_game_id'), 'party', ['game_id'], unique=False)
+    op.create_index(op.f('ix_party_id'), 'party', ['id'], unique=False)
+    op.create_index(op.f('ix_party_user_id'), 'party', ['user_id'], unique=False)
+    op.create_table('sessions',
+    sa.Column('id', sa.UUID(), nullable=False),
+    sa.Column('game_id', sa.UUID(), nullable=False),
+    sa.Column('title', sa.String(length=255), nullable=True),
+    sa.Column('summary_log', sa.Text(), nullable=True),
+    sa.Column('start_time', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('end_time', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['game_id'], ['games.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_sessions_game_id'), 'sessions', ['game_id'], unique=False)
     op.create_table('campaign_maps',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('game_id', sa.UUID(), nullable=False),
@@ -1220,34 +1303,6 @@ def upgrade() -> None:
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['session_id'], ['sessions.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('session_id')
-    )
-    op.create_table('item_effects',
-    sa.Column('item_id', sa.UUID(), nullable=False),
-    sa.Column('effect_id', sa.UUID(), nullable=False),
-    sa.ForeignKeyConstraint(['effect_id'], ['effects.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['item_id'], ['magical_items.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('item_id', 'effect_id')
-    )
-    op.create_table('npc_npctag_link',
-    sa.Column('npc_id', sa.UUID(), nullable=False),
-    sa.Column('npctag_id', sa.UUID(), nullable=False),
-    sa.ForeignKeyConstraint(['npc_id'], ['npcs.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['npctag_id'], ['npc_types.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('npc_id', 'npctag_id')
-    )
-    op.create_table('npc_type_links',
-    sa.Column('npc_id', sa.UUID(), nullable=False),
-    sa.Column('type_id', sa.UUID(), nullable=False),
-    sa.ForeignKeyConstraint(['npc_id'], ['npcs.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['type_id'], ['npc_types.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('npc_id', 'type_id')
-    )
-    op.create_table('origin_languages',
-    sa.Column('origin_id', sa.UUID(), nullable=False),
-    sa.Column('language_id', sa.UUID(), nullable=False),
-    sa.ForeignKeyConstraint(['language_id'], ['languages.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['origin_id'], ['origins.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('origin_id', 'language_id')
     )
     op.create_table('character_ability_scores',
     sa.Column('id', sa.UUID(), nullable=False),
@@ -1458,12 +1513,16 @@ def upgrade() -> None:
     op.create_index(op.f('ix_tokens_npc_id'), 'tokens', ['npc_id'], unique=False)
     op.create_index(op.f('ix_tokens_owner_id'), 'tokens', ['owner_id'], unique=False)
     op.create_index(op.f('ix_tokens_session_id'), 'tokens', ['session_id'], unique=False)
+    op.execute("\nCREATE OR REPLACE FUNCTION worldloom_guard_rule_engine_version()\nRETURNS trigger\nLANGUAGE plpgsql\nAS $$\nBEGIN\n    RAISE EXCEPTION\n        'Published rule engine versions are immutable'\n        USING ERRCODE = '23514';\n    RETURN NULL;\nEND;\n$$;\n")
+    op.execute('\nCREATE TRIGGER trg_rule_engine_versions_immutable\nBEFORE UPDATE OR DELETE ON rule_engine_versions\nFOR EACH ROW\nEXECUTE FUNCTION worldloom_guard_rule_engine_version();\n')
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     """Downgrade schema."""
     # ### commands auto generated by Alembic - please adjust! ###
+    op.execute('\nDROP TRIGGER trg_rule_engine_versions_immutable\nON rule_engine_versions;\n')
+    op.execute('\nDROP FUNCTION worldloom_guard_rule_engine_version();\n')
     op.drop_index(op.f('ix_tokens_session_id'), table_name='tokens')
     op.drop_index(op.f('ix_tokens_owner_id'), table_name='tokens')
     op.drop_index(op.f('ix_tokens_npc_id'), table_name='tokens')
@@ -1501,10 +1560,6 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_character_ability_scores_characteristic_id'), table_name='character_ability_scores')
     op.drop_index(op.f('ix_character_ability_scores_character_sheet_id'), table_name='character_ability_scores')
     op.drop_table('character_ability_scores')
-    op.drop_table('origin_languages')
-    op.drop_table('npc_type_links')
-    op.drop_table('npc_npctag_link')
-    op.drop_table('item_effects')
     op.drop_table('initiative_tracker')
     op.drop_index(op.f('ix_dice_rolls_session_id'), table_name='dice_rolls')
     op.drop_index(op.f('ix_dice_rolls_roller_id'), table_name='dice_rolls')
@@ -1522,6 +1577,27 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_campaign_maps_session_id'), table_name='campaign_maps')
     op.drop_index(op.f('ix_campaign_maps_game_id'), table_name='campaign_maps')
     op.drop_table('campaign_maps')
+    op.drop_index(op.f('ix_sessions_game_id'), table_name='sessions')
+    op.drop_table('sessions')
+    op.drop_index(op.f('ix_party_user_id'), table_name='party')
+    op.drop_index(op.f('ix_party_id'), table_name='party')
+    op.drop_index(op.f('ix_party_game_id'), table_name='party')
+    op.drop_table('party')
+    op.drop_index(op.f('ix_invites_game_id'), table_name='invites')
+    op.drop_index(op.f('ix_invites_creator_id'), table_name='invites')
+    op.drop_index(op.f('ix_invites_claimed_by'), table_name='invites')
+    op.drop_table('invites')
+    op.drop_index(op.f('ix_active_sessions_cache_user_id'), table_name='active_sessions_cache')
+    op.drop_index(op.f('ix_active_sessions_cache_current_game_id'), table_name='active_sessions_cache')
+    op.drop_table('active_sessions_cache')
+    op.drop_table('origin_languages')
+    op.drop_table('npc_type_links')
+    op.drop_table('npc_npctag_link')
+    op.drop_table('item_effects')
+    op.drop_index(op.f('ix_games_system_id'), table_name='games')
+    op.drop_index(op.f('ix_games_rules_version_id'), table_name='games')
+    op.drop_index(op.f('ix_games_master_id'), table_name='games')
+    op.drop_table('games')
     op.drop_index(op.f('ix_artifact_properties_artifact_id'), table_name='artifact_properties')
     op.drop_table('artifact_properties')
     op.drop_index(op.f('ix_weapons_weapon_type_id'), table_name='weapons')
@@ -1533,13 +1609,7 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_skill_characteristic_map_system_id'), table_name='skill_characteristic_map')
     op.drop_index(op.f('ix_skill_characteristic_map_owner_id'), table_name='skill_characteristic_map')
     op.drop_table('skill_characteristic_map')
-    op.drop_index(op.f('ix_sessions_game_id'), table_name='sessions')
-    op.drop_table('sessions')
     op.drop_table('race_languages')
-    op.drop_index(op.f('ix_party_user_id'), table_name='party')
-    op.drop_index(op.f('ix_party_id'), table_name='party')
-    op.drop_index(op.f('ix_party_game_id'), table_name='party')
-    op.drop_table('party')
     op.drop_index(op.f('ix_origins_system_id'), table_name='origins')
     op.drop_index(op.f('ix_origins_race_id'), table_name='origins')
     op.drop_index(op.f('ix_origins_owner_id'), table_name='origins')
@@ -1553,10 +1623,10 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_magical_items_rarity_id'), table_name='magical_items')
     op.drop_index(op.f('ix_magical_items_base_item_id'), table_name='magical_items')
     op.drop_table('magical_items')
-    op.drop_index(op.f('ix_invites_game_id'), table_name='invites')
-    op.drop_index(op.f('ix_invites_creator_id'), table_name='invites')
-    op.drop_index(op.f('ix_invites_claimed_by'), table_name='invites')
-    op.drop_table('invites')
+    op.drop_index(op.f('ix_game_system_rules_versions_engine_version_id'), table_name='game_system_rules_versions')
+    op.drop_table('game_system_rules_versions')
+    op.drop_index(op.f('ix_game_system_rules_drafts_engine_version_id'), table_name='game_system_rules_drafts')
+    op.drop_table('game_system_rules_drafts')
     op.drop_index('ix_creature_type_race_type', table_name='creature_type_race_link')
     op.drop_index('ix_creature_type_race_race', table_name='creature_type_race_link')
     op.drop_table('creature_type_race_link')
@@ -1572,9 +1642,6 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_armor_base_item_id'), table_name='armor')
     op.drop_index(op.f('ix_armor_armor_type_id'), table_name='armor')
     op.drop_table('armor')
-    op.drop_index(op.f('ix_active_sessions_cache_user_id'), table_name='active_sessions_cache')
-    op.drop_index(op.f('ix_active_sessions_cache_current_game_id'), table_name='active_sessions_cache')
-    op.drop_table('active_sessions_cache')
     op.drop_index(op.f('ix_weapon_classes_type_id'), table_name='weapon_classes')
     op.drop_index(op.f('ix_weapon_classes_system_id'), table_name='weapon_classes')
     op.drop_table('weapon_classes')
@@ -1590,13 +1657,11 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_skills_owner_id'), table_name='skills')
     op.drop_index(op.f('ix_skills_ability_score_id'), table_name='skills')
     op.drop_table('skills')
+    op.drop_table('rule_engine_versions')
+    op.drop_table('rule_engine_drafts')
     op.drop_index(op.f('ix_races_system_id'), table_name='races')
     op.drop_index(op.f('ix_races_owner_id'), table_name='races')
     op.drop_table('races')
-    op.drop_index(op.f('ix_games_system_id'), table_name='games')
-    op.drop_index(op.f('ix_games_rules_version_id'), table_name='games')
-    op.drop_index(op.f('ix_games_master_id'), table_name='games')
-    op.drop_table('games')
     op.drop_index(op.f('ix_equipment_system_id'), table_name='equipment')
     op.drop_index(op.f('ix_equipment_rarity_id'), table_name='equipment')
     op.drop_index(op.f('ix_equipment_owner_id'), table_name='equipment')
@@ -1621,6 +1686,8 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_spell_levels_system_id'), table_name='spell_levels')
     op.drop_index(op.f('ix_spell_levels_owner_id'), table_name='spell_levels')
     op.drop_table('spell_levels')
+    op.drop_index(op.f('ix_rule_engines_owner_id'), table_name='rule_engines')
+    op.drop_table('rule_engines')
     op.drop_index(op.f('ix_rarities_system_id'), table_name='rarities')
     op.drop_index(op.f('ix_rarities_owner_id'), table_name='rarities')
     op.drop_table('rarities')
@@ -1646,8 +1713,6 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_homebrew_rules_system_id'), table_name='homebrew_rules')
     op.drop_index(op.f('ix_homebrew_rules_owner_id'), table_name='homebrew_rules')
     op.drop_table('homebrew_rules')
-    op.drop_table('game_system_rules_versions')
-    op.drop_table('game_system_rules_drafts')
     op.drop_table('friends')
     op.drop_index(op.f('ix_feats_system_id'), table_name='feats')
     op.drop_index(op.f('ix_feats_owner_id'), table_name='feats')

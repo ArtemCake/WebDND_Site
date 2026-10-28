@@ -95,6 +95,21 @@ class GameSystemRulesDraft(Base):
 			"jsonb_typeof(rules_json) = 'object'",
 			name="ck_game_system_rules_drafts_rules_object",
 		),
+		CheckConstraint(
+			"""
+			(
+				engine_version_id IS NULL
+				AND rules_overrides_json IS NULL
+			)
+			OR
+			(
+				engine_version_id IS NOT NULL
+				AND rules_overrides_json IS NOT NULL
+				AND jsonb_typeof(rules_overrides_json) = 'object'
+			)
+			""",
+			name="ck_game_system_rules_drafts_engine_origin",
+		),
 	)
 
 	id: Mapped[UUID] = mapped_column(
@@ -106,6 +121,19 @@ class GameSystemRulesDraft(Base):
 		PG_UUID(as_uuid=True),
 		ForeignKey("game_systems.id", ondelete="CASCADE"),
 		nullable=False,
+	)
+	engine_version_id: Mapped[UUID | None] = mapped_column(
+		PG_UUID(as_uuid=True),
+		ForeignKey(
+			"rule_engine_versions.id",
+			ondelete="RESTRICT",
+		),
+		nullable=True,
+		index=True,
+	)
+	rules_overrides_json: Mapped[dict | None] = mapped_column(
+		JSONB,
+		nullable=True,
 	)
 	rules_json: Mapped[dict] = mapped_column(
 		JSONB,
@@ -166,6 +194,21 @@ class GameSystemRulesVersion(Base):
 			"jsonb_typeof(rules_json) = 'object'",
 			name="ck_game_system_rules_versions_rules_object",
 		),
+		CheckConstraint(
+			"""
+			(
+				engine_version_id IS NULL
+				AND rules_overrides_json IS NULL
+			)
+			OR
+			(
+				engine_version_id IS NOT NULL
+				AND rules_overrides_json IS NOT NULL
+				AND jsonb_typeof(rules_overrides_json) = 'object'
+			)
+			""",
+			name="ck_game_system_rules_versions_engine_origin",
+		),
 	)
 
 	id: Mapped[UUID] = mapped_column(
@@ -181,6 +224,19 @@ class GameSystemRulesVersion(Base):
 	version_number: Mapped[int] = mapped_column(
 		Integer,
 		nullable=False,
+	)
+	engine_version_id: Mapped[UUID | None] = mapped_column(
+		PG_UUID(as_uuid=True),
+		ForeignKey(
+			"rule_engine_versions.id",
+			ondelete="RESTRICT",
+		),
+		nullable=True,
+		index=True,
+	)
+	rules_overrides_json: Mapped[dict | None] = mapped_column(
+		JSONB,
+		nullable=True,
 	)
 	rules_json: Mapped[dict] = mapped_column(
 		JSONB,
