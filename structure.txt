@@ -28,6 +28,7 @@ Tests/
 │ 	├── test_auth_refresh.py
 │ 	├── test_csrf_coverage.py
 │ 	├── test_game_system_rules_view.py
+│ 	├── test_game_system_engine_editor.py
 │ 	├── test_rules_composition.py
 │ 	├── test_csrf_protection.py
 │ 	├── test_rule_engine_models.py
@@ -43,6 +44,8 @@ Tests/
 │ 	├── test_rules_draft_api.py
 │ 	└── test_rules_engine.py
 ├── js/
+	├── test_game_system_engine_origin.mjs
+	├── test_rule_engine_api.mjs
 	└── session-client.test.js
 
 BACKEND
@@ -308,6 +311,9 @@ frontend/
             │   └── TokenFactory.js
             └── systems/
                 ├── Dnd5eSystem.js
+                ├── rule-engine-api.js
+                ├── rule-engine-manager.js
+                ├── game-system-engine-origin.js
                 ├── game-system-rules-view.js
                 ├── game-system-rules-editor.js
                 ├── game-systems-catalog.js

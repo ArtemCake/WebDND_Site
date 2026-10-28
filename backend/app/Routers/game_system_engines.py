@@ -14,7 +14,7 @@ from backend.app.Enums.enums_BD import AdminPermission
 from backend.app.Services.admin_service import require_permission
 from backend.app.Schemas.game_rules import (GameSystemRulesDraftRead, GameSystemRulesPublish, GameSystemRulesVersionRead)
 from backend.app.Schemas.game_system_editor import GameSystemEditorRead
-from backend.app.Schemas.game_system_origin import (GameSystemDraftEngineSet, GameSystemFromEngineCreate)
+from backend.app.Schemas.game_system_origin import (GameSystemEngineEditorUpdate, GameSystemEngineOriginRead, GameSystemDraftEngineSet, GameSystemFromEngineCreate)
 from backend.app.Schemas.rule_engines import (RuleEngineCreate, RuleEngineDraftRead, RuleEngineDraftUpdate, RuleEngineEditorRead,
                                               RuleEnginePage, RuleEnginePublish, RuleEngineVersionPage, RuleEngineVersionRead)
 from backend.app.Services.GameSystems import (editor_service, rule_engine_service as engines, rules_service)
@@ -139,5 +139,25 @@ async def publish_system_rules(system_id: UUID, data: GameSystemRulesPublish, se
 	return await rules_service.publish_rules_version(
 		session,
 		system_id,
+		data,
+	)
+
+@router.get("/game-systems/{system_id}/editor/engine", response_model=GameSystemEngineOriginRead, operation_id="adminGetGameSystemEngineOrigin")
+async def get_system_origin(system_id: UUID, session: AsyncSession = Depends(get_async_session), actor_id: UUID = Depends(_content_actor_id)):
+	# Обязательная проверка административного разрешения
+	# выполняется зависимостью _content_actor_id.
+	return await editor_service.get_system_engine_origin(
+		session,
+		system_id,
+	)
+
+@router.put("/game-systems/{system_id}/editor/engine", response_model=GameSystemEditorRead, operation_id="adminUpdateGameSystemFromEngine",
+            dependencies=[Depends(enforce_csrf)])
+async def update_system(system_id: UUID, data: GameSystemEngineEditorUpdate, session: AsyncSession = Depends(get_async_session),
+		actor_id: UUID = Depends(_content_actor_id)):
+	return await editor_service.update_system_from_engine(
+		session,
+		system_id,
+		actor_id,
 		data,
 	)

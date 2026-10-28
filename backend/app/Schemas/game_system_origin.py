@@ -5,6 +5,7 @@
 from Config.imports import Any, Field, UUID
 from backend.app.Schemas.content import GameSystemCreate
 from backend.app.Schemas.game_rules import RulesModel
+from backend.app.Schemas.rule_engines import RuleEngineVersionRead
 
 
 class EngineRulesSource(RulesModel):
@@ -19,3 +20,14 @@ class GameSystemDraftEngineSet(EngineRulesSource):
 	# null — клиент ожидает, что черновика ещё нет.
 	# Число — ожидаемая ревизия существующего черновика.
 	expected_revision: int | None = Field(..., ge=1)
+
+class GameSystemEngineEditorUpdate(GameSystemDraftEngineSet):
+	"""Единое обновление карточки и связанных правил."""
+
+	system: GameSystemCreate
+
+class GameSystemEngineOriginRead(RulesModel):
+	"""Основа сохранённого черновика и ревизия его состояния."""
+
+	draft_revision: int = Field(ge=1)
+	engine_version: RuleEngineVersionRead

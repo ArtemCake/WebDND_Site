@@ -1,5 +1,7 @@
 // frontend/static/js/modules/systems/game-system-rules-editor.js
 
+import {collectEngineOverrides, readEngineOverrides} from './game-system-engine-origin.js';
+
 const OPERATIONS = [
     ['sum', 'Сложить'],
     ['subtract', 'Из первого значения вычесть второе'],
@@ -230,6 +232,9 @@ function upgrade(raw) {
 export function createRulesEditor(host, {
     request,
     systemId,
+    standaloneOnly = false,
+    singlePage = false,
+    getExecutorVersion = () => '1.0',
     onBusy = () => {},
     onChange = () => {},
     onInvalid = () => {}
@@ -248,6 +253,13 @@ export function createRulesEditor(host, {
     let parentBusy = true;
     let presets = [];
     let selectedPreset = '';
+    let engineVersion = null;
+    let explicitOverrides = {};
+    let availableEngines = [];
+    let availableVersions = [];
+    let selectedEngineId = '';
+    let selectedVersionId = '';
+    let enginesLoaded = false;
     let activePage = 'main';
     let result;
     let sampleLevel = '1';
@@ -284,7 +296,7 @@ export function createRulesEditor(host, {
         activePage = name;
 
         body.querySelectorAll('[data-editor-panel]').forEach((panel) => {
-            panel.hidden = panel.dataset.editorPanel !== name;
+            panel.hidden = !singlePage && panel.dataset.editorPanel !== name;
         });
     }
 
@@ -458,9 +470,298 @@ export function createRulesEditor(host, {
         render();
     }
 
-    function renderBasis() {
+        function checkEngineVersion(version, engineId, versionId) {
+            if (
+                !version ||
+                version.id !== versionId ||
+                version.engine_id !== engineId ||
+                !Number.isInteger(version.version_number) ||
+                version.version_number < 1 ||
+                !version.rules_json
+            ) {
+                throw new Error(
+                    'Сервер вернул некорректную публикацию движка.'
+                );
+            }
+
+            if (
+                version.rules_engine_version !== getExecutorVersion()
+            ) {
+                throw new Error(
+                    'Публикация рассчитана на другую версию ' +
+                    'программного исполнителя.'
+                );
+            }
+
+            // Автоматически изменять защищённую schema_version
+            // выбранной публикации нельзя.
+            if (version.rules_json.schema_version !== 2) {
+                throw new Error(
+                    'Эта публикация пока не поддерживается ' +
+                    'связанным редактором. Нужна схема правил 2.'
+                );
+            }
+
+            return upgrade(version.rules_json);
+        }
+
+        async function readAllPages(path) {
+            const items = [];
+            const ids = new Set();
+            let offset = 0;
+
+            while (true) {
+                const data = await request(
+                    `${path}?limit=100&offset=${offset}`
+                );
+
+                if (!Array.isArray(data?.items)) {
+                    throw new Error(
+                        'Сервер вернул некорректную страницу каталога.'
+                    );
+                }
+
+                for (const item of data.items) {
+                    if (
+                        typeof item?.id !== 'string' ||
+                        !item.id ||
+                        ids.has(item.id)
+                    ) {
+                        throw new Error(
+                            'Каталог изменился или содержит ' +
+                            'некорректные записи. Повторите загрузку.'
+                        );
+                    }
+
+                    ids.add(item.id);
+                    items.push(item);
+                }
+
+                if (data.next_offset === null) return items;
+
+                if (
+                    !Number.isSafeInteger(data.next_offset) ||
+                    data.next_offset <= offset ||
+                    data.items.length === 0
+                ) {
+                    throw new Error(
+                        'Сервер вернул некорректное продолжение каталога.'
+                    );
+                }
+
+                offset = data.next_offset;
+            }
+        }
+
+        async function basisAction(action) {
+            if (busy || parentBusy) return;
+
+            busy = true;
+            onBusy(true);
+            sync();
+
+            try {
+                await action();
+            } catch (error) {
+                message.textContent =
+                    error.message || 'Не удалось загрузить основу.';
+            } finally {
+                busy = false;
+                onBusy(false);
+                sync();
+            }
+        }
+
+        function renderBasis() {
+            if (standaloneOnly) {
+                renderStandaloneBasis();
+                return;
+            }
+            if (!engineVersion) {
+                renderStandaloneBasis();
+            } else {
+                basis.replaceChildren();
+
+                basis.append(
+                    element('h3', 'Связанная система'),
+                    element(
+                        'p',
+                        `Основа: публикация №${engineVersion.version_number}. ` +
+                        `Профиль: ${engineVersion.rules_json.base_ruleset}.`
+                    ),
+                    element(
+                        'p',
+                        'Редактор меняет правила этой системы, ' +
+                        'но не опубликованный движок. Новые публикации ' +
+                        'не подключаются автоматически.',
+                        'profile-note'
+                    )
+                );
+            }
+
+            const catalog = element(
+                'section',
+                undefined,
+                'system-editor__details'
+            );
+
+            catalog.append(
+                element('h3', 'Опубликованный движок'),
+                element(
+                    'p',
+                    'Выбор публикации заменит текущие настройки правил. ' +
+                    'Название и описание системы останутся в форме.',
+                    'profile-note'
+                )
+            );
+
+            catalog.append(button(
+                enginesLoaded
+                    ? 'Обновить каталог движков'
+                    : 'Загрузить каталог движков',
+                () => void basisAction(async () => {
+                    const loaded = await readAllPages(
+                        '/admin/rule-engines'
+                    );
+
+                    availableEngines = loaded;
+                    availableVersions = [];
+                    selectedEngineId = loaded[0]?.id || '';
+                    selectedVersionId = '';
+                    enginesLoaded = true;
+
+                    renderBasis();
+
+                    message.textContent = loaded.length
+                        ? 'Выберите движок и загрузите его публикации.'
+                        : 'Доступных опубликованных движков пока нет.';
+                })
+            ));
+
+            if (availableEngines.length) {
+                const engineSelect = choices(
+                    availableEngines.map((item) => [
+                        item.id,
+                        item.name || item.slug || 'Движок без названия'
+                    ]),
+                    selectedEngineId
+                );
+
+                engineSelect.addEventListener('change', () => {
+                    selectedEngineId = engineSelect.value;
+                    selectedVersionId = '';
+                    availableVersions = [];
+                    renderBasis();
+                    sync();
+                });
+
+                catalog.append(
+                    field('Движок', engineSelect),
+                    button(
+                        'Загрузить публикации',
+                        () => void basisAction(async () => {
+                            const engineId = selectedEngineId;
+
+                            const loaded = await readAllPages(
+                                '/admin/rule-engines/' +
+                                encodeURIComponent(engineId) +
+                                '/versions'
+                            );
+
+                            availableVersions = loaded.filter(
+                                (item) =>
+                                    item.engine_id === engineId &&
+                                    item.rules_engine_version ===
+                                        getExecutorVersion()
+                            );
+
+                            selectedVersionId =
+                                availableVersions[0]?.id || '';
+
+                            renderBasis();
+
+                            message.textContent = availableVersions.length
+                                ? 'Выберите конкретную публикацию.'
+                                : 'Для этого движка нет публикаций, ' +
+                                    'совместимых с исполнителем системы.';
+                        })
+                    )
+                );
+            }
+
+            if (availableVersions.length) {
+                const versionSelect = choices(
+                    availableVersions.map((item) => [
+                        item.id,
+                        `Публикация №${item.version_number}`
+                    ]),
+                    selectedVersionId
+                );
+
+                versionSelect.addEventListener('change', () => {
+                    selectedVersionId = versionSelect.value;
+                });
+
+                catalog.append(
+                    field('Публикация', versionSelect),
+                    button(
+                        'Использовать публикацию',
+                        () => void basisAction(async () => {
+                            if (
+                                profile &&
+                                !window.confirm(
+                                    'Заменить текущие настройки правил ' +
+                                    'выбранной публикацией? Изменения ' +
+                                    'характеристик и формул будут сброшены. ' +
+                                    'Карточка системы останется без изменений.'
+                                )
+                            ) {
+                                return;
+                            }
+
+                            const engineId = selectedEngineId;
+                            const versionId = selectedVersionId;
+
+                            const version = await request(
+                                '/admin/rule-engines/' +
+                                encodeURIComponent(engineId) +
+                                '/versions/' +
+                                encodeURIComponent(versionId)
+                            );
+
+                            const nextProfile = checkEngineVersion(
+                                version,
+                                engineId,
+                                versionId
+                            );
+
+                            // Состояние меняем только после успешной
+                            // загрузки и проверки всей публикации.
+                            profile = nextProfile;
+                            engineVersion = clone(version);
+                            explicitOverrides = {};
+                            samples = {};
+                            sampleLevel = '1';
+
+                            changed();
+                            renderBasis();
+                            render();
+
+                            message.textContent =
+                                'Публикация выбрана. Настройте систему ' +
+                                'и сохраните изменения.';
+                        })
+                    )
+                );
+            }
+
+            basis.append(catalog);
+            sync();
+        }
+
+    function renderStandaloneBasis() {
         basis.replaceChildren();
-        basis.append(element('h3', 'Основа правил'));
+        basis.append(element('h3', 'Самостоятельная система из пресета'));
 
         if (profile) {
             const names = {
@@ -584,6 +885,8 @@ export function createRulesEditor(host, {
 
                 try {
                     profile = upgrade(preset.rules);
+                    engineVersion = null;
+                    explicitOverrides = {};
                     samples = {};
                     sampleLevel = '1';
                     changed();
@@ -1293,7 +1596,7 @@ export function createRulesEditor(host, {
                 page(
                     name,
                     title,
-                    'Сначала выберите основу на странице «Основное».'
+                    'Сначала выберите основу на странице «Основа».'
                 );
             }
         } else {
@@ -1504,7 +1807,7 @@ export function createRulesEditor(host, {
     function collect() {
         if (!profile) {
             throw new Error(
-                'Выберите и примените основу на странице «Основное».'
+                'Выберите и примените основу на странице «Основа».'
             );
         }
 
@@ -1760,6 +2063,8 @@ export function createRulesEditor(host, {
 
         try {
             let loaded = null;
+            let nextEngineVersion = null;
+            let nextOverrides = {};
 
             if (systemId) {
                 const state = await request(
@@ -1783,6 +2088,43 @@ export function createRulesEditor(host, {
                 )) {
                     throw new Error(
                         'Сервер вернул некорректный черновик.'
+                    );
+                }
+
+                if (loaded?.engine_version_id != null) {
+                    const origin = await request(
+                        `/admin/game-systems/${encodeURIComponent(systemId)}` +
+                        '/editor/engine'
+                    );
+
+                    if (
+                        origin?.draft_revision !== loaded.revision ||
+                        origin.engine_version?.id !==
+                            loaded.engine_version_id
+                    ) {
+                        throw new Error(
+                            'Черновик изменился во время загрузки. ' +
+                            'Загрузите страницу заново, чтобы ' +
+                            'не смешивать разные ревизии.'
+                        );
+                    }
+
+                    nextEngineVersion = origin.engine_version;
+
+                    checkEngineVersion(
+                        nextEngineVersion,
+                        nextEngineVersion.engine_id,
+                        loaded.engine_version_id
+                    );
+
+                    nextOverrides = readEngineOverrides(
+                        loaded,
+                        nextEngineVersion
+                    );
+                } else if (loaded?.rules_overrides != null) {
+                    throw new Error(
+                        'В черновике есть переопределения ' +
+                        'без публикации движка.'
                     );
                 }
             }
@@ -1811,22 +2153,61 @@ export function createRulesEditor(host, {
             profile = nextProfile;
             revision = loaded?.revision ?? null;
             dirty = loaded?.rules.schema_version === 1;
+
+            engineVersion = nextEngineVersion
+                ? clone(nextEngineVersion)
+                : null;
+            explicitOverrides = nextOverrides;
+
             presets = nextPresets;
             selectedPreset = '';
             sampleLevel = '1';
             samples = {};
+
+            availableEngines = [];
+            availableVersions = [];
+            selectedEngineId = '';
+            selectedVersionId = '';
+            enginesLoaded = false;
 
             renderBasis();
             render();
 
             message.textContent = loaded
                 ? `Черновик загружен. Ревизия: ${revision}.`
-                : 'Выберите основу правил. ' +
-                    'Создание на сервере ещё не выполнялось.';
+                : 'Выберите основу. Создание на сервере ' +
+                    'ещё не выполнялось.';
         } finally {
             busy = false;
             sync();
         }
+    }
+
+    function collectSubmission() {
+        const rules = collect();
+
+        if (!engineVersion) {
+            return { rules };
+        }
+
+        if (
+            engineVersion.rules_engine_version !==
+            getExecutorVersion()
+        ) {
+            throw new Error(
+                'Версия исполнителя системы не соответствует основе.'
+            );
+        }
+
+        return {
+            engine_id: engineVersion.engine_id,
+            engine_version_id: engineVersion.id,
+            rules_overrides: collectEngineOverrides(
+                engineVersion.rules_json,
+                rules,
+                explicitOverrides
+            )
+        };
     }
 
     function acceptSaved(draft) {
@@ -1841,9 +2222,29 @@ export function createRulesEditor(host, {
             );
         }
 
-        profile = upgrade(draft.rules);
+        const nextProfile = upgrade(draft.rules);
+        let nextOverrides = {};
+
+        if (engineVersion) {
+            nextOverrides = readEngineOverrides(
+                draft,
+                engineVersion
+            );
+        } else if (
+            draft.engine_version_id != null ||
+            draft.rules_overrides != null
+        ) {
+            throw new Error(
+                'Сервер вернул неожиданную связь с движком. ' +
+                'Проверьте сохранённые данные перед повтором.'
+            );
+        }
+
+        profile = nextProfile;
         revision = draft.revision;
+        explicitOverrides = nextOverrides;
         dirty = false;
+
         renderBasis();
         render();
 
@@ -1855,6 +2256,7 @@ export function createRulesEditor(host, {
     return {
         load,
         collect,
+        collectSubmission,
         acceptSaved,
         showPage,
         getRevision: () => revision,

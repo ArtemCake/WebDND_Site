@@ -170,3 +170,97 @@ async def origin_for_publication(session: AsyncSession, draft, executor_version:
 		"engine_version_id": assembled["engine_version_id"],
 		"rules_overrides_json": assembled["rules_overrides_json"],
 	}
+
+async def load_saved_engine_version(session: AsyncSession, draft):
+	"""Прочитать публикацию, уже связанную с черновиком системы.
+
+	Право читать/изменять систему проверяет вызывающий слой.
+
+	Видимость и активность исходного движка здесь не проверяются:
+	ранее сохранённая связь не является новым выбором основы.
+	"""
+	version_id = draft.get("engine_version_id")
+	overrides = draft.get("rules_overrides_json")
+
+	if version_id is None and overrides is None:
+		raise HTTPException(
+			status_code=404,
+			detail="Черновик использует самостоятельные правила.",
+		)
+
+	if version_id is None or not isinstance(overrides, dict):
+		raise _conflict(
+			"В черновике нарушена согласованность "
+			"происхождения правил."
+		)
+
+	result = await session.execute(
+		select(_VERSIONS).where(
+			_VERSIONS.c.id == version_id,
+			)
+	)
+	version = result.mappings().one_or_none()
+
+	if version is None:
+		raise _conflict(
+			"Сохранённая публикация движка не найдена."
+		)
+
+	return version
+
+async def load_editor_engine_origin(session: AsyncSession, source: EngineRulesSource, actor_id: UUID, executor_version: str, current_draft) -> dict:
+	"""Собрать правила при обновлении единой формы.
+
+	Та же публикация:
+		используем сохранённую связь с системой.
+
+	Другая публикация:
+		заново проверяем доступность выбранной основы.
+	"""
+	if not isinstance(actor_id, UUID):
+		raise HTTPException(
+			status_code=401,
+			detail="Требуется авторизованный пользователь.",
+		)
+
+	if current_draft is not None:
+		saved_version_id = current_draft.get("engine_version_id")
+		saved_overrides = current_draft.get("rules_overrides_json")
+
+		if (
+				(saved_version_id is None) != (saved_overrides is None)
+				or (
+				saved_version_id is not None
+				and not isinstance(saved_overrides, dict)
+		)
+		):
+			raise _conflict(
+				"В черновике нарушена согласованность "
+				"происхождения правил."
+			)
+
+		if saved_version_id == source.engine_version_id:
+			version = await load_saved_engine_version(
+				session,
+				current_draft,
+			)
+
+			if version["engine_id"] != source.engine_id:
+				raise HTTPException(
+					status_code=404,
+					detail="Публикация выбранного движка не найдена.",
+				)
+
+			return _assemble(
+				version,
+				source.rules_overrides,
+				executor_version,
+				error_code=422,
+			)
+
+	return await load_engine_origin(
+		session,
+		source,
+		actor_id,
+		executor_version,
+	)

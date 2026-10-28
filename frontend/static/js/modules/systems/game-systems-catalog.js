@@ -3,6 +3,7 @@
 import {sessionClient, SessionRefreshError} from '../games/session-client.js';
 import {createRulesEditor} from './game-system-rules-editor.js';
 import {mountRulesView} from './game-system-rules-view.js';
+import {mountRuleEngineManager} from './rule-engine-manager.js';
 
 const root = document.querySelector('[data-game-systems-page]');
 
@@ -39,7 +40,8 @@ function initGameSystemsPage(root) {
             button.disabled = !allowed || busy ||  !ready ||  deleteBlocked.has(button.dataset.systemDelete);
         });
     }
-	const editorPages = [
+    const editorPages = [
+        ['basis', 'Основа'],
         ['main', 'Основное'],
         ['attributes', 'Характеристики'],
         ['derived', 'Показатели'],
@@ -61,11 +63,27 @@ function initGameSystemsPage(root) {
             ? createRulesEditor(root.querySelector('[data-rules-editor]'), {
                 request,
                 systemId: mode === 'edit' ? systemId : null,
+                getExecutorVersion: () =>
+                                    form.elements.namedItem(
+                                        'rules_engine_version'
+                                    ).value.trim(),
                 onBusy: setBusy,
                 onChange: updateEditorState,
                 onInvalid: revealControl
             })
             : null;
+
+	    const engineHost = root.querySelector('[data-rule-engine-manager]');
+
+	    const engineManager = mode === 'list'
+	        ? mountRuleEngineManager(engineHost, {
+	            request,
+	            isAllowed: () =>
+	                ready &&
+	                access?.can_create === true &&
+	                engineHost?.hidden === false
+	        })
+	        : null;
 
         function hasUnsaved() {
             return metadataDirty || Boolean(rulesEditor?.hasUnsaved());
@@ -501,7 +519,14 @@ function initGameSystemsPage(root) {
 	}
 
 	async function loadPage() {
-		if (busy || rulesEditor?.isBusy()) return;
+        if (
+            busy ||
+            rulesEditor?.isBusy() ||
+            engineManager?.isBusy()
+        ) {
+            return;
+        }
+        if (engineHost) engineHost.hidden = true;
 
 		ready = false;
 		access = null;
@@ -565,6 +590,14 @@ function initGameSystemsPage(root) {
 			}
 
 			ready = true;
+
+            if (engineHost) {
+                engineHost.hidden =
+                    mode !== 'list' || access.can_create !== true;
+            }
+
+            engineManager?.sync();
+
 			deleteBlocked.clear();
             syncDeleteButtons();
 			content.hidden = false;
@@ -627,7 +660,7 @@ function initGameSystemsPage(root) {
                         ).trim(),
                         is_active: values.has('is_active')
                     },
-                    rules: rulesEditor.collect()
+                    ...rulesEditor.collectSubmission()
                 };
 
                 if (isEditing) {
@@ -639,15 +672,30 @@ function initGameSystemsPage(root) {
                 return;
             }
 
+            const linked = Object.prototype.hasOwnProperty.call(
+                payload,
+                'engine_version_id'
+            );
+
+            const savePath = linked
+                ? (
+                    isEditing
+                        ? `${adminUrl(systemId)}/editor/engine`
+                        : '/admin/game-systems/from-engine'
+                )
+                : (
+                    isEditing
+                        ? `${adminUrl(systemId)}/editor`
+                        : '/admin/game-systems/editor/create'
+                );
+
             setBusy(true);
             login.hidden = true;
             message.textContent = 'Сохранение системы и черновика…';
 
             try {
                 const saved = await request(
-                    isEditing
-                        ? `${adminUrl(systemId)}/editor`
-                        : '/admin/game-systems/editor/create',
+                    savePath,
                     isEditing ? 'PUT' : 'POST',
                     payload
                 );
@@ -678,6 +726,7 @@ function initGameSystemsPage(root) {
             } catch (error) {
                 if (
                     !error.status ||
+                    error.status >= 500 ||
                     error.status === 401 ||
                     error.status === 403 ||
                     (isEditing && error.status === 409)
@@ -741,7 +790,13 @@ function initGameSystemsPage(root) {
 	});
 
 	reload.addEventListener('click', () => {
-		if (busy || rulesEditor?.isBusy()) return;
+        if (
+            busy ||
+            rulesEditor?.isBusy() ||
+            engineManager?.isBusy()
+        ) {
+            return;
+        }
 
 		if (
 			form && ready &&
@@ -792,11 +847,16 @@ function initGameSystemsPage(root) {
             if (busy || !ready) return;
 
             try {
-                if (editorPage === 0) {
-                    if (!validateMetadata()) return;
-                    rulesEditor.collect();
-                } else if (editorPage === 1 || editorPage === 2) {
-                    rulesEditor.collect();
+                const page = editorPages[editorPage][0];
+
+                if (page === 'main' && !validateMetadata()) {
+                    return;
+                }
+
+                if (
+                    ['basis', 'main', 'attributes', 'derived'].includes(page)
+                ) {
+                    rulesEditor.collectSubmission();
                 }
 
                 message.textContent = '';
