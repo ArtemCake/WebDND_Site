@@ -183,6 +183,51 @@ export function createRuleEngineApi(request) {
             );
         },
 
+        async setActive(engineId, isActive, expectedIsActive) {
+            ensure(
+                typeof isActive === 'boolean' &&
+                typeof expectedIsActive === 'boolean',
+                'Не указано корректное состояние активности.'
+            );
+
+            const saved = engineCard(
+                await request(
+                    `${path(engineId)}/activity`,
+                    'PATCH',
+                    {
+                        is_active: isActive,
+                        expected_is_active: expectedIsActive
+                    }
+                )
+            );
+
+            ensure(
+                saved.id === engineId &&
+                saved.is_active === isActive,
+                'Ответ изменения активности не удалось проверить.'
+            );
+
+            return saved;
+        },
+
+        async remove(engineId, expectedRevision) {
+            const saved = await request(
+                path(engineId),
+                'DELETE',
+                {
+                    expected_revision: revision(expectedRevision)
+                }
+            );
+
+            ensure(
+                saved?.deleted === true &&
+                saved.engine_id === engineId,
+                'Ответ удаления не удалось проверить.'
+            );
+
+            return saved;
+        },
+
         async publish(engineId, expectedRevision) {
             revision(expectedRevision);
 

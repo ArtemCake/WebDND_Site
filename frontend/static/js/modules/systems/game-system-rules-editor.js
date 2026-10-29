@@ -2253,11 +2253,34 @@ export function createRulesEditor(host, {
             'Публикация не выполнялась.';
     }
 
+    function acceptEngineDraft(draft) {
+        if (
+            !standaloneOnly ||
+            systemId ||
+            typeof draft?.engine_id !== 'string' ||
+            !draft.engine_id ||
+            draft.rules_engine_version !== getExecutorVersion() ||
+            draft.rules_json?.schema_version !== 2
+        ) {
+            throw new Error(
+                'Черновик движка не соответствует режиму редактора.'
+            );
+        }
+
+        acceptSaved({
+            rules: draft.rules_json,
+            revision: draft.revision,
+            engine_version_id: null,
+            rules_overrides: null
+        });
+    }
+
     return {
         load,
         collect,
         collectSubmission,
         acceptSaved,
+        acceptEngineDraft,
         showPage,
         getRevision: () => revision,
         hasUnsaved: () => dirty,

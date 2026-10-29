@@ -3,6 +3,7 @@
 from Config.imports import (AsyncSession, HTTPException, status, secrets, UUID, select)
 from backend.app.Schemas.lobby import GameCreate, GameUpdate, InviteCreate, SessionCreate, SessionUpdate
 from backend.app.Database.Models.Gameplay.lobby import Game, Party, Invite, Session as GameSession
+from backend.app.Database.Models.Content.game_systems import GameSystem
 
 
 async def list_games_for_user(session: AsyncSession, user_id: UUID) -> list[Game]:
@@ -26,12 +27,61 @@ async def list_games_for_user(session: AsyncSession, user_id: UUID) -> list[Game
 	return list(result.scalars().all())
 
 async def create_game(session: AsyncSession, master_id: UUID, data: GameCreate) -> Game:
-	game = Game(master_id=master_id, status="draft", **data.model_dump())
-	session.add(game)
-	await session.flush()
+	systems = GameSystem.__table__
 
-	session.add(Party(game_id=game.id, user_id=master_id, role_in_game="assistant_dm", is_active=True))
-	await session.commit()
+	try:
+		# Та же запись должна блокироваться сервисом деактивации.
+		# Проверку выполняем в БД, а не по состоянию интерфейса.
+		result = await session.execute(
+			select(
+				systems.c.id,
+				systems.c.is_active,
+			)
+			.where(systems.c.id == data.system_id)
+			.with_for_update()
+		)
+		system = result.mappings().one_or_none()
+
+		if system is None:
+			raise HTTPException(
+				status_code=status.HTTP_404_NOT_FOUND,
+				detail="Игровая система не найдена.",
+			)
+
+		if not system["is_active"]:
+			raise HTTPException(
+				status_code=status.HTTP_409_CONFLICT,
+				detail=(
+					"Игровая система деактивирована. "
+					"Создание новых игр недоступно."
+				),
+			)
+
+		game = Game(
+			master_id=master_id,
+			status="draft",
+			**data.model_dump(),
+		)
+		session.add(game)
+		await session.flush()
+
+		session.add(
+			Party(
+				game_id=game.id,
+				user_id=master_id,
+				role_in_game="assistant_dm",
+				is_active=True,
+			)
+		)
+
+		# Блокировка системы удерживается до фиксации
+		# игры и участия мастера в одной транзакции.
+		await session.commit()
+
+	except Exception:
+		await session.rollback()
+		raise
+
 	await session.refresh(game)
 	return game
 
@@ -205,15 +255,58 @@ async def is_game_master(session: AsyncSession, game_id: UUID, user_id: UUID) ->
 	return game is not None and game.master_id == user_id
 
 async def start_session(session: AsyncSession, game_id: UUID, master_id: UUID, data: SessionCreate) -> GameSession:
-	await _require_master(session, game_id, master_id)
+	try:
+		# Блокируем родительскую игру до проверки сессий.
+		# Удаление игры уже использует блокировку этой записи.
+		result = await session.execute(
+			select(
+				Game.id,
+				Game.master_id,
+			)
+			.where(Game.id == game_id)
+			.with_for_update()
+		)
+		game = result.one_or_none()
 
-	active_stmt = select(GameSession).where(GameSession.game_id == game_id, GameSession.is_active.is_(True))
-	if (await session.execute(active_stmt)).scalar_one_or_none() is not None:
-		raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="В этой игре уже есть активная сессия")
+		if game is None:
+			raise HTTPException(
+				status_code=status.HTTP_404_NOT_FOUND,
+				detail="Игра не найдена",
+			)
 
-	game_session = GameSession(game_id=game_id, **data.model_dump())
-	session.add(game_session)
-	await session.commit()
+		if game.master_id != master_id:
+			raise HTTPException(
+				status_code=status.HTTP_403_FORBIDDEN,
+				detail="Только мастер игры может это делать",
+			)
+
+		active_stmt = select(GameSession).where(
+			GameSession.game_id == game_id,
+			GameSession.is_active.is_(True),
+			)
+		active_session = (
+			await session.execute(active_stmt)
+		).scalar_one_or_none()
+
+		if active_session is not None:
+			raise HTTPException(
+				status_code=status.HTTP_400_BAD_REQUEST,
+				detail="В этой игре уже есть активная сессия",
+			)
+
+		game_session = GameSession(
+			game_id=game_id,
+			**data.model_dump(),
+		)
+		session.add(game_session)
+
+		# Сессия создаётся до освобождения блокировки игры.
+		await session.commit()
+
+	except Exception:
+		await session.rollback()
+		raise
+
 	await session.refresh(game_session)
 	return game_session
 

@@ -15,9 +15,13 @@ from backend.app.Services.admin_service import require_permission
 from backend.app.Schemas.game_rules import (GameSystemRulesDraftRead, GameSystemRulesPublish, GameSystemRulesVersionRead)
 from backend.app.Schemas.game_system_editor import GameSystemEditorRead
 from backend.app.Schemas.game_system_origin import (GameSystemEngineEditorUpdate, GameSystemEngineOriginRead, GameSystemDraftEngineSet, GameSystemFromEngineCreate)
-from backend.app.Schemas.rule_engines import (RuleEngineCreate, RuleEngineDraftRead, RuleEngineDraftUpdate, RuleEngineEditorRead,
-                                              RuleEnginePage, RuleEnginePublish, RuleEngineVersionPage, RuleEngineVersionRead)
-from backend.app.Services.GameSystems import (editor_service, rule_engine_service as engines, rules_service)
+from backend.app.Schemas.rule_engines import (RuleEngineCreate, RuleEngineDraftRead, RuleEngineDraftUpdate, RuleEngineEditorRead, RuleEngineDeleteRead,
+                                              RuleEnginePage, RuleEnginePublish, RuleEngineVersionPage, RuleEngineVersionRead, RuleEngineActivityUpdate,
+                                              RuleEngineDelete, RuleEngineRead)
+from backend.app.Services.GameSystems import (editor_service, rule_engine_lifecycle_service as lifecycle, rule_engine_service as engines, rules_service,
+                                              rule_engine_removal_service as removal)
+from backend.app.Schemas.rule_engine_lifecycle import (RuleEngineRemovalPreview)
+from backend.app.Schemas.rule_engine_removal import (RuleEngineRemovalExecute, RuleEngineRemovalPlan, RuleEngineRemovalResult)
 
 
 def _no_store(response: Response) -> None:
@@ -158,6 +162,54 @@ async def update_system(system_id: UUID, data: GameSystemEngineEditorUpdate, ses
 	return await editor_service.update_system_from_engine(
 		session,
 		system_id,
+		actor_id,
+		data,
+	)
+
+@router.patch("/rule-engines/{engine_id}/activity", response_model=RuleEngineRead, operation_id="adminSetRuleEngineActivity",
+              dependencies=[Depends(enforce_csrf)])
+async def set_engine_activity(engine_id: UUID, data: RuleEngineActivityUpdate, session: AsyncSession = Depends(get_async_session),
+		actor_id: UUID = Depends(_content_actor_id)):
+	return await engines.set_engine_activity(
+		session,
+		engine_id,
+		actor_id,
+		data,
+	)
+
+@router.delete("/rule-engines/{engine_id}", response_model=RuleEngineDeleteRead, operation_id="adminDeleteUnpublishedRuleEngine",
+	dependencies=[Depends(enforce_csrf)])
+async def delete_engine(engine_id: UUID, data: RuleEngineDelete, session: AsyncSession = Depends(get_async_session), actor_id: UUID = Depends(_content_actor_id)):
+	return await engines.delete_unpublished_engine(
+		session,
+		engine_id,
+		actor_id,
+		data,
+	)
+
+@router.get("/rule-engines/{engine_id}/removal-preview", response_model=RuleEngineRemovalPreview, operation_id="adminPreviewRuleEngineRemoval")
+async def preview_engine_removal(engine_id: UUID, session: AsyncSession = Depends(get_async_session), actor_id: UUID = Depends(_content_actor_id)):
+	return await lifecycle.preview_engine_removal(
+		session,
+		engine_id,
+		actor_id,
+	)
+
+@router.get("/rule-engines/{engine_id}/removal-plan", response_model=RuleEngineRemovalPlan, operation_id="adminGetRuleEngineRemovalPlan")
+async def get_engine_removal_plan(engine_id: UUID, session: AsyncSession = Depends(get_async_session), actor_id: UUID = Depends(_content_actor_id)):
+	return await removal.get_removal_plan(
+		session,
+		engine_id,
+		actor_id,
+	)
+
+@router.post("/rule-engines/{engine_id}/removal-execution", response_model=RuleEngineRemovalResult, operation_id="adminExecuteRuleEngineRemoval",
+	dependencies=[Depends(enforce_csrf)])
+async def execute_engine_removal(engine_id: UUID, data: RuleEngineRemovalExecute, session: AsyncSession = Depends(get_async_session),
+		actor_id: UUID = Depends(_content_actor_id)):
+	return await removal.execute_removal(
+		session,
+		engine_id,
 		actor_id,
 		data,
 	)

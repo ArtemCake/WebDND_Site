@@ -67,140 +67,178 @@ async def _finish_cleanup(session: AsyncSession, game_id: UUID, master_id: UUID)
 		"detail": "Игра, её карты и каталог карт удалены.",
 	}
 
-async def delete_game(session: AsyncSession, game_id: UUID, master_id: UUID) -> dict:
+async def _stage_game_deletion(session: AsyncSession, game_id: UUID, master_id: UUID) -> bool:
+	"""Подготовить удаление игры в транзакции вызывающего сервиса.
+
+	Возвращает:
+		True — игра найдена, задание очистки добавлено,
+			   удаление записей выполнено в текущей транзакции.
+		False — игра отсутствует.
+
+	Не выполняет commit, rollback или очистку файлов.
+	Вызывающий сервис обязан завершить транзакцию.
+
+	Это внутренняя функция, а не проверка административных прав.
+	Будущий административный сервис должен отдельно проверить
+	полномочия и передать настоящего владельца игры.
+	"""
+	game = (
+		await session.execute(
+			select(
+				Game.id,
+				Game.master_id,
+				Game.maps_storage_folder,
+			)
+			.where(Game.id == game_id)
+			.with_for_update()
+		)
+	).one_or_none()
+
+	if game is None:
+		return False
+
+	if game.master_id is None:
+		raise HTTPException(
+			409,
+			"У игры отсутствует владелец. "
+			"Удаление остановлено до проверки каталогов хранения.",
+		)
+
+	if game.master_id != master_id:
+		raise HTTPException(
+			403,
+			"Только мастер игры может удалить её",
+		)
+
+	# Порядок блокировок: игра, затем её карты.
+	maps = (
+		await session.execute(
+			select(
+				CampaignMap.id,
+				CampaignMap.background_storage_path,
+			)
+			.where(CampaignMap.game_id == game_id)
+			.order_by(CampaignMap.id)
+			.with_for_update()
+		)
+	).all()
+
+	master_folder = (
+		await session.execute(
+			select(User.maps_storage_folder)
+			.where(User.id == master_id)
+		)
+	).scalar_one_or_none()
+
 	try:
-		# Выбираем поля, не загружая отношения Game.
-		game = (
+		plan = map_cleanup_service.build_plan(
+			game_id,
+			master_id,
+			master_folder,
+			game.maps_storage_folder,
+			maps,
+		)
+	except (ValueError, RuntimeError) as exc:
+		log.exception(
+			"Не удалось подготовить очистку игры %s",
+			game_id,
+		)
+		raise HTTPException(
+			409,
+			"Не удалось безопасно определить каталог карт. "
+			"Игра не удалена; требуется проверка хранилища.",
+		) from exc
+
+	# Сохраняем существующую проверку общих каталогов.
+	for relative in plan["directories"]:
+		shared_map = (
 			await session.execute(
-				select(
-					Game.id,
-					Game.master_id,
-					Game.maps_storage_folder,
-				)
-				.where(Game.id == game_id)
-				.with_for_update()
-			)
-		).one_or_none()
-
-		if game is not None:
-			if game.master_id != master_id:
-				raise HTTPException(
-					403,
-					"Только мастер игры может удалить её",
-				)
-
-			# Порядок блокировок: игра, затем карты.
-			maps = (
-				await session.execute(
-					select(
-						CampaignMap.id,
-						CampaignMap.background_storage_path,
-					)
-					.where(CampaignMap.game_id == game_id)
-					.order_by(CampaignMap.id)
-					.with_for_update()
-				)
-			).all()
-
-			master_folder = (
-				await session.execute(
-					select(User.maps_storage_folder)
-					.where(User.id == master_id)
-				)
-			).scalar_one_or_none()
-
-			try:
-				plan = map_cleanup_service.build_plan(
-					game_id,
-					master_id,
-					master_folder,
-					game.maps_storage_folder,
-					maps,
-				)
-			except (ValueError, RuntimeError) as exc:
-				log.exception(
-					"Не удалось подготовить очистку игры %s",
-					game_id,
-				)
-				raise HTTPException(
-					409,
-					"Не удалось безопасно определить каталог карт. "
-					"Игра не удалена; требуется проверка хранилища.",
-				) from exc
-
-			# Не очищаем каталог, на который ссылаются карты
-			# другой игры, даже при повреждённых данных.
-			for relative in plan["directories"]:
-				shared_map = (
-					await session.execute(
-						select(CampaignMap.id)
-						.where(
-							CampaignMap.game_id != game_id,
-							CampaignMap.background_storage_path.startswith(
-								f"{relative}/",
-								autoescape=True,
-							),
-							)
-						.limit(1)
-					)
-				).scalar_one_or_none()
-
-				if shared_map is not None:
-					raise HTTPException(
-						409,
-						"Каталог используется картами другой игры. "
-						"Удаление остановлено.",
-					)
-
-			session.add(
-				GameDeletionJob(
-					game_id=game_id,
-					master_id=master_id,
-					cleanup_plan=plan,
-					cleanup_complete=False,
-				)
-			)
-
-			session_ids = select(GameSession.id).where(
-				GameSession.game_id == game_id
-			)
-			party_ids = select(Party.id).where(
-				Party.game_id == game_id
-			)
-
-			# В текущей модели у бросков SET NULL.
-			# Для окончательного удаления истории игры
-			# удаляем её броски явно.
-			await session.execute(
-				delete(DiceRoll)
+				select(CampaignMap.id)
 				.where(
-					or_(
-						DiceRoll.session_id.in_(session_ids),
-						DiceRoll.party_id.in_(party_ids),
+					CampaignMap.game_id != game_id,
+					CampaignMap.background_storage_path.startswith(
+						f"{relative}/",
+						autoescape=True,
+					),
 					)
-				)
-				.execution_options(synchronize_session=False)
+				.limit(1)
+			)
+		).scalar_one_or_none()
+
+		if shared_map is not None:
+			raise HTTPException(
+				409,
+				"Каталог используется картами другой игры. "
+				"Удаление остановлено.",
 			)
 
-			# Core DELETE: используем каскады самой БД,
-			# не ORM-обнуление обязательных внешних ключей.
-			await session.execute(
-				delete(Game)
-				.where(Game.id == game_id)
-				.execution_options(synchronize_session=False)
-			)
+	session.add(
+		GameDeletionJob(
+			game_id=game_id,
+			master_id=master_id,
+			cleanup_plan=plan,
+			cleanup_complete=False,
+		)
+	)
 
-			# Задание и удаление записей фиксируются вместе.
-			# До этого момента файлы не изменялись.
+	# Записываем задание в текущую транзакцию ДО удаления игры.
+	# flush не фиксирует транзакцию: последующий rollback
+	# отменит и задание, и удаление.
+	await session.flush()
+
+	session_ids = select(GameSession.id).where(
+		GameSession.game_id == game_id
+	)
+	party_ids = select(Party.id).where(
+		Party.game_id == game_id
+	)
+
+	# У бросков стоят SET NULL, поэтому удаляем историю явно.
+	await session.execute(
+		delete(DiceRoll)
+		.where(
+			or_(
+				DiceRoll.session_id.in_(session_ids),
+				DiceRoll.party_id.in_(party_ids),
+			)
+		)
+		.execution_options(synchronize_session=False)
+	)
+
+	# Сохраняем удаление через каскады самой БД.
+	await session.execute(
+		delete(Game)
+		.where(Game.id == game_id)
+		.execution_options(synchronize_session=False)
+	)
+
+	return True
+
+async def delete_game(session: AsyncSession, game_id: UUID, master_id: UUID) -> dict:
+	"""Одиночное удаление с прежним контрактом ответа."""
+	try:
+		staged = await _stage_game_deletion(
+			session,
+			game_id,
+			master_id,
+		)
+
+		if staged:
+			# Задание очистки и удаление фиксируются вместе.
 			await session.commit()
 
 	except Exception:
 		await session.rollback()
 		raise
 
-	# Если игра уже удалена, повторный запрос продолжает
-	# сохранённое задание с отдельной проверкой владельца.
-	return await _finish_cleanup(session, game_id, master_id)
+	# Только после успешной фиксации разрешена очистка файлов.
+	# Если игра уже отсутствует, продолжаем сохранённое задание
+	# с существующей проверкой владельца.
+	return await _finish_cleanup(
+		session,
+		game_id,
+		master_id,
+	)
 
 async def run_cleanup_worker(session_factory) -> None:
 	while True:

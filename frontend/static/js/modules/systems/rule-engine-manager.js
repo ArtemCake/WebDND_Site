@@ -85,8 +85,9 @@ export function mountRuleEngineManager(host, {
     }
 
     function alreadyPublished() {
-        return draft && versions.some(
-            (item) => item.source_draft_revision === draft.revision
+        return Boolean(draft) && versions.some(
+            (item) =>
+                item.source_draft_revision + 1 === draft.revision
         );
     }
 
@@ -113,8 +114,27 @@ export function mountRuleEngineManager(host, {
             !loaded ||
             blocked ||
             !engine ||
+            engine.is_active !== true ||
             unsaved() ||
             Boolean(alreadyPublished());
+
+	        const activity = form.querySelector(
+	            '[data-engine-activity]'
+	        );
+	        const remove = form.querySelector(
+	            '[data-engine-delete]'
+	        );
+
+	        activity.hidden = !engine;
+	        activity.textContent = engine?.is_active === false
+	            ? 'Активировать движок'
+	            : 'Деактивировать движок';
+	        activity.disabled =
+	            disabled || !loaded || blocked || !engine;
+
+	        remove.hidden = !engine || versions.length > 0;
+	        remove.disabled =
+	            disabled || !loaded || blocked || !engine;
 
         editor?.setParentBusy(disabled || !loaded);
     }
@@ -124,25 +144,46 @@ export function mountRuleEngineManager(host, {
         if (mutation && blocked) return;
 
         busy = true;
-        sync();
+        let actionStarted = false;
 
         try {
+            sync();
+
+            actionStarted = true;
             await action();
         } catch (error) {
-            if (mutation && blocksEngineMutation(error, editing)) {
+            if (
+                mutation &&
+                actionStarted &&
+                blocksEngineMutation(error, editing)
+            ) {
                 blocked = true;
             }
+
+            console.error(error);
 
             status.textContent =
                 (error.message || 'Не удалось выполнить действие.') +
                 (blocked
                     ? ' Повторная запись заблокирована. ' +
-                      'Загрузите список и откройте сохранённый движок ' +
-                      'для сверки. Введённые данные оставлены в форме.'
+                      'Обновите страницу и загрузите список движков ' +
+                      'для сверки. До перезагрузки введённые данные ' +
+                      'остаются в форме.'
                     : '');
         } finally {
             busy = false;
-            sync();
+
+            try {
+                sync();
+            } catch (error) {
+                console.error(error);
+
+                status.textContent =
+                    'Не удалось обновить состояние элементов формы. ' +
+                    'Проверьте разметку кнопок в buildForm(). ' +
+                    'Если выполнялась запись, перед повтором ' +
+                    'сверьте сохранённые данные после перезагрузки.';
+            }
         }
     }
 
@@ -296,6 +337,25 @@ export function mountRuleEngineManager(host, {
                         data-engine-publish>
                     Опубликовать сохранённую ревизию
                 </button>
+
+                <hr>
+
+                <p class="profile-note">
+                    Деактивация запрещает новый выбор этого движка
+                    как основы. Существующие системы сохраняют
+                    связь с выбранной публикацией.
+                    Удаление доступно только без публикаций.
+                </p>
+
+                <button type="button" class="btn btn-outline-primary"
+                        data-engine-activity>
+                    Изменить активность
+                </button>
+
+                <button type="button" class="btn btn-outline-primary"
+                        data-engine-delete>
+                    Удалить движок
+                </button>
             </form>
         `;
 
@@ -371,6 +431,12 @@ export function mountRuleEngineManager(host, {
         form.addEventListener('submit', save);
         form.querySelector('[data-engine-publish]')
             .addEventListener('click', publish);
+
+        form.querySelector('[data-engine-activity]')
+            .addEventListener('click', changeActivity);
+
+        form.querySelector('[data-engine-delete]')
+            .addEventListener('click', removeEngine);
 
         if (draft) {
             editor.acceptEngineDraft(draft);
@@ -452,10 +518,107 @@ export function mountRuleEngineManager(host, {
         }, true, editing);
     }
 
+    function changeActivity() {
+        if (
+            working() || !isAllowed() || !loaded ||
+            blocked || !engine
+        ) {
+            return;
+        }
+
+        const selected = engine;
+        const nextActive = !selected.is_active;
+
+        const question = nextActive
+            ? `Активировать движок «${selected.name}»?`
+            : `Деактивировать движок «${selected.name}»? ` +
+              'Его нельзя будет выбрать для новой основы. ' +
+              'Уже связанные системы продолжат работать.';
+
+        if (!window.confirm(question)) return;
+
+        void run(async () => {
+            const saved = await api.setActive(
+                selected.id,
+                nextActive,
+                selected.is_active
+            );
+
+            engine = saved;
+            engines = engines.map((item) =>
+                item.id === saved.id ? saved : item
+            );
+
+            // Форму не пересоздаём: несохранённые правила остаются.
+            renderList();
+            showVersionState();
+
+            status.textContent = saved.is_active
+                ? 'Движок активирован.'
+                : 'Движок деактивирован. Сохранённые связи не изменены.';
+        }, true);
+    }
+
+    function removeEngine() {
+        if (
+            working() || !isAllowed() || !loaded ||
+            blocked || !engine || versions.length > 0
+        ) {
+            return;
+        }
+
+        const selected = engine;
+        const expectedRevision = draft.revision;
+
+        const warning = unsaved()
+            ? '\nНесохранённые изменения формы также будут потеряны.\n'
+            : '\n';
+
+        const confirmation = window.prompt(
+            `Удалить движок «${selected.name}» и его черновик?\n` +
+            'Действие нельзя отменить. При наличии публикаций ' +
+            'сервер запретит удаление.\n' +
+            warning +
+            '\nДля подтверждения введите название движка:',
+            ''
+        );
+
+        if (confirmation === null) return;
+
+        if (confirmation !== selected.name) {
+            status.textContent =
+                'Название не совпало. Удаление не выполнялось.';
+            return;
+        }
+
+        void run(async () => {
+            await api.remove(selected.id, expectedRevision);
+
+            engines = engines.filter(
+                (item) => item.id !== selected.id
+            );
+
+            engine = null;
+            draft = null;
+            versions = [];
+            editor = null;
+            form = null;
+            loaded = false;
+            metadataDirty = false;
+            area.replaceChildren();
+
+            renderList();
+
+            status.textContent =
+                `Движок «${selected.name}» и его черновик удалены.`;
+        }, true);
+    }
+
     function publish() {
         if (
             working() || !isAllowed() || !loaded || blocked ||
-            !engine || unsaved() || alreadyPublished()
+            !engine || engine.is_active !== true ||
+            unsaved() || alreadyPublished()
         ) {
             return;
         }
@@ -478,7 +641,17 @@ export function mountRuleEngineManager(host, {
                 expectedRevision
             );
 
+            // Сервер публикует expectedRevision и в той же
+            // транзакции увеличивает ревизию черновика на один.
+            const nextDraft = {
+                ...draft,
+                revision: expectedRevision + 1
+            };
+
+            editor.acceptEngineDraft(nextDraft);
+            draft = nextDraft;
             versions = [...versions, saved];
+
             showVersionState();
 
             status.textContent =

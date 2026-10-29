@@ -85,3 +85,18 @@ class RuleEnginePage(RulesModel):
 class RuleEngineVersionPage(RulesModel):
 	items: list[RuleEngineVersionSummary]
 	next_offset: int | None = None
+
+class RuleEngineActivityUpdate(RulesModel):
+	"""Явно установить активность, проверив прочитанное состояние."""
+
+	is_active: bool = Field(strict=True)
+	expected_is_active: bool = Field(strict=True)
+
+class RuleEngineDelete(RulesModel):
+	"""Удалить неопубликованный движок с известной ревизией."""
+
+	expected_revision: int = Field(ge=1)
+
+class RuleEngineDeleteRead(RulesModel):
+	deleted: Literal[True]
+	engine_id: UUID

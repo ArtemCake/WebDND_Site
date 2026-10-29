@@ -1,8 +1,8 @@
 """add_tables
 
-Revision ID: b191c2d0a472
+Revision ID: 7a955264b3e3
 Revises: 
-Create Date: 2026-10-28 21:22:19.467606
+Create Date: 2026-10-29 22:00:12.596595
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = 'b191c2d0a472'
+revision: str = '7a955264b3e3'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -1513,7 +1513,7 @@ def upgrade() -> None:
     op.create_index(op.f('ix_tokens_npc_id'), 'tokens', ['npc_id'], unique=False)
     op.create_index(op.f('ix_tokens_owner_id'), 'tokens', ['owner_id'], unique=False)
     op.create_index(op.f('ix_tokens_session_id'), 'tokens', ['session_id'], unique=False)
-    op.execute("\nCREATE OR REPLACE FUNCTION worldloom_guard_rule_engine_version()\nRETURNS trigger\nLANGUAGE plpgsql\nAS $$\nBEGIN\n    RAISE EXCEPTION\n        'Published rule engine versions are immutable'\n        USING ERRCODE = '23514';\n    RETURN NULL;\nEND;\n$$;\n")
+    op.execute("CREATE OR REPLACE FUNCTION worldloom_guard_rule_engine_version()\nRETURNS trigger\nLANGUAGE plpgsql\nAS $$\nBEGIN\n    IF TG_OP = 'DELETE'\n       AND current_setting(\n           'worldloom.removing_engine_id',\n           true\n       ) = OLD.engine_id::text\n    THEN\n        RETURN OLD;\n    END IF;\n\n    RAISE EXCEPTION\n        'Published rule engine versions are immutable'\n        USING ERRCODE = '23514';\n\n    RETURN NULL;\nEND;\n$$;\n")
     op.execute('\nCREATE TRIGGER trg_rule_engine_versions_immutable\nBEFORE UPDATE OR DELETE ON rule_engine_versions\nFOR EACH ROW\nEXECUTE FUNCTION worldloom_guard_rule_engine_version();\n')
     # ### end Alembic commands ###
 

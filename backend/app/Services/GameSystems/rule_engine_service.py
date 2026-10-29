@@ -19,11 +19,12 @@ actor_id должен приходить от проверенной аутен�
 """
 
 from Config.imports import (AsyncSession, HTTPException, IntegrityError, UUID, or_, ValidationError,
-	asynccontextmanager, func, insert, select, update)
+	asynccontextmanager, func, insert, select, update, delete)
 from backend.app.Database._models import (RuleEngine, RuleEngineDraft, RuleEngineVersion)
 from backend.app.Schemas.game_rules import RulesProfile
 from backend.app.Schemas.rule_engines import (RuleEngineCreate, RuleEngineDraftRead, RuleEngineDraftUpdate, RuleEngineEditorRead,
-	RuleEnginePublish, RuleEngineRead, RuleEngineVersionRead, RuleEnginePage, RuleEngineVersionPage, RuleEngineVersionSummary)
+	RuleEnginePublish, RuleEngineRead, RuleEngineVersionRead, RuleEnginePage, RuleEngineVersionPage, RuleEngineVersionSummary,
+	                                          RuleEngineActivityUpdate, RuleEngineDelete, RuleEngineDeleteRead,)
 
 
 _ENGINES = RuleEngine.__table__
@@ -406,3 +407,128 @@ async def list_engine_versions(session: AsyncSession, engine_id: UUID, actor_id:
 		],
 		next_offset=offset + limit if len(rows) > limit else None,
 	)
+
+async def set_engine_activity(session: AsyncSession, engine_id: UUID, actor_id: UUID, data: RuleEngineActivityUpdate) -> RuleEngineRead:
+	"""Изменить активность своего движка.
+
+	Не изменяет правила, ревизию черновика и публикации.
+	"""
+	async with _write(session):
+		engine = await _find_engine(
+			session,
+			engine_id,
+			actor_id,
+			owner_only=True,
+			for_update=True,
+		)
+
+		if engine["is_active"] != data.expected_is_active:
+			raise _error(
+				409,
+				"Активность движка уже изменилась. "
+				"Обновите список и откройте движок заново.",
+			)
+
+		result = await session.execute(
+			update(_ENGINES)
+			.where(_ENGINES.c.id == engine_id)
+			.values(
+				is_active=data.is_active,
+				updated_at=func.now(),
+			)
+			.returning(*_ENGINES.c)
+		)
+		updated = result.mappings().one_or_none()
+
+		if updated is None:
+			raise _error(
+				409,
+				"Движок изменился во время операции. "
+				"Изменение активности отменено.",
+			)
+
+		response = RuleEngineRead.model_validate(dict(updated))
+
+	return response
+
+async def delete_unpublished_engine(session: AsyncSession, engine_id: UUID, actor_id: UUID, data: RuleEngineDelete) -> RuleEngineDeleteRead:
+	"""Удалить свой движок, только если публикаций ещё нет.
+
+	Блокировки совпадают с сохранением и публикацией:
+		карточка движка -> черновик.
+
+	Черновик удаляет внешний ключ ON DELETE CASCADE.
+	Публикации никогда не удаляем.
+	"""
+	try:
+		async with _write(session):
+			await _find_engine(
+				session,
+				engine_id,
+				actor_id,
+				owner_only=True,
+				for_update=True,
+			)
+
+			draft = await _find_draft(
+				session,
+				engine_id,
+				for_update=True,
+			)
+			_check_revision(
+				draft["revision"],
+				data.expected_revision,
+			)
+
+			publication_result = await session.execute(
+				select(
+					select(_VERSIONS.c.id)
+					.where(_VERSIONS.c.engine_id == engine_id)
+					.exists()
+				)
+			)
+
+			if publication_result.scalar_one():
+				raise _error(
+					409,
+					"У движка есть опубликованные версии. "
+					"Удаление запрещено. Используйте деактивацию.",
+				)
+
+			deleted_result = await session.execute(
+				delete(_ENGINES)
+				.where(_ENGINES.c.id == engine_id)
+				.returning(_ENGINES.c.id)
+			)
+
+			if deleted_result.scalar_one_or_none() != engine_id:
+				raise _error(
+					409,
+					"Удаление движка не подтверждено. "
+					"Загрузите актуальное состояние.",
+				)
+
+			response = RuleEngineDeleteRead(
+				deleted=True,
+				engine_id=engine_id,
+			)
+
+	except IntegrityError as exc:
+		# _write уже выполнил rollback.
+		# Это дополнительная защита на случай зависимостей,
+		# которые не удалось учесть предварительной проверкой.
+		sqlstate = (
+				getattr(exc.orig, "sqlstate", None)
+				or getattr(exc.orig, "pgcode", None)
+		)
+
+		if sqlstate == "23503":
+			raise _error(
+				409,
+				"Движок связан с другими данными. "
+				"Удаление отменено. Используйте деактивацию.",
+			) from exc
+
+		raise
+
+	return response
